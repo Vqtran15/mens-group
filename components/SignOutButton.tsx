@@ -17,10 +17,10 @@ export function SignOutButton() {
   return (
     <button
       onClick={handleSignOut}
-      aria-label="Sign out"
-      className="rounded-full p-2 text-secondary hover:bg-surface-muted"
+      className="flex w-full items-center gap-2 rounded-xl border border-border/60 bg-white px-4 py-3 text-left font-medium text-accent transition-colors hover:bg-accent/10"
     >
-      <SignOut size={20} />
+      <SignOut size={18} />
+      Sign out
     </button>
   );
 }

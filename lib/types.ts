@@ -74,6 +74,17 @@ export interface ChatMessage {
   body: string;
   created_by: string;
   group_id: string;
+  image_url: string | null;
+  reply_to_id: string | null;
+  edited_at: string | null;
   created_at: string;
   profiles?: Pick<Profile, "display_name">;
+}
+
+export interface Reaction {
+  id: string;
+  message_id: string;
+  user_id: string;
+  emoji: string;
+  created_at: string;
 }

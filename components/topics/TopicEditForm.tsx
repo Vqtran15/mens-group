@@ -1,19 +1,36 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { WarningCircle } from "@phosphor-icons/react";
 import { createClient } from "@/lib/supabase/client";
-import { getCurrentMembership } from "@/lib/supabase/current-membership";
 import { RichTextEditor } from "@/components/topics/RichTextEditor";
 import { SuccessButton, type SubmitStatus } from "@/components/ui/SuccessButton";
+import { Skeleton } from "@/components/ui/Skeleton";
 
-export function TopicForm() {
+export function TopicEditForm({ topicId }: { topicId: string }) {
   const router = useRouter();
+  const [loading, setLoading] = useState(true);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [status, setStatus] = useState<SubmitStatus>("idle");
+
+  useEffect(() => {
+    const supabase = createClient();
+    supabase
+      .from("topics")
+      .select("title, description")
+      .eq("id", topicId)
+      .single()
+      .then(({ data }) => {
+        if (data) {
+          setTitle(data.title);
+          setDescription(data.description ?? "");
+        }
+        setLoading(false);
+      });
+  }, [topicId]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -21,23 +38,10 @@ export function TopicForm() {
     setStatus("submitting");
 
     const supabase = createClient();
-    const membership = await getCurrentMembership(supabase);
-    if (!membership) {
-      setError("You must be signed in and belong to a group.");
-      setStatus("idle");
-      return;
-    }
-
-    const { data: topic, error } = await supabase
+    const { error } = await supabase
       .from("topics")
-      .insert({
-        title,
-        description: description || null,
-        created_by: membership.userId,
-        group_id: membership.groupId,
-      })
-      .select()
-      .single();
+      .update({ title, description: description || null })
+      .eq("id", topicId);
 
     if (error) {
       setError(error.message);
@@ -47,9 +51,18 @@ export function TopicForm() {
 
     setStatus("success");
     setTimeout(() => {
-      router.push(`/topics/${topic.id}`);
+      router.push(`/topics/${topicId}`);
       router.refresh();
     }, 500);
+  }
+
+  if (loading) {
+    return (
+      <div className="space-y-4 p-4">
+        <Skeleton className="h-10 w-full" />
+        <Skeleton className="h-32 w-full" />
+      </div>
+    );
   }
 
   return (
@@ -76,7 +89,7 @@ export function TopicForm() {
           {error}
         </p>
       )}
-      <SuccessButton status={status} idleLabel="Add topic" submittingLabel="Adding..." className="w-full" />
+      <SuccessButton status={status} idleLabel="Save changes" submittingLabel="Saving..." className="w-full" />
     </form>
   );
 }

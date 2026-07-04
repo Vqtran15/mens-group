@@ -1,57 +1,120 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { WarningCircle } from "@phosphor-icons/react";
 import { createClient } from "@/lib/supabase/client";
 import { getCurrentMembership } from "@/lib/supabase/current-membership";
-import { Button } from "@/components/ui/Button";
+import { SuccessButton, type SubmitStatus } from "@/components/ui/SuccessButton";
+import { Skeleton } from "@/components/ui/Skeleton";
 
 const fieldClass =
   "w-full rounded-xl border border-border bg-background/50 px-3 py-2.5 outline-none transition focus:border-primary focus:bg-white focus:ring-2 focus:ring-primary/20";
 
-export function EventForm() {
+function toDateInputValue(iso: string): string {
+  return iso.slice(0, 10);
+}
+
+function toTimeInputValue(iso: string): string {
+  const d = new Date(iso);
+  return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+}
+
+export function EventForm({ eventId }: { eventId?: string }) {
   const router = useRouter();
+  const isEditing = Boolean(eventId);
+  const [loading, setLoading] = useState(isEditing);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [date, setDate] = useState("");
   const [time, setTime] = useState("");
   const [location, setLocation] = useState("");
   const [error, setError] = useState<string | null>(null);
-  const [submitting, setSubmitting] = useState(false);
+  const [status, setStatus] = useState<SubmitStatus>("idle");
+
+  useEffect(() => {
+    if (!eventId) return;
+    const supabase = createClient();
+    supabase
+      .from("events")
+      .select("title, description, starts_at, location")
+      .eq("id", eventId)
+      .single()
+      .then(({ data }) => {
+        if (data) {
+          setTitle(data.title);
+          setDescription(data.description ?? "");
+          setDate(toDateInputValue(data.starts_at));
+          setTime(toTimeInputValue(data.starts_at));
+          setLocation(data.location ?? "");
+        }
+        setLoading(false);
+      });
+  }, [eventId]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
-    setSubmitting(true);
+    setStatus("submitting");
 
     const supabase = createClient();
-    const membership = await getCurrentMembership(supabase);
-    if (!membership) {
-      setError("You must be signed in and belong to a group.");
-      setSubmitting(false);
-      return;
-    }
-
     const startsAt = new Date(`${date}T${time}`);
-    const { error } = await supabase.from("events").insert({
-      title,
-      description: description || null,
-      starts_at: startsAt.toISOString(),
-      location: location || null,
-      created_by: membership.userId,
-      group_id: membership.groupId,
-    });
 
-    setSubmitting(false);
+    if (eventId) {
+      const { error } = await supabase
+        .from("events")
+        .update({
+          title,
+          description: description || null,
+          starts_at: startsAt.toISOString(),
+          location: location || null,
+        })
+        .eq("id", eventId);
 
-    if (error) {
-      setError(error.message);
-      return;
+      if (error) {
+        setError(error.message);
+        setStatus("idle");
+        return;
+      }
+    } else {
+      const membership = await getCurrentMembership(supabase);
+      if (!membership) {
+        setError("You must be signed in and belong to a group.");
+        setStatus("idle");
+        return;
+      }
+
+      const { error } = await supabase.from("events").insert({
+        title,
+        description: description || null,
+        starts_at: startsAt.toISOString(),
+        location: location || null,
+        created_by: membership.userId,
+        group_id: membership.groupId,
+      });
+
+      if (error) {
+        setError(error.message);
+        setStatus("idle");
+        return;
+      }
     }
 
-    router.push("/calendar");
-    router.refresh();
+    setStatus("success");
+    setTimeout(() => {
+      router.push("/calendar");
+      router.refresh();
+    }, 500);
+  }
+
+  if (loading) {
+    return (
+      <div className="space-y-4 p-4">
+        <Skeleton className="h-10 w-full" />
+        <Skeleton className="h-20 w-full" />
+        <Skeleton className="h-10 w-full" />
+      </div>
+    );
   }
 
   return (
@@ -124,9 +187,12 @@ export function EventForm() {
           {error}
         </p>
       )}
-      <Button type="submit" disabled={submitting} className="w-full">
-        {submitting ? "Adding..." : "Add event"}
-      </Button>
+      <SuccessButton
+        status={status}
+        idleLabel={isEditing ? "Save changes" : "Add event"}
+        submittingLabel={isEditing ? "Saving..." : "Adding..."}
+        className="w-full"
+      />
     </form>
   );
 }

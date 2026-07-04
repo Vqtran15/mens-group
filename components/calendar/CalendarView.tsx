@@ -8,6 +8,7 @@ import { getCurrentMembership } from "@/lib/supabase/current-membership";
 import { getUpcomingOccurrences, toRecurrenceConfig } from "@/lib/recurrence";
 import { NextMeetingCard } from "@/components/calendar/NextMeetingCard";
 import { EventListItem } from "@/components/calendar/EventListItem";
+import { Skeleton } from "@/components/ui/Skeleton";
 import type { CalendarEvent, MeetingSchedule, Rsvp } from "@/lib/types";
 
 const OCCURRENCES_TO_MATERIALIZE = 6;
@@ -88,7 +89,17 @@ export function CalendarView() {
   }, [loadEvents]);
 
   if (loading || !userId || !groupId) {
-    return <p className="p-4 text-secondary">Loading...</p>;
+    return (
+      <div className="space-y-4 p-4">
+        <div className="flex items-center justify-between">
+          <Skeleton className="h-7 w-28" />
+          <Skeleton className="h-8 w-28 rounded-full" />
+        </div>
+        <Skeleton className="h-40 w-full rounded-2xl" />
+        <Skeleton className="h-24 w-full rounded-2xl" />
+        <Skeleton className="h-24 w-full rounded-2xl" />
+      </div>
+    );
   }
 
   const [nextMeeting, ...rest] = events;

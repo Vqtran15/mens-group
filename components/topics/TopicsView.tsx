@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Plus } from "@phosphor-icons/react";
 import { createClient } from "@/lib/supabase/client";
 import { TopicListItem } from "@/components/topics/TopicListItem";
+import { Skeleton } from "@/components/ui/Skeleton";
 import type { Topic } from "@/lib/types";
 
 export function TopicsView() {
@@ -36,7 +37,11 @@ export function TopicsView() {
       </div>
 
       {loading ? (
-        <p className="text-secondary">Loading...</p>
+        <div className="space-y-3">
+          <Skeleton className="h-16 w-full rounded-2xl" />
+          <Skeleton className="h-16 w-full rounded-2xl" />
+          <Skeleton className="h-16 w-full rounded-2xl" />
+        </div>
       ) : topics.length === 0 ? (
         <p className="text-secondary">No topics yet.</p>
       ) : (
