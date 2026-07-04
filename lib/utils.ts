@@ -30,6 +30,17 @@ export function formatDateTime(date: Date): string {
   return `${formatDate(date)} at ${formatTime(date)}`;
 }
 
+// Excludes visually ambiguous characters (0/O, 1/I/L).
+const INVITE_CODE_CHARS = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
+
+export function generateInviteCode(length = 5): string {
+  let code = "";
+  for (let i = 0; i < length; i++) {
+    code += INVITE_CODE_CHARS[Math.floor(Math.random() * INVITE_CODE_CHARS.length)];
+  }
+  return code;
+}
+
 export function urlBase64ToUint8Array(base64String: string): Uint8Array<ArrayBuffer> {
   const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
   const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");

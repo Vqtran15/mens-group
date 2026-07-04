@@ -2,8 +2,9 @@
 
 import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { Buildings, LockKey, Users } from "@phosphor-icons/react";
+import { ArrowsClockwise, Buildings, LockKey, Users } from "@phosphor-icons/react";
 import { createClient } from "@/lib/supabase/client";
+import { generateInviteCode } from "@/lib/utils";
 import { SegmentedToggle } from "@/components/ui/SegmentedToggle";
 import { AuthTextField } from "@/components/AuthForm/AuthTextField";
 import type { Group } from "@/lib/types";
@@ -26,6 +27,7 @@ export function GroupSection({
 }) {
   const [groups, setGroups] = useState<Group[]>([]);
   const [loadingGroups, setLoadingGroups] = useState(true);
+  const [spins, setSpins] = useState(0);
 
   useEffect(() => {
     const supabase = createClient();
@@ -35,8 +37,25 @@ export function GroupSection({
     });
   }, []);
 
+  // Seed an initial code so "Create a Group" never starts empty.
+  useEffect(() => {
+    if (value.mode === "create" && !value.inviteCode) {
+      onChange({ ...value, inviteCode: generateInviteCode() });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   function setMode(mode: GroupMode) {
-    onChange({ ...value, mode });
+    if (mode === "create") {
+      onChange({ ...value, mode, inviteCode: generateInviteCode() });
+    } else {
+      onChange({ ...value, mode, inviteCode: "" });
+    }
+  }
+
+  function refreshInviteCode() {
+    onChange({ ...value, inviteCode: generateInviteCode() });
+    setSpins((s) => s + 1);
   }
 
   return (
@@ -70,13 +89,32 @@ export function GroupSection({
                 onChange={(groupName) => onChange({ ...value, groupName })}
               />
               <div>
-                <AuthTextField
-                  label="Invite Code"
-                  icon={LockKey}
-                  required
-                  value={value.inviteCode}
-                  onChange={(inviteCode) => onChange({ ...value, inviteCode })}
-                />
+                <label className="mb-1.5 block text-sm font-medium text-secondary">
+                  Invite Code
+                </label>
+                <div className="flex items-center gap-2">
+                  <div className="relative flex-1">
+                    <LockKey
+                      size={18}
+                      className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted"
+                    />
+                    <input
+                      readOnly
+                      value={value.inviteCode}
+                      className="w-full rounded-xl border border-border bg-background/50 py-2.5 pl-10 pr-3 font-mono text-base tracking-[0.2em] outline-none"
+                    />
+                  </div>
+                  <motion.button
+                    type="button"
+                    animate={{ rotate: spins * 360 }}
+                    transition={{ duration: 0.4, ease: "easeOut" }}
+                    onClick={refreshInviteCode}
+                    aria-label="Generate a new invite code"
+                    className="shrink-0 rounded-xl border border-border bg-white p-2.5 text-secondary transition-colors hover:bg-surface-muted"
+                  >
+                    <ArrowsClockwise size={18} />
+                  </motion.button>
+                </div>
                 <p className="mt-1.5 text-xs text-muted">
                   Share this code with people you want to invite to the group.
                 </p>
