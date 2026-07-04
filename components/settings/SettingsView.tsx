@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { CheckCircle, WarningCircle } from "@phosphor-icons/react";
+import { CheckCircle, Copy, WarningCircle } from "@phosphor-icons/react";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/Button";
 import { Skeleton } from "@/components/ui/Skeleton";
@@ -14,6 +14,9 @@ export function SettingsView() {
   const [loading, setLoading] = useState(true);
   const [displayName, setDisplayName] = useState("");
   const [email, setEmail] = useState("");
+  const [groupName, setGroupName] = useState("");
+  const [inviteCode, setInviteCode] = useState("");
+  const [codeCopied, setCodeCopied] = useState(false);
   const [nameStatus, setNameStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const [nameError, setNameError] = useState<string | null>(null);
 
@@ -29,10 +32,13 @@ export function SettingsView() {
       setEmail(data.user.email ?? "");
       const { data: profile } = await supabase
         .from("profiles")
-        .select("display_name")
+        .select("display_name, group_id, groups(name, invite_code)")
         .eq("id", data.user.id)
         .single();
       setDisplayName(profile?.display_name ?? "");
+      const group = profile?.groups as unknown as { name: string; invite_code: string } | null;
+      setGroupName(group?.name ?? "");
+      setInviteCode(group?.invite_code ?? "");
       setLoading(false);
     });
   }, []);
@@ -135,6 +141,30 @@ export function SettingsView() {
           </Button>
         </form>
       </section>
+
+      {inviteCode && (
+        <section className="space-y-3 rounded-2xl border border-border/60 bg-white p-4">
+          <h2 className="font-semibold text-primary">{groupName}</h2>
+          <p className="text-sm text-secondary">Share this invite code so others can join:</p>
+          <div className="flex items-center gap-2">
+            <code className="flex-1 truncate rounded-lg bg-background/60 px-3 py-2 font-mono text-sm">
+              {inviteCode}
+            </code>
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => {
+                navigator.clipboard.writeText(inviteCode);
+                setCodeCopied(true);
+                setTimeout(() => setCodeCopied(false), 1500);
+              }}
+            >
+              {codeCopied ? <CheckCircle size={16} /> : <Copy size={16} />}
+              {codeCopied ? "Copied" : "Copy"}
+            </Button>
+          </div>
+        </section>
+      )}
 
       <section className="space-y-3 rounded-2xl border border-border/60 bg-white p-4">
         <h2 className="font-semibold text-primary">Change password</h2>

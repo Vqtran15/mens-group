@@ -86,7 +86,7 @@ export function MessageComposer({
           type="submit"
           disabled={!body.trim() && !imageFile}
           aria-label="Send message"
-          className="rounded-full bg-gradient-to-br from-primary to-teal p-3 text-white shadow-md shadow-primary/30 disabled:opacity-60"
+          className="rounded-full bg-primary p-3 text-white shadow-md shadow-primary/30 disabled:opacity-60"
         >
           <PaperPlaneTilt size={18} weight="fill" />
         </motion.button>

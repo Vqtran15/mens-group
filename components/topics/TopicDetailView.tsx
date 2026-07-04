@@ -66,7 +66,10 @@ export function TopicDetailView({ topicId }: { topicId: string }) {
             dangerouslySetInnerHTML={{ __html: topic.description }}
           />
         ) : (
-          <p className="text-secondary">Nothing here yet — tap the pencil to add some details ✏️</p>
+          <p className="flex items-center gap-1.5 text-secondary">
+            <PencilSimple size={16} className="shrink-0" />
+            Nothing here yet — tap the pencil to add some details
+          </p>
         )}
       </div>
     </div>

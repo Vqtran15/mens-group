@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { HandWaving } from "@phosphor-icons/react";
 import { createClient } from "@/lib/supabase/client";
 import { getCurrentMembership } from "@/lib/supabase/current-membership";
 import { uploadChatPhoto } from "@/lib/supabase/uploadChatPhoto";
@@ -280,7 +281,7 @@ export function ChatView() {
       <div className="flex-1 space-y-4 overflow-y-auto p-4">
         {messages.length === 0 && (
           <EmptyState
-            emoji="👋"
+            icon={HandWaving}
             title="Say hello!"
             subtitle="This is the start of your group chat. Send the first message."
           />

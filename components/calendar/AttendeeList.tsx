@@ -1,3 +1,4 @@
+import { HandsClapping } from "@phosphor-icons/react";
 import { AvatarStack } from "@/components/ui/AvatarStack";
 import type { Rsvp } from "@/lib/types";
 
@@ -12,7 +13,12 @@ export function AttendeeList({ rsvps }: { rsvps: Rsvp[] }) {
   for (const rsvp of rsvps) grouped[rsvp.status].push(rsvp);
 
   if (rsvps.length === 0) {
-    return <p className="text-sm text-secondary">No RSVPs yet — be the first to say you&apos;re in! 🙌</p>;
+    return (
+      <p className="flex items-center gap-1.5 text-sm text-secondary">
+        <HandsClapping size={16} className="shrink-0" />
+        No RSVPs yet — be the first to say you&apos;re in!
+      </p>
+    );
   }
 
   return (

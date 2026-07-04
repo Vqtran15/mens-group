@@ -1,12 +1,13 @@
 import { motion } from "framer-motion";
+import type { Icon } from "@phosphor-icons/react";
 
 export function EmptyState({
-  emoji,
+  icon: IconComponent,
   title,
   subtitle,
   children,
 }: {
-  emoji: string;
+  icon: Icon;
   title: string;
   subtitle?: string;
   children?: React.ReactNode;
@@ -17,9 +18,9 @@ export function EmptyState({
         initial={{ scale: 0.6, rotate: -10, opacity: 0 }}
         animate={{ scale: 1, rotate: 0, opacity: 1 }}
         transition={{ type: "spring", stiffness: 300, damping: 15 }}
-        className="text-4xl"
+        className="flex items-center justify-center text-primary"
       >
-        {emoji}
+        <IconComponent size={40} weight="duotone" />
       </motion.span>
       <p className="font-semibold text-primary">{title}</p>
       {subtitle && <p className="max-w-xs text-sm text-secondary">{subtitle}</p>}

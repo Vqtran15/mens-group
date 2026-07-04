@@ -18,8 +18,7 @@ export function Button({
       transition={{ type: "spring", stiffness: 500, damping: 25 }}
       className={cn(
         "flex items-center justify-center gap-1.5 rounded-xl px-4 py-2.5 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-60",
-        variant === "primary" &&
-          "bg-gradient-to-r from-primary to-teal text-white shadow-md shadow-primary/30",
+        variant === "primary" && "bg-primary text-white shadow-md shadow-primary/30",
         variant === "secondary" && "bg-surface-muted text-primary hover:bg-surface-muted/70",
         variant === "ghost" && "text-secondary hover:bg-surface-muted",
         className

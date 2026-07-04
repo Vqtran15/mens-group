@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { Plus } from "@phosphor-icons/react";
+import { CalendarBlank, Plus } from "@phosphor-icons/react";
 import { createClient } from "@/lib/supabase/client";
 import { getCurrentMembership } from "@/lib/supabase/current-membership";
 import { getUpcomingOccurrences, toRecurrenceConfig } from "@/lib/recurrence";
@@ -111,7 +111,7 @@ export function CalendarView() {
         <h1 className="text-xl font-semibold text-primary">Calendar</h1>
         <Link
           href="/calendar/new"
-          className="flex items-center gap-1 rounded-full bg-gradient-to-r from-primary to-teal px-3 py-1.5 text-sm font-medium text-white shadow-md shadow-primary/30 transition-transform active:scale-95"
+          className="flex items-center gap-1 rounded-full bg-primary px-3 py-1.5 text-sm font-medium text-white shadow-md shadow-primary/30 transition-transform active:scale-95"
         >
           <Plus size={16} /> Add event
         </Link>
@@ -126,7 +126,7 @@ export function CalendarView() {
         />
       ) : (
         <EmptyState
-          emoji="📅"
+          icon={CalendarBlank}
           title="Nothing on the calendar"
           subtitle="Plan a hangout and let everyone know!"
         />
