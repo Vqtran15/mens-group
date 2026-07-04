@@ -82,13 +82,13 @@ export function MessageComposer({
           className="flex-1 rounded-full border border-border bg-background/60 px-4 py-2 outline-none transition focus:border-primary focus:bg-white focus:ring-2 focus:ring-primary/20"
         />
         <motion.button
-          whileTap={{ scale: 0.93 }}
+          whileTap={{ scale: 0.85, rotate: -15 }}
           type="submit"
           disabled={!body.trim() && !imageFile}
           aria-label="Send message"
-          className="rounded-full bg-primary p-3 text-white shadow-sm shadow-primary/30 disabled:opacity-60"
+          className="rounded-full bg-gradient-to-br from-primary to-teal p-3 text-white shadow-md shadow-primary/30 disabled:opacity-60"
         >
-          <PaperPlaneTilt size={18} />
+          <PaperPlaneTilt size={18} weight="fill" />
         </motion.button>
       </form>
     </div>

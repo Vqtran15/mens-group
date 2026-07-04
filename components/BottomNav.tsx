@@ -29,7 +29,7 @@ export function BottomNav() {
                 {active && (
                   <motion.div
                     layoutId="bottom-nav-pill"
-                    className="absolute inset-x-3 inset-y-1 rounded-xl bg-surface-muted"
+                    className="absolute inset-x-3 inset-y-1 rounded-xl bg-primary/10"
                     transition={{ type: "spring", stiffness: 500, damping: 35 }}
                   />
                 )}
@@ -39,7 +39,14 @@ export function BottomNav() {
                     active ? "text-primary" : "text-secondary"
                   )}
                 >
-                  <Icon size={24} weight={active ? "fill" : "regular"} />
+                  <motion.span
+                    key={active ? "active" : "inactive"}
+                    initial={active ? { scale: 0.6 } : false}
+                    animate={{ scale: 1 }}
+                    transition={{ type: "spring", stiffness: 500, damping: 15 }}
+                  >
+                    <Icon size={24} weight={active ? "fill" : "regular"} />
+                  </motion.span>
                   {label}
                 </span>
               </Link>

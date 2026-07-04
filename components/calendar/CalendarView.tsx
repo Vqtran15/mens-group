@@ -9,6 +9,7 @@ import { getUpcomingOccurrences, toRecurrenceConfig } from "@/lib/recurrence";
 import { NextMeetingCard } from "@/components/calendar/NextMeetingCard";
 import { EventListItem } from "@/components/calendar/EventListItem";
 import { Skeleton } from "@/components/ui/Skeleton";
+import { EmptyState } from "@/components/ui/EmptyState";
 import type { CalendarEvent, MeetingSchedule, Rsvp } from "@/lib/types";
 
 const OCCURRENCES_TO_MATERIALIZE = 6;
@@ -110,7 +111,7 @@ export function CalendarView() {
         <h1 className="text-xl font-semibold text-primary">Calendar</h1>
         <Link
           href="/calendar/new"
-          className="flex items-center gap-1 rounded-full bg-primary px-3 py-1.5 text-sm font-medium text-white shadow-sm shadow-primary/30 transition-colors hover:bg-primary/90"
+          className="flex items-center gap-1 rounded-full bg-gradient-to-r from-primary to-teal px-3 py-1.5 text-sm font-medium text-white shadow-md shadow-primary/30 transition-transform active:scale-95"
         >
           <Plus size={16} /> Add event
         </Link>
@@ -124,7 +125,11 @@ export function CalendarView() {
           onChanged={() => loadEvents(userId, groupId)}
         />
       ) : (
-        <p className="text-secondary">No upcoming meetings scheduled.</p>
+        <EmptyState
+          emoji="📅"
+          title="Nothing on the calendar"
+          subtitle="Plan a hangout and let everyone know!"
+        />
       )}
 
       {rest.length > 0 && (

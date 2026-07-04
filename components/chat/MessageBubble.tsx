@@ -79,7 +79,9 @@ export function MessageBubble({
             {...gestureHandlers}
             className={cn(
               "mt-1 select-none rounded-2xl px-3 py-2 shadow-sm",
-              isOwn ? "bg-primary text-white shadow-primary/20" : "bg-white text-secondary",
+              isOwn
+                ? "rounded-br-md bg-primary text-white shadow-primary/20"
+                : "rounded-bl-md bg-white text-secondary",
               pending && "opacity-60"
             )}
           >

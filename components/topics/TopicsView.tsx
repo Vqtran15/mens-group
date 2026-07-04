@@ -6,6 +6,7 @@ import { Plus } from "@phosphor-icons/react";
 import { createClient } from "@/lib/supabase/client";
 import { TopicListItem } from "@/components/topics/TopicListItem";
 import { Skeleton } from "@/components/ui/Skeleton";
+import { EmptyState } from "@/components/ui/EmptyState";
 import type { Topic } from "@/lib/types";
 
 export function TopicsView() {
@@ -30,7 +31,7 @@ export function TopicsView() {
         <h1 className="text-xl font-semibold text-primary">Topics</h1>
         <Link
           href="/topics/new"
-          className="flex items-center gap-1 rounded-full bg-primary px-3 py-1.5 text-sm font-medium text-white shadow-sm shadow-primary/30 transition-colors hover:bg-primary/90"
+          className="flex items-center gap-1 rounded-full bg-gradient-to-r from-primary to-teal px-3 py-1.5 text-sm font-medium text-white shadow-md shadow-primary/30 transition-transform active:scale-95"
         >
           <Plus size={16} /> Add topic
         </Link>
@@ -43,7 +44,11 @@ export function TopicsView() {
           <Skeleton className="h-16 w-full rounded-2xl" />
         </div>
       ) : topics.length === 0 ? (
-        <p className="text-secondary">No topics yet.</p>
+        <EmptyState
+          emoji="💬"
+          title="Nothing to talk about yet"
+          subtitle="Start a topic and get the conversation going!"
+        />
       ) : (
         <div className="space-y-3">
           {topics.map((topic) => (

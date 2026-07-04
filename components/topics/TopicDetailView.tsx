@@ -66,7 +66,7 @@ export function TopicDetailView({ topicId }: { topicId: string }) {
             dangerouslySetInnerHTML={{ __html: topic.description }}
           />
         ) : (
-          <p className="text-secondary">No description yet.</p>
+          <p className="text-secondary">Nothing here yet — tap the pencil to add some details ✏️</p>
         )}
       </div>
     </div>

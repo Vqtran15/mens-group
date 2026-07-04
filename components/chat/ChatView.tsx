@@ -8,6 +8,7 @@ import { MessageBubble } from "@/components/chat/MessageBubble";
 import { MessageComposer } from "@/components/chat/MessageComposer";
 import { MessageActionSheet } from "@/components/chat/MessageActionSheet";
 import { Skeleton } from "@/components/ui/Skeleton";
+import { EmptyState } from "@/components/ui/EmptyState";
 import type { ChatMessage, Reaction } from "@/lib/types";
 
 const DEFAULT_REACTION = "❤️";
@@ -277,6 +278,13 @@ export function ChatView() {
   return (
     <div className="flex h-full flex-col">
       <div className="flex-1 space-y-4 overflow-y-auto p-4">
+        {messages.length === 0 && (
+          <EmptyState
+            emoji="👋"
+            title="Say hello!"
+            subtitle="This is the start of your group chat. Send the first message."
+          />
+        )}
         {messages.map((message) => (
           <MessageBubble
             key={message.id}

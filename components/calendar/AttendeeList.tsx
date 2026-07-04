@@ -1,3 +1,4 @@
+import { AvatarStack } from "@/components/ui/AvatarStack";
 import type { Rsvp } from "@/lib/types";
 
 const LABELS: Record<Rsvp["status"], string> = {
@@ -11,19 +12,19 @@ export function AttendeeList({ rsvps }: { rsvps: Rsvp[] }) {
   for (const rsvp of rsvps) grouped[rsvp.status].push(rsvp);
 
   if (rsvps.length === 0) {
-    return <p className="text-sm text-secondary">No RSVPs yet.</p>;
+    return <p className="text-sm text-secondary">No RSVPs yet — be the first to say you&apos;re in! 🙌</p>;
   }
 
   return (
-    <div className="space-y-1 text-sm text-secondary">
+    <div className="space-y-2">
       {(["yes", "maybe", "no"] as const).map((status) =>
         grouped[status].length > 0 ? (
-          <p key={status}>
-            <span className="font-medium">
-              {LABELS[status]} ({grouped[status].length}):
-            </span>{" "}
-            {grouped[status].map((r) => r.profiles?.display_name ?? "Someone").join(", ")}
-          </p>
+          <div key={status} className="flex items-center gap-2">
+            <AvatarStack names={grouped[status].map((r) => r.profiles?.display_name ?? "Someone")} />
+            <p className="text-sm text-secondary">
+              <span className="font-medium">{LABELS[status]}</span> ({grouped[status].length})
+            </p>
+          </div>
         ) : null
       )}
     </div>
