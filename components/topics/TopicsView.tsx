@@ -29,7 +29,7 @@ export function TopicsView() {
         <h1 className="text-xl font-semibold text-primary">Topics</h1>
         <Link
           href="/topics/new"
-          className="flex items-center gap-1 rounded-full bg-primary px-3 py-1.5 text-sm font-medium text-white"
+          className="flex items-center gap-1 rounded-full bg-primary px-3 py-1.5 text-sm font-medium text-white shadow-sm shadow-primary/30 transition-colors hover:bg-primary/90"
         >
           <Plus size={16} /> Add topic
         </Link>

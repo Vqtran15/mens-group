@@ -8,8 +8,8 @@ export default function AppLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <div className="flex h-dvh flex-col">
-      <header className="flex items-center justify-between border-b border-border bg-white px-4 py-3">
+    <div className="flex h-dvh flex-col bg-background">
+      <header className="flex items-center justify-between border-b border-border/60 bg-white/90 px-4 py-3 backdrop-blur-sm">
         <span className="font-semibold text-primary">Men&apos;s Group</span>
         <SignOutButton />
       </header>

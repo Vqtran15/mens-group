@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { motion } from "framer-motion";
 import { createClient } from "@/lib/supabase/client";
 import { PaperPlaneTilt } from "@phosphor-icons/react";
 
@@ -42,16 +43,17 @@ export function NoteComposer({
         onChange={(e) => setBody(e.target.value)}
         placeholder="Add a note..."
         rows={2}
-        className="flex-1 rounded-lg border border-border bg-white px-3 py-2 outline-none focus:border-primary"
+        className="flex-1 rounded-xl border border-border bg-background/50 px-3 py-2 outline-none transition focus:border-primary focus:bg-white focus:ring-2 focus:ring-primary/20"
       />
-      <button
+      <motion.button
+        whileTap={{ scale: 0.93 }}
         type="submit"
         disabled={submitting || !body.trim()}
         aria-label="Add note"
-        className="self-end rounded-full bg-primary p-3 text-white disabled:opacity-60"
+        className="self-end rounded-full bg-primary p-3 text-white shadow-sm shadow-primary/30 disabled:opacity-60"
       >
         <PaperPlaneTilt size={18} />
-      </button>
+      </motion.button>
     </form>
   );
 }

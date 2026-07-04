@@ -29,8 +29,8 @@ export function MessageBubble({
         </div>
         <div
           className={cn(
-            "mt-1 rounded-2xl px-3 py-2",
-            isOwn ? "bg-primary text-white" : "bg-white text-secondary",
+            "mt-1 rounded-2xl px-3 py-2 shadow-sm",
+            isOwn ? "bg-primary text-white shadow-primary/20" : "bg-white text-secondary",
             pending && "opacity-60"
           )}
         >

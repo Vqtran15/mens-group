@@ -1,12 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { CheckCircle, Copy, Envelope, LockKey, UserCircle, WarningCircle } from "@phosphor-icons/react";
 import { createClient } from "@/lib/supabase/client";
 import { GroupSection, type GroupSelection } from "@/components/AuthForm/GroupSection";
+import { AuthTextField } from "@/components/AuthForm/AuthTextField";
+import { Button } from "@/components/ui/Button";
 
-export function SignUpForm() {
+export function SignUpForm({ onSwitchToSignIn }: { onSwitchToSignIn: () => void }) {
   const router = useRouter();
   const [displayName, setDisplayName] = useState("");
   const [email, setEmail] = useState("");
@@ -24,6 +26,7 @@ export function SignUpForm() {
   const [hasSession, setHasSession] = useState(false);
   const [createdGroupName, setCreatedGroupName] = useState<string | null>(null);
   const [createdInviteCode, setCreatedInviteCode] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -116,38 +119,43 @@ export function SignUpForm() {
 
   if (submitted) {
     return (
-      <div className="w-full max-w-sm text-center">
+      <div className="w-full text-center">
         {createdGroupName && createdInviteCode && (
-          <div className="mb-4 rounded-xl border border-highlight bg-white p-4 text-left">
+          <div className="mb-4 rounded-2xl border border-highlight bg-highlight/10 p-4 text-left">
             <p className="font-semibold text-primary">Group &quot;{createdGroupName}&quot; created!</p>
             <p className="mt-1 text-sm text-secondary">
               Share this invite code so others can join:
             </p>
             <div className="mt-2 flex items-center gap-2">
-              <code className="flex-1 rounded-lg bg-surface-muted px-3 py-2 font-mono text-sm">
+              <code className="flex-1 truncate rounded-lg bg-white px-3 py-2 font-mono text-sm">
                 {createdInviteCode}
               </code>
-              <button
+              <Button
                 type="button"
-                onClick={() => navigator.clipboard.writeText(createdInviteCode)}
-                className="rounded-lg bg-primary px-3 py-2 text-sm font-medium text-white"
+                variant="secondary"
+                onClick={() => {
+                  navigator.clipboard.writeText(createdInviteCode);
+                  setCopied(true);
+                  setTimeout(() => setCopied(false), 1500);
+                }}
               >
-                Copy
-              </button>
+                {copied ? <CheckCircle size={16} /> : <Copy size={16} />}
+                {copied ? "Copied" : "Copy"}
+              </Button>
             </div>
           </div>
         )}
         {hasSession ? (
-          <button
+          <Button
             type="button"
+            className="w-full"
             onClick={() => {
               router.push("/calendar");
               router.refresh();
             }}
-            className="w-full rounded-lg bg-primary px-4 py-2 font-medium text-white"
           >
             Continue to Calendar
-          </button>
+          </Button>
         ) : (
           <>
             <h2 className="text-lg font-semibold text-primary">Check your email</h2>
@@ -161,72 +169,60 @@ export function SignUpForm() {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="w-full max-w-sm space-y-4">
+    <form onSubmit={handleSubmit} className="w-full space-y-4">
       <GroupSection value={group} onChange={setGroup} />
-      <div>
-        <label htmlFor="displayName" className="mb-1 block text-sm font-medium text-secondary">
-          Name
-        </label>
-        <input
-          id="displayName"
-          type="text"
-          value={displayName}
-          onChange={(e) => setDisplayName(e.target.value)}
-          className="w-full rounded-lg border border-border bg-white px-3 py-2 text-base outline-none focus:border-primary"
-        />
-      </div>
-      <div>
-        <label htmlFor="email" className="mb-1 block text-sm font-medium text-secondary">
-          Email
-        </label>
-        <input
-          id="email"
-          type="email"
-          required
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          className="w-full rounded-lg border border-border bg-white px-3 py-2 text-base outline-none focus:border-primary"
-        />
-      </div>
-      <div>
-        <label htmlFor="password" className="mb-1 block text-sm font-medium text-secondary">
-          Password
-        </label>
-        <input
-          id="password"
-          type="password"
-          required
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          className="w-full rounded-lg border border-border bg-white px-3 py-2 text-base outline-none focus:border-primary"
-        />
-      </div>
-      <div>
-        <label htmlFor="confirmPassword" className="mb-1 block text-sm font-medium text-secondary">
-          Confirm password
-        </label>
-        <input
-          id="confirmPassword"
-          type="password"
-          required
-          value={confirmPassword}
-          onChange={(e) => setConfirmPassword(e.target.value)}
-          className="w-full rounded-lg border border-border bg-white px-3 py-2 text-base outline-none focus:border-primary"
-        />
-      </div>
-      {error && <p className="text-sm text-accent">{error}</p>}
-      <button
-        type="submit"
-        disabled={submitting}
-        className="w-full rounded-lg bg-primary px-4 py-2 font-medium text-white disabled:opacity-60"
-      >
+      <AuthTextField
+        label="Name"
+        icon={UserCircle}
+        autoComplete="name"
+        value={displayName}
+        onChange={setDisplayName}
+      />
+      <AuthTextField
+        label="Email"
+        type="email"
+        icon={Envelope}
+        required
+        autoComplete="email"
+        value={email}
+        onChange={setEmail}
+      />
+      <AuthTextField
+        label="Password"
+        type="password"
+        icon={LockKey}
+        required
+        autoComplete="new-password"
+        value={password}
+        onChange={setPassword}
+      />
+      <AuthTextField
+        label="Confirm password"
+        type="password"
+        icon={LockKey}
+        required
+        autoComplete="new-password"
+        value={confirmPassword}
+        onChange={setConfirmPassword}
+      />
+      {error && (
+        <p className="flex items-center gap-1.5 rounded-lg bg-accent/10 px-3 py-2 text-sm text-accent">
+          <WarningCircle size={16} className="shrink-0" />
+          {error}
+        </p>
+      )}
+      <Button type="submit" disabled={submitting} className="w-full">
         {submitting ? "Creating account..." : "Sign up"}
-      </button>
+      </Button>
       <p className="text-center text-sm text-secondary">
         Already have an account?{" "}
-        <Link href="/sign-in" className="font-medium text-primary">
+        <button
+          type="button"
+          onClick={onSwitchToSignIn}
+          className="font-medium text-primary hover:underline"
+        >
           Sign in
-        </Link>
+        </button>
       </p>
     </form>
   );

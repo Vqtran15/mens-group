@@ -12,7 +12,7 @@ export function NoteThread({ notes }: { notes: TopicNote[] }) {
       {notes.map((note) => (
         <div key={note.id} className="flex gap-3">
           <Avatar name={note.profiles?.display_name ?? "?"} />
-          <div className="flex-1 rounded-xl border border-border bg-white p-3">
+          <div className="flex-1 rounded-2xl border border-border/60 bg-white p-3 shadow-sm">
             <div className="flex items-baseline justify-between gap-2">
               <p className="text-sm font-medium text-primary">
                 {note.profiles?.display_name ?? "Someone"}

@@ -1,9 +1,7 @@
-import { AuthTransition } from "@/components/AuthTransition";
-
 export default function AuthLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  return <AuthTransition>{children}</AuthTransition>;
+  return <div className="flex min-h-full flex-1 flex-col">{children}</div>;
 }
