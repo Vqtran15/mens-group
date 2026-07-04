@@ -135,7 +135,7 @@ export function SettingsView() {
 
   return (
     <div className="space-y-6 p-4">
-      <section className="space-y-3 rounded-2xl border border-border/60 bg-white p-4">
+      <section className="space-y-3 rounded-2xl border border-border/60 bg-white p-4 shadow-sm">
         <h2 className="font-semibold text-primary">Profile</h2>
         <p className="text-sm text-muted">{email}</p>
         <form onSubmit={handleSaveName} className="space-y-3">
@@ -170,7 +170,7 @@ export function SettingsView() {
         </form>
       </section>
 
-      <section className="space-y-3 rounded-2xl border border-border/60 bg-white p-4">
+      <section className="space-y-3 rounded-2xl border border-border/60 bg-white p-4 shadow-sm">
         <h2 className="font-semibold text-primary">Avatar color</h2>
         <div className="flex items-center gap-3">
           <Avatar name={displayName || "?"} color={avatarColor} size={40} />
@@ -200,7 +200,7 @@ export function SettingsView() {
       </section>
 
       {inviteCode && (
-        <section className="space-y-3 rounded-2xl border border-border/60 bg-white p-4">
+        <section className="space-y-3 rounded-2xl border border-border/60 bg-white p-4 shadow-sm">
           <h2 className="font-semibold text-primary">{groupName}</h2>
           <p className="text-sm text-secondary">Share this invite code so others can join:</p>
           <div className="flex items-center gap-2">
@@ -223,7 +223,7 @@ export function SettingsView() {
         </section>
       )}
 
-      <section className="space-y-3 rounded-2xl border border-border/60 bg-white p-4">
+      <section className="space-y-3 rounded-2xl border border-border/60 bg-white p-4 shadow-sm">
         <h2 className="font-semibold text-primary">Change password</h2>
         <form onSubmit={handleChangePassword} className="space-y-3">
           <div>

@@ -4,6 +4,7 @@ import { useEffect, useRef } from "react";
 import { TextB, TextItalic, ListBullets, ListNumbers } from "@phosphor-icons/react";
 import { cn } from "@/lib/utils";
 import { richTextContentClass } from "@/lib/richTextStyles";
+import { sanitizeRichText } from "@/lib/sanitizeRichText";
 
 export function RichTextEditor({
   value,
@@ -19,7 +20,7 @@ export function RichTextEditor({
     // after that, so overwriting innerHTML on every render would reset the
     // cursor position while the user is typing.
     if (ref.current && ref.current.innerHTML !== value) {
-      ref.current.innerHTML = value;
+      ref.current.innerHTML = sanitizeRichText(value);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -27,7 +28,7 @@ export function RichTextEditor({
   function handleInput() {
     if (!ref.current) return;
     const isEmpty = ref.current.textContent?.trim().length === 0;
-    onChange(isEmpty ? "" : ref.current.innerHTML);
+    onChange(isEmpty ? "" : sanitizeRichText(ref.current.innerHTML));
   }
 
   function exec(command: string) {

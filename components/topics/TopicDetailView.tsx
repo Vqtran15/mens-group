@@ -2,11 +2,14 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { PencilSimple } from "@phosphor-icons/react";
+import { MagnifyingGlass, PencilSimple } from "@phosphor-icons/react";
 import { createClient } from "@/lib/supabase/client";
 import { BackButton } from "@/components/ui/BackButton";
 import { Skeleton } from "@/components/ui/Skeleton";
+import { EmptyState } from "@/components/ui/EmptyState";
 import { richTextContentClass } from "@/lib/richTextStyles";
+import { sanitizeRichText } from "@/lib/sanitizeRichText";
+import { formatDate, parseDateOnly } from "@/lib/utils";
 import type { Topic } from "@/lib/types";
 
 export function TopicDetailView({ topicId }: { topicId: string }) {
@@ -41,7 +44,11 @@ export function TopicDetailView({ topicId }: { topicId: string }) {
   }
 
   if (!topic) {
-    return <p className="p-4 text-secondary">Topic not found.</p>;
+    return (
+      <div className="p-4">
+        <EmptyState icon={MagnifyingGlass} title="Topic not found" />
+      </div>
+    );
   }
 
   return (
@@ -49,7 +56,10 @@ export function TopicDetailView({ topicId }: { topicId: string }) {
       <div className="flex items-start justify-between gap-2 border-b border-border/60 p-4">
         <div className="flex items-start gap-2">
           <BackButton href="/topics" />
-          <h1 className="pt-1 text-xl font-semibold text-primary">{topic.title}</h1>
+          <div>
+            <h1 className="text-xl font-semibold text-primary">{topic.title}</h1>
+            <p className="text-sm text-muted">{formatDate(parseDateOnly(topic.topic_date))}</p>
+          </div>
         </div>
         <Link
           href={`/topics/${topicId}/edit`}
@@ -63,7 +73,7 @@ export function TopicDetailView({ topicId }: { topicId: string }) {
         {topic.description ? (
           <div
             className={richTextContentClass}
-            dangerouslySetInnerHTML={{ __html: topic.description }}
+            dangerouslySetInnerHTML={{ __html: sanitizeRichText(topic.description) }}
           />
         ) : (
           <p className="flex items-center gap-1.5 text-secondary">

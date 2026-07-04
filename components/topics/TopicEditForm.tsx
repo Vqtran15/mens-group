@@ -12,6 +12,7 @@ export function TopicEditForm({ topicId }: { topicId: string }) {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [title, setTitle] = useState("");
+  const [topicDate, setTopicDate] = useState("");
   const [description, setDescription] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [status, setStatus] = useState<SubmitStatus>("idle");
@@ -20,13 +21,14 @@ export function TopicEditForm({ topicId }: { topicId: string }) {
     const supabase = createClient();
     supabase
       .from("topics")
-      .select("title, description")
+      .select("title, description, topic_date")
       .eq("id", topicId)
       .single()
       .then(({ data }) => {
         if (data) {
           setTitle(data.title);
           setDescription(data.description ?? "");
+          setTopicDate(data.topic_date);
         }
         setLoading(false);
       });
@@ -40,7 +42,7 @@ export function TopicEditForm({ topicId }: { topicId: string }) {
     const supabase = createClient();
     const { error } = await supabase
       .from("topics")
-      .update({ title, description: description || null })
+      .update({ title, topic_date: topicDate, description: description || null })
       .eq("id", topicId);
 
     if (error) {
@@ -76,6 +78,19 @@ export function TopicEditForm({ topicId }: { topicId: string }) {
           required
           value={title}
           onChange={(e) => setTitle(e.target.value)}
+          className="w-full rounded-xl border border-border bg-background/50 px-3 py-2.5 outline-none transition focus:border-primary focus:bg-white focus:ring-2 focus:ring-primary/20"
+        />
+      </div>
+      <div>
+        <label htmlFor="topicDate" className="mb-1.5 block text-sm font-medium text-secondary">
+          Date
+        </label>
+        <input
+          id="topicDate"
+          type="date"
+          required
+          value={topicDate}
+          onChange={(e) => setTopicDate(e.target.value)}
           className="w-full rounded-xl border border-border bg-background/50 px-3 py-2.5 outline-none transition focus:border-primary focus:bg-white focus:ring-2 focus:ring-primary/20"
         />
       </div>

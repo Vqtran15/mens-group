@@ -275,6 +275,7 @@ export function ChatView() {
   if (loading || !userId) {
     return (
       <div className="space-y-4 p-4">
+        <Skeleton className="h-7 w-16" />
         <Skeleton className="h-12 w-2/3 rounded-2xl" />
         <Skeleton className="ml-auto h-12 w-2/3 rounded-2xl" />
         <Skeleton className="h-12 w-1/2 rounded-2xl" />
@@ -287,6 +288,9 @@ export function ChatView() {
 
   return (
     <div className="flex h-full flex-col">
+      <div className="p-4 pb-0">
+        <h1 className="text-xl font-semibold text-primary">Chat</h1>
+      </div>
       <div className="flex-1 space-y-4 overflow-y-auto p-4">
         {messages.length === 0 && (
           <EmptyState

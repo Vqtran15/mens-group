@@ -10,7 +10,7 @@ export default function AppLayout({
   return (
     <div className="flex h-dvh flex-col bg-background">
       <header className="flex items-center justify-between border-b border-border/60 bg-background px-4 py-3">
-        <span className="text-lg font-bold text-primary">Men&apos;s Group</span>
+        <span className="text-2xl font-extrabold tracking-tight text-primary">Men&apos;s Group</span>
         <SettingsLink />
       </header>
       <PushPermissionPrompt />

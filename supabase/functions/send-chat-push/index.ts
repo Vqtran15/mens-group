@@ -14,12 +14,26 @@ webpush.setVapidDetails(
 
 Deno.serve(async (req) => {
   const payload = await req.json();
-  const message = payload.record as {
-    id: string;
-    body: string;
-    created_by: string;
-    group_id: string;
-  };
+  const recordId = (payload.record as { id?: string })?.id;
+  if (!recordId) {
+    return Response.json({ error: "missing record id" }, { status: 400 });
+  }
+
+  // Re-fetch the message by id instead of trusting the webhook payload's
+  // body/created_by/group_id verbatim - this endpoint verifies a caller's
+  // JWT but not that the caller *is* the internal pg_net trigger, so a
+  // forged request with a crafted payload could otherwise send a push
+  // notification with spoofed sender/content to a real group's members
+  // without a matching chat_messages row ever existing.
+  const { data: message } = await supabase
+    .from("chat_messages")
+    .select("id, body, created_by, group_id")
+    .eq("id", recordId)
+    .single();
+
+  if (!message) {
+    return Response.json({ error: "message not found" }, { status: 404 });
+  }
 
   const { data: sender } = await supabase
     .from("profiles")

@@ -65,7 +65,7 @@ export function MessageBubble({
             <textarea
               value={editValue}
               onChange={(e) => setEditValue(e.target.value)}
-              className="w-full rounded-xl border border-border bg-white p-2 text-secondary outline-none focus:border-primary"
+              className="w-full rounded-xl border border-border bg-background/50 px-3 py-2.5 text-secondary outline-none transition focus:border-primary focus:bg-white focus:ring-2 focus:ring-primary/20"
               rows={2}
             />
             <div className="flex gap-2">

@@ -18,6 +18,7 @@ export interface Topic {
   id: string;
   title: string;
   description: string | null;
+  topic_date: string;
   created_by: string;
   group_id: string;
   created_at: string;

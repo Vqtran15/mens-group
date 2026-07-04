@@ -19,6 +19,21 @@ export function formatDate(date: Date): string {
   });
 }
 
+// Parses a "YYYY-MM-DD" (Postgres `date`) string as a local calendar date.
+// `new Date("YYYY-MM-DD")` parses as UTC midnight, which shifts a day back
+// in any timezone behind UTC once formatted locally - this avoids that.
+export function parseDateOnly(dateStr: string): Date {
+  const [year, month, day] = dateStr.split("-").map(Number);
+  return new Date(year, month - 1, day);
+}
+
+export function toDateOnlyString(date: Date): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
 export function formatTime(date: Date): string {
   return date.toLocaleTimeString("en-US", {
     hour: "numeric",
@@ -33,7 +48,13 @@ export function formatDateTime(date: Date): string {
 // Excludes visually ambiguous characters (0/O, 1/I/L).
 const INVITE_CODE_CHARS = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
 
-export function generateInviteCode(length = 5): string {
+// Longer than it looks like it needs to be: verify_group_invite() is callable
+// by the anon role (required for the join flow before a session exists), and
+// group names are listable the same way, so a short code would be brute
+// -forceable by anyone with just the anon key. 10 chars from this 31-char
+// alphabet is ~8x10^14 combinations - impractical to guess without also
+// having real rate-limiting in front of the RPC.
+export function generateInviteCode(length = 10): string {
   let code = "";
   for (let i = 0; i < length; i++) {
     code += INVITE_CODE_CHARS[Math.floor(Math.random() * INVITE_CODE_CHARS.length)];
