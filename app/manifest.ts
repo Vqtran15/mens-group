@@ -7,8 +7,8 @@ export default function manifest(): MetadataRoute.Manifest {
     description: "Calendar, topics, and chat for our men's group",
     start_url: "/",
     display: "standalone",
-    background_color: "#e1e6e2",
-    theme_color: "#396580",
+    background_color: "#ede7e3",
+    theme_color: "#264653",
     icons: [
       { src: "/icons/icon-192.png", sizes: "192x192", type: "image/png" },
       { src: "/icons/icon-512.png", sizes: "512x512", type: "image/png" },

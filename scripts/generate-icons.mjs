@@ -1,7 +1,7 @@
 import sharp from "sharp";
 import { mkdirSync } from "node:fs";
 
-const PRIMARY = "#396580";
+const PRIMARY = "#264653";
 
 function squareSvg(size) {
   const fontSize = Math.round(size * 0.5);

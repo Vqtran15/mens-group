@@ -1,18 +1,20 @@
 @import "tailwindcss";
 
 @theme {
-  --color-primary: #396580;
-  --color-secondary: #59686d;
-  --color-accent: #d57b4d;
-  --color-background: #e1e6e2;
-  --color-surface-muted: #bdd3de;
-  --color-border: #91a4aa;
-  --color-muted: #a18b62;
-  --color-highlight: #ddce8d;
+  --color-primary: #264653;       /* deep teal-navy — headers, primary buttons, active nav */
+  --color-secondary: #5c6b6a;     /* warm slate — secondary text/icons */
+  --color-accent: #e76f51;        /* coral — CTAs, errors, badges */
+  --color-background: #ede7e3;    /* warm cream — app background */
+  --color-surface-muted: #dfe6e4; /* pale teal-gray — chips, selected states, nav pill */
+  --color-border: #d8d0c7;        /* warm neutral — borders/dividers */
+  --color-muted: #a89f95;         /* warm neutral — timestamps, tertiary text */
+  --color-highlight: #e9c46a;     /* gold — next-meeting glow, badges */
+  --color-teal: #2a9d8f;          /* teal — positive/success states (e.g. RSVP "Yes") */
+  --color-sand: #f4a261;          /* sandy orange — tertiary accent (e.g. RSVP "Maybe") */
 }
 
 body {
   background: var(--color-background);
-  color: #26343a;
+  color: #2f2b27;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
 }

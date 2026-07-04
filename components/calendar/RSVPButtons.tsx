@@ -7,10 +7,10 @@ import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 import type { RsvpStatus } from "@/lib/types";
 
-const OPTIONS: { status: RsvpStatus; label: string; icon: Icon }[] = [
-  { status: "yes", label: "Yes", icon: Check },
-  { status: "maybe", label: "Maybe", icon: Question },
-  { status: "no", label: "No", icon: X },
+const OPTIONS: { status: RsvpStatus; label: string; icon: Icon; selectedClass: string }[] = [
+  { status: "yes", label: "Yes", icon: Check, selectedClass: "border-teal bg-teal text-white shadow-sm shadow-teal/30" },
+  { status: "maybe", label: "Maybe", icon: Question, selectedClass: "border-sand bg-sand text-white shadow-sm shadow-sand/30" },
+  { status: "no", label: "No", icon: X, selectedClass: "border-accent bg-accent text-white shadow-sm shadow-accent/30" },
 ];
 
 export function RSVPButtons({
@@ -41,7 +41,7 @@ export function RSVPButtons({
 
   return (
     <div className="flex gap-2">
-      {OPTIONS.map(({ status, label, icon: StatusIcon }) => (
+      {OPTIONS.map(({ status, label, icon: StatusIcon, selectedClass }) => (
         <motion.button
           key={status}
           whileTap={{ scale: 0.95 }}
@@ -49,9 +49,7 @@ export function RSVPButtons({
           disabled={submitting !== null}
           className={cn(
             "flex items-center gap-1 rounded-full border px-3 py-1.5 text-sm font-medium transition-colors disabled:opacity-60",
-            currentStatus === status
-              ? "border-primary bg-primary text-white shadow-sm shadow-primary/30"
-              : "border-border bg-white text-secondary hover:bg-surface-muted"
+            currentStatus === status ? selectedClass : "border-border bg-white text-secondary hover:bg-surface-muted"
           )}
         >
           <StatusIcon size={14} weight={currentStatus === status ? "bold" : "regular"} />
