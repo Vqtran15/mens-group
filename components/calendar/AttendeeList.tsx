@@ -26,7 +26,12 @@ export function AttendeeList({ rsvps }: { rsvps: Rsvp[] }) {
       {(["yes", "maybe", "no"] as const).map((status) =>
         grouped[status].length > 0 ? (
           <div key={status} className="flex items-center gap-2">
-            <AvatarStack names={grouped[status].map((r) => r.profiles?.display_name ?? "Someone")} />
+            <AvatarStack
+              people={grouped[status].map((r) => ({
+                name: r.profiles?.display_name ?? "Someone",
+                color: r.profiles?.avatar_color,
+              }))}
+            />
             <p className="text-sm text-secondary">
               <span className="font-medium">{LABELS[status]}</span> ({grouped[status].length})
             </p>

@@ -25,7 +25,7 @@ export function ChatView() {
   const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
   const [actionSheetMessageId, setActionSheetMessageId] = useState<string | null>(null);
 
-  const profilesRef = useRef<Record<string, string>>({});
+  const profilesRef = useRef<Record<string, { display_name: string; avatar_color: string | null }>>({});
   const userIdRef = useRef<string | null>(null);
   const groupIdRef = useRef<string | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -47,14 +47,14 @@ export function ChatView() {
       userIdRef.current = membership.userId;
       groupIdRef.current = membership.groupId;
 
-      const { data: profiles } = await supabase.from("profiles").select("id, display_name");
+      const { data: profiles } = await supabase.from("profiles").select("id, display_name, avatar_color");
       for (const p of profiles ?? []) {
-        profilesRef.current[p.id] = p.display_name;
+        profilesRef.current[p.id] = { display_name: p.display_name, avatar_color: p.avatar_color };
       }
 
       const { data: initialMessages } = await supabase
         .from("chat_messages")
-        .select("*, profiles(display_name)")
+        .select("*, profiles(display_name, avatar_color)")
         .order("created_at", { ascending: true })
         .limit(100);
 
@@ -93,7 +93,13 @@ export function ChatView() {
               if (prev.some((m) => m.id === row.id)) return prev;
               return [
                 ...prev,
-                { ...row, profiles: { display_name: profilesRef.current[row.created_by] ?? "Someone" } },
+                {
+                  ...row,
+                  profiles: {
+                    display_name: profilesRef.current[row.created_by]?.display_name ?? "Someone",
+                    avatar_color: profilesRef.current[row.created_by]?.avatar_color ?? null,
+                  },
+                },
               ];
             });
           }
@@ -166,7 +172,10 @@ export function ChatView() {
       reply_to_id: replyToId,
       edited_at: null,
       created_at: new Date().toISOString(),
-      profiles: { display_name: profilesRef.current[userId] ?? "You" },
+      profiles: {
+        display_name: profilesRef.current[userId]?.display_name ?? "You",
+        avatar_color: profilesRef.current[userId]?.avatar_color ?? null,
+      },
       pending: true,
     };
     setMessages((prev) => [...prev, optimisticMessage]);

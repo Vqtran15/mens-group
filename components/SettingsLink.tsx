@@ -8,7 +8,7 @@ export function SettingsLink() {
     <Link
       href="/settings"
       aria-label="Settings"
-      className="rounded-full p-2 text-white/90 transition-colors hover:bg-white/15 hover:text-white"
+      className="rounded-full p-2 text-secondary transition-colors hover:bg-surface-muted hover:text-primary"
     >
       <Gear size={20} />
     </Link>

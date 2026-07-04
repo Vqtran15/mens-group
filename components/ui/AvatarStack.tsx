@@ -1,14 +1,19 @@
 import { Avatar } from "@/components/Avatar";
 
-export function AvatarStack({ names, max = 4 }: { names: string[]; max?: number }) {
-  const shown = names.slice(0, max);
-  const overflow = names.length - shown.length;
+export interface AvatarStackPerson {
+  name: string;
+  color?: string | null;
+}
+
+export function AvatarStack({ people, max = 4 }: { people: AvatarStackPerson[]; max?: number }) {
+  const shown = people.slice(0, max);
+  const overflow = people.length - shown.length;
 
   return (
     <div className="flex items-center">
-      {shown.map((name, i) => (
+      {shown.map((person, i) => (
         <div key={i} style={{ marginLeft: i === 0 ? 0 : -8 }}>
-          <Avatar name={name} size={24} ringed />
+          <Avatar name={person.name} color={person.color} size={24} ringed />
         </div>
       ))}
       {overflow > 0 && (

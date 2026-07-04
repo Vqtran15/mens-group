@@ -38,6 +38,7 @@ export function MessageBubble({
   onCancelEdit: () => void;
 }) {
   const name = message.profiles?.display_name ?? "Someone";
+  const avatarColor = message.profiles?.avatar_color;
   const [editValue, setEditValue] = useState(message.body);
 
   // While a message is still pending (optimistic, awaiting server confirmation
@@ -51,7 +52,7 @@ export function MessageBubble({
 
   return (
     <div className={cn("flex gap-2", isOwn && "flex-row-reverse")}>
-      <Avatar name={name} />
+      <Avatar name={name} color={avatarColor} />
       <div className={cn("max-w-[75%]", isOwn && "items-end text-right")}>
         <div className={cn("flex items-baseline gap-2", isOwn && "flex-row-reverse")}>
           <p className="text-xs font-medium text-secondary">{name}</p>

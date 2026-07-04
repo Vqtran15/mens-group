@@ -3,9 +3,11 @@
 import { useEffect, useState } from "react";
 import { CheckCircle, Copy, WarningCircle } from "@phosphor-icons/react";
 import { createClient } from "@/lib/supabase/client";
+import { Avatar, AVATAR_COLORS } from "@/components/Avatar";
 import { Button } from "@/components/ui/Button";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { SignOutButton } from "@/components/SignOutButton";
+import { cn } from "@/lib/utils";
 
 const fieldClass =
   "w-full rounded-xl border border-border bg-background/50 px-3 py-2.5 outline-none transition focus:border-primary focus:bg-white focus:ring-2 focus:ring-primary/20";
@@ -20,6 +22,9 @@ export function SettingsView() {
   const [nameStatus, setNameStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const [nameError, setNameError] = useState<string | null>(null);
 
+  const [avatarColor, setAvatarColor] = useState<string | null>(null);
+  const [colorStatus, setColorStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
+
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [passwordStatus, setPasswordStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
@@ -32,10 +37,11 @@ export function SettingsView() {
       setEmail(data.user.email ?? "");
       const { data: profile } = await supabase
         .from("profiles")
-        .select("display_name, group_id, groups(name, invite_code)")
+        .select("display_name, group_id, avatar_color, groups(name, invite_code)")
         .eq("id", data.user.id)
         .single();
       setDisplayName(profile?.display_name ?? "");
+      setAvatarColor(profile?.avatar_color ?? null);
       const group = profile?.groups as unknown as { name: string; invite_code: string } | null;
       setGroupName(group?.name ?? "");
       setInviteCode(group?.invite_code ?? "");
@@ -65,6 +71,28 @@ export function SettingsView() {
 
     setNameStatus("saved");
     setTimeout(() => setNameStatus("idle"), 1500);
+  }
+
+  async function handleSaveAvatarColor(color: string) {
+    setAvatarColor(color);
+    setColorStatus("saving");
+
+    const supabase = createClient();
+    const { data } = await supabase.auth.getUser();
+    if (!data.user) return;
+
+    const { error } = await supabase
+      .from("profiles")
+      .update({ avatar_color: color })
+      .eq("id", data.user.id);
+
+    if (error) {
+      setColorStatus("error");
+      return;
+    }
+
+    setColorStatus("saved");
+    setTimeout(() => setColorStatus("idle"), 1500);
   }
 
   async function handleChangePassword(e: React.FormEvent) {
@@ -140,6 +168,35 @@ export function SettingsView() {
             )}
           </Button>
         </form>
+      </section>
+
+      <section className="space-y-3 rounded-2xl border border-border/60 bg-white p-4">
+        <h2 className="font-semibold text-primary">Avatar color</h2>
+        <div className="flex items-center gap-3">
+          <Avatar name={displayName || "?"} color={avatarColor} size={40} />
+          {colorStatus === "saved" && (
+            <p className="flex items-center gap-1.5 text-sm text-teal">
+              <CheckCircle size={16} /> Saved
+            </p>
+          )}
+        </div>
+        <div className="flex flex-wrap gap-2">
+          {AVATAR_COLORS.map((color) => (
+            <button
+              key={color}
+              type="button"
+              aria-label={`Use color ${color}`}
+              onClick={() => handleSaveAvatarColor(color)}
+              style={{ backgroundColor: color }}
+              className={cn(
+                "flex h-9 w-9 items-center justify-center rounded-full ring-2 ring-offset-2 ring-offset-white transition-transform active:scale-90",
+                avatarColor === color ? "ring-primary" : "ring-transparent"
+              )}
+            >
+              {avatarColor === color && <CheckCircle size={18} weight="fill" className="text-white" />}
+            </button>
+          ))}
+        </div>
       </section>
 
       {inviteCode && (

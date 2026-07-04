@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { CaretRight } from "@phosphor-icons/react";
+import { formatDate } from "@/lib/utils";
 import type { Topic } from "@/lib/types";
 
 function stripHtml(html: string): string {
@@ -17,6 +18,7 @@ export function TopicListItem({ topic }: { topic: Topic }) {
       <div className="min-w-0">
         <p className="font-medium text-primary">{topic.title}</p>
         {preview && <p className="mt-1 line-clamp-2 text-sm text-secondary">{preview}</p>}
+        <p className="mt-1 text-xs text-muted">{formatDate(new Date(topic.created_at))}</p>
       </div>
       <CaretRight size={18} className="shrink-0 text-muted" />
     </Link>

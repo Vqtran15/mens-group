@@ -3,6 +3,7 @@ export interface Profile {
   display_name: string;
   email: string;
   group_id: string | null;
+  avatar_color: string | null;
   created_at: string;
 }
 
@@ -67,7 +68,7 @@ export interface Rsvp {
   status: RsvpStatus;
   created_at: string;
   updated_at: string;
-  profiles?: Pick<Profile, "display_name">;
+  profiles?: Pick<Profile, "display_name" | "avatar_color">;
 }
 
 export interface ChatMessage {
@@ -79,7 +80,7 @@ export interface ChatMessage {
   reply_to_id: string | null;
   edited_at: string | null;
   created_at: string;
-  profiles?: Pick<Profile, "display_name">;
+  profiles?: Pick<Profile, "display_name" | "avatar_color">;
 }
 
 export interface Reaction {

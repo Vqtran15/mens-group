@@ -55,7 +55,7 @@ export function CalendarView() {
 
     const { data: eventRows } = await supabase
       .from("events")
-      .select("*, rsvps(id, event_id, user_id, status, created_at, updated_at, profiles(display_name))")
+      .select("*, rsvps(id, event_id, user_id, status, created_at, updated_at, profiles(display_name, avatar_color))")
       .eq("group_id", groupId)
       .gte("starts_at", new Date().toISOString())
       .order("starts_at", { ascending: true })
