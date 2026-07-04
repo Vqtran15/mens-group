@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { GroupSection, type GroupSelection } from "@/components/AuthForm/GroupSection";
 
 export function SignUpForm() {
   const router = useRouter();
@@ -11,9 +12,18 @@ export function SignUpForm() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [group, setGroup] = useState<GroupSelection>({
+    mode: "create",
+    groupName: "",
+    inviteCode: "",
+    selectedGroupId: "",
+  });
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [hasSession, setHasSession] = useState(false);
+  const [createdGroupName, setCreatedGroupName] = useState<string | null>(null);
+  const [createdInviteCode, setCreatedInviteCode] = useState<string | null>(null);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -30,10 +40,51 @@ export function SignUpForm() {
 
     setSubmitting(true);
     const supabase = createClient();
+
+    let groupId: string;
+    let inviteCode: string;
+
+    if (group.mode === "create") {
+      const { data, error } = await supabase.rpc("create_group", {
+        p_name: group.groupName,
+        p_invite_code: group.inviteCode,
+      });
+      if (error) {
+        setSubmitting(false);
+        setError(error.message);
+        return;
+      }
+      groupId = data as string;
+      inviteCode = group.inviteCode;
+    } else {
+      if (!group.selectedGroupId) {
+        setSubmitting(false);
+        setError("Please select a group.");
+        return;
+      }
+      const { data: valid, error: verifyError } = await supabase.rpc("verify_group_invite", {
+        p_group_id: group.selectedGroupId,
+        p_invite_code: group.inviteCode,
+      });
+      if (verifyError || !valid) {
+        setSubmitting(false);
+        setError("Invalid invite code for that group.");
+        return;
+      }
+      groupId = group.selectedGroupId;
+      inviteCode = group.inviteCode;
+    }
+
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
-      options: { data: { display_name: displayName || email.split("@")[0] } },
+      options: {
+        data: {
+          display_name: displayName || email.split("@")[0],
+          group_id: groupId,
+          invite_code: inviteCode,
+        },
+      },
     });
 
     setSubmitting(false);
@@ -43,8 +94,18 @@ export function SignUpForm() {
       return;
     }
 
+    if (group.mode === "create") {
+      setCreatedGroupName(group.groupName);
+      setCreatedInviteCode(group.inviteCode);
+    }
+
     // If email confirmation is disabled, signUp already returns a live session.
     if (data.session) {
+      if (group.mode === "create") {
+        setHasSession(true);
+        setSubmitted(true);
+        return;
+      }
       router.push("/calendar");
       router.refresh();
       return;
@@ -56,16 +117,52 @@ export function SignUpForm() {
   if (submitted) {
     return (
       <div className="w-full max-w-sm text-center">
-        <h2 className="text-lg font-semibold text-primary">Check your email</h2>
-        <p className="mt-2 text-secondary">
-          We sent a confirmation link to {email}. Click it to finish creating your account.
-        </p>
+        {createdGroupName && createdInviteCode && (
+          <div className="mb-4 rounded-xl border border-highlight bg-white p-4 text-left">
+            <p className="font-semibold text-primary">Group &quot;{createdGroupName}&quot; created!</p>
+            <p className="mt-1 text-sm text-secondary">
+              Share this invite code so others can join:
+            </p>
+            <div className="mt-2 flex items-center gap-2">
+              <code className="flex-1 rounded-lg bg-surface-muted px-3 py-2 font-mono text-sm">
+                {createdInviteCode}
+              </code>
+              <button
+                type="button"
+                onClick={() => navigator.clipboard.writeText(createdInviteCode)}
+                className="rounded-lg bg-primary px-3 py-2 text-sm font-medium text-white"
+              >
+                Copy
+              </button>
+            </div>
+          </div>
+        )}
+        {hasSession ? (
+          <button
+            type="button"
+            onClick={() => {
+              router.push("/calendar");
+              router.refresh();
+            }}
+            className="w-full rounded-lg bg-primary px-4 py-2 font-medium text-white"
+          >
+            Continue to Calendar
+          </button>
+        ) : (
+          <>
+            <h2 className="text-lg font-semibold text-primary">Check your email</h2>
+            <p className="mt-2 text-secondary">
+              We sent a confirmation link to {email}. Click it to finish creating your account.
+            </p>
+          </>
+        )}
       </div>
     );
   }
 
   return (
     <form onSubmit={handleSubmit} className="w-full max-w-sm space-y-4">
+      <GroupSection value={group} onChange={setGroup} />
       <div>
         <label htmlFor="displayName" className="mb-1 block text-sm font-medium text-secondary">
           Name

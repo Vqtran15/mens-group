@@ -2,6 +2,13 @@ export interface Profile {
   id: string;
   display_name: string;
   email: string;
+  group_id: string | null;
+  created_at: string;
+}
+
+export interface Group {
+  id: string;
+  name: string;
   created_at: string;
 }
 
@@ -10,6 +17,7 @@ export interface Topic {
   title: string;
   description: string | null;
   created_by: string;
+  group_id: string;
   created_at: string;
 }
 
@@ -32,6 +40,7 @@ export interface MeetingSchedule {
   location: string | null;
   notes: string | null;
   active: boolean;
+  group_id: string;
 }
 
 export interface CalendarEvent {
@@ -44,6 +53,7 @@ export interface CalendarEvent {
   created_by: string;
   is_recurring: boolean;
   schedule_id: string | null;
+  group_id: string;
   created_at: string;
 }
 
@@ -63,6 +73,7 @@ export interface ChatMessage {
   id: string;
   body: string;
   created_by: string;
+  group_id: string;
   created_at: string;
   profiles?: Pick<Profile, "display_name">;
 }

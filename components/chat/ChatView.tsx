@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { getCurrentMembership } from "@/lib/supabase/current-membership";
 import { MessageBubble } from "@/components/chat/MessageBubble";
 import { MessageComposer } from "@/components/chat/MessageComposer";
 import type { ChatMessage } from "@/lib/types";
@@ -12,16 +13,18 @@ export function ChatView() {
   const [loading, setLoading] = useState(true);
   const profilesRef = useRef<Record<string, string>>({});
   const userIdRef = useRef<string | null>(null);
+  const groupIdRef = useRef<string | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const supabase = createClient();
 
     async function init() {
-      const { data: userData } = await supabase.auth.getUser();
-      if (!userData.user) return;
-      setUserId(userData.user.id);
-      userIdRef.current = userData.user.id;
+      const membership = await getCurrentMembership(supabase);
+      if (!membership) return;
+      setUserId(membership.userId);
+      userIdRef.current = membership.userId;
+      groupIdRef.current = membership.groupId;
 
       const { data: profiles } = await supabase.from("profiles").select("id, display_name");
       for (const p of profiles ?? []) {
@@ -72,13 +75,14 @@ export function ChatView() {
   }, [messages]);
 
   async function handleSend(body: string) {
-    if (!userId) return;
+    if (!userId || !groupIdRef.current) return;
     const supabase = createClient();
     const tempId = crypto.randomUUID();
     const optimisticMessage: ChatMessage = {
       id: tempId,
       body,
       created_by: userId,
+      group_id: groupIdRef.current,
       created_at: new Date().toISOString(),
       profiles: { display_name: profilesRef.current[userId] ?? "You" },
     };
@@ -86,7 +90,7 @@ export function ChatView() {
 
     const { data, error } = await supabase
       .from("chat_messages")
-      .insert({ body, created_by: userId })
+      .insert({ body, created_by: userId, group_id: groupIdRef.current })
       .select()
       .single();
 

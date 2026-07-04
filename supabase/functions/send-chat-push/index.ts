@@ -14,7 +14,12 @@ webpush.setVapidDetails(
 
 Deno.serve(async (req) => {
   const payload = await req.json();
-  const message = payload.record as { id: string; body: string; created_by: string };
+  const message = payload.record as {
+    id: string;
+    body: string;
+    created_by: string;
+    group_id: string;
+  };
 
   const { data: sender } = await supabase
     .from("profiles")
@@ -25,6 +30,7 @@ Deno.serve(async (req) => {
   const { data: subscriptions } = await supabase
     .from("push_subscriptions")
     .select("id, endpoint, p256dh, auth")
+    .eq("group_id", message.group_id)
     .neq("user_id", message.created_by);
 
   const notification = JSON.stringify({

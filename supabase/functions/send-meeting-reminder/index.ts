@@ -55,59 +55,65 @@ function isSameCalendarDay(a: Date, b: Date): boolean {
 }
 
 Deno.serve(async () => {
-  const { data: schedule } = await supabase
+  const { data: schedules } = await supabase
     .from("meeting_schedule")
     .select("*")
-    .eq("active", true)
-    .limit(1)
-    .maybeSingle();
+    .eq("active", true);
 
-  if (!schedule) {
-    return Response.json({ skipped: "no active schedule" });
+  if (!schedules || schedules.length === 0) {
+    return Response.json({ skipped: "no active schedules" });
   }
 
   const now = new Date();
-  const next = getNextOccurrence(
-    {
-      dayOfWeek: schedule.day_of_week,
-      occurrencesInMonth: schedule.occurrences_in_month,
-      timeOfDay: schedule.time_of_day,
-    },
-    now
-  );
-
   const tomorrow = new Date(now);
   tomorrow.setDate(tomorrow.getDate() + 1);
 
-  if (!isSameCalendarDay(next, tomorrow)) {
-    return Response.json({ skipped: "next meeting is not tomorrow", next });
-  }
+  const results = [];
 
-  const { data: subscriptions } = await supabase
-    .from("push_subscriptions")
-    .select("id, endpoint, p256dh, auth");
+  for (const schedule of schedules) {
+    const next = getNextOccurrence(
+      {
+        dayOfWeek: schedule.day_of_week,
+        occurrencesInMonth: schedule.occurrences_in_month,
+        timeOfDay: schedule.time_of_day,
+      },
+      now
+    );
 
-  const notification = JSON.stringify({
-    title: schedule.label,
-    body: `Tomorrow at ${schedule.time_of_day.slice(0, 5)}${schedule.location ? " — " + schedule.location : ""}`,
-    url: "/calendar",
-  });
+    if (!isSameCalendarDay(next, tomorrow)) {
+      results.push({ group_id: schedule.group_id, skipped: "next meeting is not tomorrow", next });
+      continue;
+    }
 
-  let sent = 0;
-  for (const sub of subscriptions ?? []) {
-    try {
-      await webpush.sendNotification(
-        { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } },
-        notification
-      );
-      sent++;
-    } catch (err) {
-      const statusCode = (err as { statusCode?: number }).statusCode;
-      if (statusCode === 404 || statusCode === 410) {
-        await supabase.from("push_subscriptions").delete().eq("id", sub.id);
+    const { data: subscriptions } = await supabase
+      .from("push_subscriptions")
+      .select("id, endpoint, p256dh, auth")
+      .eq("group_id", schedule.group_id);
+
+    const notification = JSON.stringify({
+      title: schedule.label,
+      body: `Tomorrow at ${schedule.time_of_day.slice(0, 5)}${schedule.location ? " — " + schedule.location : ""}`,
+      url: "/calendar",
+    });
+
+    let sent = 0;
+    for (const sub of subscriptions ?? []) {
+      try {
+        await webpush.sendNotification(
+          { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } },
+          notification
+        );
+        sent++;
+      } catch (err) {
+        const statusCode = (err as { statusCode?: number }).statusCode;
+        if (statusCode === 404 || statusCode === 410) {
+          await supabase.from("push_subscriptions").delete().eq("id", sub.id);
+        }
       }
     }
+
+    results.push({ group_id: schedule.group_id, sent, total: subscriptions?.length ?? 0 });
   }
 
-  return Response.json({ sent, total: subscriptions?.length ?? 0 });
+  return Response.json({ results });
 });

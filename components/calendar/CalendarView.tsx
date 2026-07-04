@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { Plus } from "@phosphor-icons/react";
 import { createClient } from "@/lib/supabase/client";
+import { getCurrentMembership } from "@/lib/supabase/current-membership";
 import { getUpcomingOccurrences, toRecurrenceConfig } from "@/lib/recurrence";
 import { NextMeetingCard } from "@/components/calendar/NextMeetingCard";
 import { EventListItem } from "@/components/calendar/EventListItem";
@@ -13,16 +14,18 @@ const OCCURRENCES_TO_MATERIALIZE = 6;
 
 export function CalendarView() {
   const [userId, setUserId] = useState<string | null>(null);
+  const [groupId, setGroupId] = useState<string | null>(null);
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [rsvpsByEvent, setRsvpsByEvent] = useState<Record<string, Rsvp[]>>({});
   const [loading, setLoading] = useState(true);
 
-  const loadEvents = useCallback(async (currentUserId: string) => {
+  const loadEvents = useCallback(async (currentUserId: string, groupId: string) => {
     const supabase = createClient();
 
     const { data: schedule } = await supabase
       .from("meeting_schedule")
       .select("*")
+      .eq("group_id", groupId)
       .eq("active", true)
       .limit(1)
       .maybeSingle<MeetingSchedule>();
@@ -42,6 +45,7 @@ export function CalendarView() {
           created_by: currentUserId,
           is_recurring: true,
           schedule_id: schedule.id,
+          group_id: groupId,
         };
       });
       await supabase.from("events").upsert(rows, { onConflict: "schedule_id,starts_at" });
@@ -50,6 +54,7 @@ export function CalendarView() {
     const { data: eventRows } = await supabase
       .from("events")
       .select("*, rsvps(id, event_id, user_id, status, created_at, updated_at, profiles(display_name))")
+      .eq("group_id", groupId)
       .gte("starts_at", new Date().toISOString())
       .order("starts_at", { ascending: true })
       .limit(20);
@@ -69,15 +74,20 @@ export function CalendarView() {
 
   useEffect(() => {
     const supabase = createClient();
-    supabase.auth.getUser().then(({ data }) => {
-      if (data.user) {
-        setUserId(data.user.id);
-        loadEvents(data.user.id);
-      }
-    });
+
+    async function init() {
+      const membership = await getCurrentMembership(supabase);
+      if (!membership) return;
+
+      setUserId(membership.userId);
+      setGroupId(membership.groupId);
+      loadEvents(membership.userId, membership.groupId);
+    }
+
+    init();
   }, [loadEvents]);
 
-  if (loading || !userId) {
+  if (loading || !userId || !groupId) {
     return <p className="p-4 text-secondary">Loading...</p>;
   }
 
@@ -100,7 +110,7 @@ export function CalendarView() {
           event={nextMeeting}
           rsvps={rsvpsByEvent[nextMeeting.id] ?? []}
           userId={userId}
-          onChanged={() => loadEvents(userId)}
+          onChanged={() => loadEvents(userId, groupId)}
         />
       ) : (
         <p className="text-secondary">No upcoming meetings scheduled.</p>
@@ -117,7 +127,7 @@ export function CalendarView() {
               event={event}
               rsvps={rsvpsByEvent[event.id] ?? []}
               userId={userId}
-              onChanged={() => loadEvents(userId)}
+              onChanged={() => loadEvents(userId, groupId)}
             />
           ))}
         </div>

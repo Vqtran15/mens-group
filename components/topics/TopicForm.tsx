@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { getCurrentMembership } from "@/lib/supabase/current-membership";
 
 export function TopicForm() {
   const router = useRouter();
@@ -17,16 +18,21 @@ export function TopicForm() {
     setSubmitting(true);
 
     const supabase = createClient();
-    const { data } = await supabase.auth.getUser();
-    if (!data.user) {
-      setError("You must be signed in.");
+    const membership = await getCurrentMembership(supabase);
+    if (!membership) {
+      setError("You must be signed in and belong to a group.");
       setSubmitting(false);
       return;
     }
 
     const { data: topic, error } = await supabase
       .from("topics")
-      .insert({ title, description: description || null, created_by: data.user.id })
+      .insert({
+        title,
+        description: description || null,
+        created_by: membership.userId,
+        group_id: membership.groupId,
+      })
       .select()
       .single();
 

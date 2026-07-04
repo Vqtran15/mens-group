@@ -11,12 +11,18 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
 
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("group_id")
+    .eq("id", user.id)
+    .single();
+
   const { endpoint, p256dh, auth } = await request.json();
 
   const { error } = await supabase
     .from("push_subscriptions")
     .upsert(
-      { user_id: user.id, endpoint, p256dh, auth },
+      { user_id: user.id, group_id: profile?.group_id ?? null, endpoint, p256dh, auth },
       { onConflict: "endpoint" }
     );
 
