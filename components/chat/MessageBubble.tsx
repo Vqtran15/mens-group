@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/Button";
 import { formatTime, cn } from "@/lib/utils";
 import { useMessageGestures } from "@/lib/hooks/useMessageGestures";
 import { ReactionPills } from "@/components/chat/ReactionPills";
+import { ImageLightbox } from "@/components/chat/ImageLightbox";
 import type { ChatMessage, Reaction } from "@/lib/types";
 
 export function MessageBubble({
@@ -43,6 +44,7 @@ export function MessageBubble({
   const [editValue, setEditValue] = useState(message.body);
   const [imageLoaded, setImageLoaded] = useState(false);
   const [imageAspectRatio, setImageAspectRatio] = useState<number | null>(null);
+  const [lightboxOpen, setLightboxOpen] = useState(false);
 
   // While a message is still pending (optimistic, awaiting server confirmation
   // of its real id), skip gesture handling entirely - a long-press/double-tap
@@ -53,6 +55,15 @@ export function MessageBubble({
     onLongPress: pending ? () => {} : onOpenActions,
   });
 
+  // The image gets its own gesture instance (rather than sharing the text
+  // bubble's) so a plain tap can open the lightbox without interfering with
+  // double-tap-to-react or long-press-for-actions, which still work on it too.
+  const imageGestureHandlers = useMessageGestures({
+    onDoubleTap: pending ? () => {} : onDoubleTapReact,
+    onLongPress: pending ? () => {} : onOpenActions,
+    onSingleTap: pending ? () => {} : () => setLightboxOpen(true),
+  });
+
   return (
     <motion.div
       initial={{ x: isOwn ? 40 : -40, opacity: 0 }}
@@ -61,7 +72,7 @@ export function MessageBubble({
       className={cn("flex gap-2", isOwn && "flex-row-reverse")}
     >
       <Avatar name={name} color={avatarColor} />
-      <div className={cn("max-w-[75%]", isOwn && "items-end text-right")}>
+      <div className={cn("flex max-w-[75%] flex-col", isOwn ? "items-end" : "items-start")}>
         <div className={cn("flex items-baseline gap-2", isOwn && "flex-row-reverse")}>
           <p className="text-xs font-medium text-secondary">{name}</p>
           <p className="text-xs text-muted">{formatTime(new Date(message.created_at))}</p>
@@ -69,7 +80,7 @@ export function MessageBubble({
         </div>
 
         {isEditing ? (
-          <div className="mt-1 space-y-2">
+          <div className="mt-1 w-full space-y-2">
             <textarea
               value={editValue}
               onChange={(e) => setEditValue(e.target.value)}
@@ -84,13 +95,11 @@ export function MessageBubble({
             </div>
           </div>
         ) : (
-          <div {...gestureHandlers} className={cn("mt-1 select-none", pending && "opacity-60")}>
+          <div className={cn("mt-1 flex w-fit max-w-full flex-col", isOwn ? "items-end" : "items-start", pending && "opacity-60")}>
             {replyToMessage && (
               <div
-                className={cn(
-                  "mb-1.5 flex items-center gap-1 rounded-lg border-l-2 bg-background/60 px-2 py-1 text-xs text-secondary",
-                  isOwn ? "ml-auto border-primary/40" : "border-primary/40"
-                )}
+                {...gestureHandlers}
+                className="mb-1.5 flex w-fit max-w-full select-none items-center gap-1 rounded-lg border-l-2 border-primary/40 bg-background/60 px-2 py-1 text-xs text-secondary"
               >
                 <ArrowBendUpLeft size={12} className="shrink-0" />
                 <span className="truncate">
@@ -101,11 +110,8 @@ export function MessageBubble({
             )}
             {message.image_url && (
               <div
-                className={cn(
-                  "relative overflow-hidden rounded-2xl bg-surface-muted",
-                  message.body && "mb-1",
-                  isOwn && "ml-auto"
-                )}
+                {...imageGestureHandlers}
+                className={cn("relative select-none overflow-hidden rounded-2xl bg-surface-muted", message.body && "mb-1")}
                 style={{ width: 240, aspectRatio: imageAspectRatio ?? 1 }}
               >
                 {!imageLoaded && <div className="absolute inset-0 animate-pulse" />}
@@ -130,8 +136,9 @@ export function MessageBubble({
             )}
             {message.body && (
               <div
+                {...gestureHandlers}
                 className={cn(
-                  "rounded-2xl px-3 py-2 shadow-sm",
+                  "w-fit max-w-full select-none rounded-2xl px-3 py-2 shadow-sm",
                   isOwn
                     ? "rounded-br-md bg-primary text-white shadow-primary/20"
                     : "rounded-bl-md bg-white text-secondary"
@@ -145,6 +152,10 @@ export function MessageBubble({
 
         <ReactionPills reactions={reactions} currentUserId={currentUserId} onToggle={onToggleReaction} />
       </div>
+
+      {message.image_url && (
+        <ImageLightbox src={message.image_url} open={lightboxOpen} onClose={() => setLightboxOpen(false)} />
+      )}
     </motion.div>
   );
 }
