@@ -48,7 +48,7 @@ export function RSVPButtons({
           onClick={() => handleSelect(status)}
           disabled={submitting !== null}
           className={cn(
-            "flex items-center gap-1 rounded-full border px-3 py-1.5 text-sm font-medium transition-colors disabled:opacity-60",
+            "flex items-center gap-1 rounded-full border px-3 py-1.5 text-sm font-medium shadow-sm transition-colors disabled:opacity-60",
             currentStatus === status ? selectedClass : "border-border bg-white text-secondary hover:bg-surface-muted"
           )}
         >

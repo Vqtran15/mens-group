@@ -47,9 +47,9 @@ export function NextMeetingCard({
             )}
           </div>
           <p className="mt-1 text-xl font-semibold text-primary">{event.title}</p>
-          <p className="mt-1 text-primary/80">{formatTime(startsAt)}</p>
+          <p className="mt-1 text-primary">{formatTime(startsAt)}</p>
           {event.location && (
-            <p className="mt-1 flex items-center gap-1.5 text-sm text-primary/70">
+            <p className="mt-1 flex items-center gap-1.5 text-sm text-primary">
               <MapPin size={14} className="shrink-0" />
               {event.location}
             </p>
@@ -80,7 +80,7 @@ export function NextMeetingCard({
         />
       </div>
       <div className="mt-4">
-        <AttendeeList rsvps={rsvps} />
+        <AttendeeList rsvps={rsvps} textClassName="text-primary" />
       </div>
     </div>
   );
