@@ -1,9 +1,16 @@
 "use client";
 
 import { useState } from "react";
+import dynamic from "next/dynamic";
 import { AnimatePresence, motion } from "framer-motion";
 import { ArrowBendUpLeft, PencilSimple, Trash, DotsThreeOutline } from "@phosphor-icons/react";
-import { FullEmojiPicker } from "@/components/chat/FullEmojiPicker";
+
+// Keeps emoji-picker-react's ~150KB+ bundle out of the initial /chat load -
+// see EmojiPickerPopover.tsx for the same pattern.
+const FullEmojiPicker = dynamic(
+  () => import("@/components/chat/FullEmojiPicker").then((m) => m.FullEmojiPicker),
+  { ssr: false, loading: () => <div className="h-[360px] w-full animate-pulse bg-surface-muted" /> }
+);
 
 const QUICK_REACTIONS = ["❤️", "😂", "😮", "😢", "🙏", "👍"];
 

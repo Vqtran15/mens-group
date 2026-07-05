@@ -1,9 +1,18 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import dynamic from "next/dynamic";
 import { AnimatePresence, motion } from "framer-motion";
 import { Smiley } from "@phosphor-icons/react";
-import { FullEmojiPicker } from "@/components/chat/FullEmojiPicker";
+
+// emoji-picker-react is a ~150KB+ dependency (emoji data set included) that
+// most chat sessions never touch - dynamically importing it keeps it out of
+// the initial /chat bundle entirely, only fetched once someone actually taps
+// the emoji button.
+const FullEmojiPicker = dynamic(
+  () => import("@/components/chat/FullEmojiPicker").then((m) => m.FullEmojiPicker),
+  { ssr: false, loading: () => <div className="h-[360px] w-full animate-pulse bg-surface-muted" /> }
+);
 
 export function EmojiPickerPopover({ onSelect }: { onSelect: (emoji: string) => void }) {
   const [open, setOpen] = useState(false);

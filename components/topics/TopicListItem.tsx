@@ -31,32 +31,32 @@ export function TopicListItem({ topic, onChanged }: { topic: Topic; onChanged: (
   return (
     <div
       style={{ borderLeftColor: accentColor }}
-      className="relative flex items-center gap-2 rounded-2xl border border-l-4 border-border/60 bg-white p-4 shadow-sm transition-colors hover:bg-surface-muted/40"
+      className="relative rounded-2xl border border-l-4 border-border/60 bg-white p-4 shadow-sm transition-colors hover:bg-surface-muted/40"
     >
-      <Link href={`/topics/${topic.id}`} className="min-w-0 flex-1">
-        <div className="flex items-baseline gap-2">
-          <p className="truncate font-medium text-primary">{topic.title}</p>
-          <p className="shrink-0 text-xs font-medium text-secondary">
-            {formatDate(parseDateOnly(topic.topic_date))}
-          </p>
+      <button
+        type="button"
+        onClick={() => setActionsOpen(true)}
+        aria-label="Topic actions"
+        className="absolute right-2 top-2 rounded-full p-1.5 text-secondary transition-colors hover:bg-surface-muted"
+      >
+        <DotsThreeVertical size={18} weight="bold" />
+      </button>
+      <Link href={`/topics/${topic.id}`} className="flex items-center gap-3">
+        <div className="min-w-0 flex-1 pr-7">
+          <div className="flex items-baseline gap-2">
+            <p className="truncate font-medium text-primary">{topic.title}</p>
+            <p className="shrink-0 text-xs font-medium text-secondary">
+              {formatDate(parseDateOnly(topic.topic_date))}
+            </p>
+          </div>
+          {preview && <p className="mt-1 line-clamp-2 text-sm text-secondary">{preview}</p>}
+          <div className="mt-2 flex items-center gap-1.5">
+            <Avatar name={authorName} color={topic.profiles?.avatar_color} size={18} />
+            <span className="text-xs text-muted">{authorName}</span>
+          </div>
         </div>
-        {preview && <p className="mt-1 line-clamp-2 text-sm text-secondary">{preview}</p>}
-        <div className="mt-2 flex items-center gap-1.5">
-          <Avatar name={authorName} color={topic.profiles?.avatar_color} size={18} />
-          <span className="text-xs text-muted">{authorName}</span>
-        </div>
+        <CaretRight size={18} className="shrink-0 text-muted" />
       </Link>
-      <div className="flex shrink-0 items-center gap-0.5">
-        <button
-          type="button"
-          onClick={() => setActionsOpen(true)}
-          aria-label="Topic actions"
-          className="rounded-full p-1.5 text-secondary transition-colors hover:bg-surface-muted"
-        >
-          <DotsThreeVertical size={18} weight="bold" />
-        </button>
-        <CaretRight size={18} className="text-muted" />
-      </div>
 
       <EditDeleteActionSheet
         open={actionsOpen}
