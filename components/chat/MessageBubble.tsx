@@ -42,6 +42,7 @@ export function MessageBubble({
   const avatarColor = message.profiles?.avatar_color;
   const [editValue, setEditValue] = useState(message.body);
   const [imageLoaded, setImageLoaded] = useState(false);
+  const [imageAspectRatio, setImageAspectRatio] = useState<number | null>(null);
 
   // While a message is still pending (optimistic, awaiting server confirmation
   // of its real id), skip gesture handling entirely - a long-press/double-tap
@@ -83,21 +84,12 @@ export function MessageBubble({
             </div>
           </div>
         ) : (
-          <div
-            {...gestureHandlers}
-            className={cn(
-              "mt-1 select-none rounded-2xl px-3 py-2 shadow-sm",
-              isOwn
-                ? "rounded-br-md bg-primary text-white shadow-primary/20"
-                : "rounded-bl-md bg-white text-secondary",
-              pending && "opacity-60"
-            )}
-          >
+          <div {...gestureHandlers} className={cn("mt-1 select-none", pending && "opacity-60")}>
             {replyToMessage && (
               <div
                 className={cn(
-                  "mb-1.5 flex items-center gap-1 rounded-lg border-l-2 px-2 py-1 text-xs",
-                  isOwn ? "border-white/50 bg-white/10" : "border-primary/40 bg-background/60"
+                  "mb-1.5 flex items-center gap-1 rounded-lg border-l-2 bg-background/60 px-2 py-1 text-xs text-secondary",
+                  isOwn ? "ml-auto border-primary/40" : "border-primary/40"
                 )}
               >
                 <ArrowBendUpLeft size={12} className="shrink-0" />
@@ -108,22 +100,46 @@ export function MessageBubble({
               </div>
             )}
             {message.image_url && (
-              <div className="relative mb-1 h-60 w-full overflow-hidden rounded-lg bg-surface-muted">
+              <div
+                className={cn(
+                  "relative overflow-hidden rounded-2xl bg-surface-muted",
+                  message.body && "mb-1",
+                  isOwn && "ml-auto"
+                )}
+                style={{ width: 240, aspectRatio: imageAspectRatio ?? 1 }}
+              >
                 {!imageLoaded && <div className="absolute inset-0 animate-pulse" />}
                 <Image
                   src={message.image_url}
                   alt="Shared photo"
                   fill
-                  sizes="(max-width: 480px) 75vw, 240px"
+                  sizes="240px"
                   className={cn(
                     "object-cover transition-opacity duration-200",
                     imageLoaded ? "opacity-100" : "opacity-0"
                   )}
-                  onLoad={() => setImageLoaded(true)}
+                  onLoad={(e) => {
+                    const img = e.currentTarget;
+                    if (img.naturalWidth && img.naturalHeight) {
+                      setImageAspectRatio(img.naturalWidth / img.naturalHeight);
+                    }
+                    setImageLoaded(true);
+                  }}
                 />
               </div>
             )}
-            {message.body && <p className="whitespace-pre-wrap">{message.body}</p>}
+            {message.body && (
+              <div
+                className={cn(
+                  "rounded-2xl px-3 py-2 shadow-sm",
+                  isOwn
+                    ? "rounded-br-md bg-primary text-white shadow-primary/20"
+                    : "rounded-bl-md bg-white text-secondary"
+                )}
+              >
+                <p className="whitespace-pre-wrap">{message.body}</p>
+              </div>
+            )}
           </div>
         )}
 

@@ -15,6 +15,9 @@
 
 # next.js
 /.next/
+# iCloud sometimes drops a conflict-copy of a synced folder as ".next 2" -
+# guard against that ever landing in git too.
+/.next */
 /out/
 
 # production
