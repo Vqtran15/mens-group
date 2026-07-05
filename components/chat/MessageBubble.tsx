@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Image from "next/image";
+import { motion } from "framer-motion";
 import { ArrowBendUpLeft } from "@phosphor-icons/react";
 import { Avatar } from "@/components/Avatar";
 import { Button } from "@/components/ui/Button";
@@ -51,7 +52,12 @@ export function MessageBubble({
   });
 
   return (
-    <div className={cn("flex gap-2", isOwn && "flex-row-reverse")}>
+    <motion.div
+      initial={{ x: isOwn ? 40 : -40, opacity: 0 }}
+      animate={{ x: 0, opacity: 1 }}
+      transition={{ duration: 0.25, ease: "easeOut" }}
+      className={cn("flex gap-2", isOwn && "flex-row-reverse")}
+    >
       <Avatar name={name} color={avatarColor} />
       <div className={cn("max-w-[75%]", isOwn && "items-end text-right")}>
         <div className={cn("flex items-baseline gap-2", isOwn && "flex-row-reverse")}>
@@ -116,6 +122,6 @@ export function MessageBubble({
 
         <ReactionPills reactions={reactions} currentUserId={currentUserId} onToggle={onToggleReaction} />
       </div>
-    </div>
+    </motion.div>
   );
 }

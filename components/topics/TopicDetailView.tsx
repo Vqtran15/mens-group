@@ -64,12 +64,12 @@ export function TopicDetailView({ topicId }: { topicId: string }) {
           className="pointer-events-none absolute -right-8 -top-8 h-28 w-28 rounded-full blur-2xl"
           style={{ backgroundColor: `${accentColor}33` }}
         />
-        <div className="relative flex items-start justify-between gap-2">
-          <div className="flex items-start gap-2">
+        <div className="relative flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
             <BackButton href="/topics" />
-            <div className="flex items-start gap-2.5">
+            <div className="flex items-center gap-2.5">
               <div
-                className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full"
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full"
                 style={{ backgroundColor: accentColor }}
               >
                 <ChatText size={18} weight="fill" className="text-white" />
@@ -89,7 +89,7 @@ export function TopicDetailView({ topicId }: { topicId: string }) {
           <Link
             href={`/topics/${topicId}/edit`}
             aria-label="Edit topic"
-            className="mt-1 shrink-0 rounded-full p-2 text-secondary transition-colors hover:bg-white/60"
+            className="shrink-0 rounded-full p-2 text-secondary transition-colors hover:bg-white/60"
           >
             <PencilSimple size={18} />
           </Link>
