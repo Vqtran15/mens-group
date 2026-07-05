@@ -15,10 +15,9 @@ const TABS = [
 
 export function BottomNav() {
   const pathname = usePathname();
-  const { chatUnread, topicsUnread } = useUnreadIndicator();
+  const { chatUnread } = useUnreadIndicator();
 
   const unreadByHref: Record<string, boolean> = {
-    "/topics": topicsUnread,
     "/chat": chatUnread,
   };
 

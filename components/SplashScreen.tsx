@@ -8,19 +8,32 @@ const SHOWN_KEY = "splash-shown";
 const MIN_VISIBLE_MS = 1100;
 
 export function SplashScreen() {
-  const [visible, setVisible] = useState(false);
+  // Default to visible so the splash is part of the very first paint (both
+  // the server-rendered HTML and the client's pre-hydration render agree on
+  // this, so there's no hydration mismatch). Starting hidden and flipping to
+  // visible from a useEffect - which only runs after hydration - left a gap
+  // where the real page was visible first, then the splash suddenly
+  // appeared on top of it, then disappeared again: a visible flicker
+  // instead of a clean "cover immediately, then reveal" sequence.
+  const [visible, setVisible] = useState(true);
 
   useEffect(() => {
     let timer: ReturnType<typeof setTimeout> | undefined;
 
-    function checkShouldShow() {
-      if (sessionStorage.getItem(SHOWN_KEY)) return;
+    function checkShouldDismiss() {
+      if (sessionStorage.getItem(SHOWN_KEY)) {
+        // Already shown earlier this session (e.g. a page refresh) - dismiss
+        // right away instead of holding up a page the user has already seen
+        // the intro for.
+        setVisible(false);
+        return;
+      }
+
       sessionStorage.setItem(SHOWN_KEY, "1");
-      setVisible(true);
       timer = setTimeout(() => setVisible(false), MIN_VISIBLE_MS);
     }
 
-    checkShouldShow();
+    checkShouldDismiss();
     return () => clearTimeout(timer);
   }, []);
 
