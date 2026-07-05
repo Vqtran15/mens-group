@@ -49,33 +49,33 @@ export function ChatView() {
       userIdRef.current = membership.userId;
       groupIdRef.current = membership.groupId;
 
-      const { data: profiles } = await supabase.from("profiles").select("id, display_name, avatar_color");
+      // Profiles and messages are independent of each other - fetch together
+      // instead of one after the other. Reactions are embedded directly in
+      // the messages query (message_reactions has a FK to chat_messages),
+      // which skips what used to be a third sequential round trip.
+      const [{ data: profiles }, { data: initialMessages }] = await Promise.all([
+        supabase.from("profiles").select("id, display_name, avatar_color").eq("group_id", membership.groupId),
+        supabase
+          .from("chat_messages")
+          .select("*, profiles(display_name, avatar_color), message_reactions(*)")
+          .order("created_at", { ascending: true })
+          .limit(100),
+      ]);
+
       for (const p of profiles ?? []) {
         profilesRef.current[p.id] = { display_name: p.display_name, avatar_color: p.avatar_color };
       }
 
-      const { data: initialMessages } = await supabase
-        .from("chat_messages")
-        .select("*, profiles(display_name, avatar_color)")
-        .order("created_at", { ascending: true })
-        .limit(100);
-
-      setMessages(initialMessages ?? []);
-
-      const messageIds = (initialMessages ?? []).map((m) => m.id);
-      if (messageIds.length > 0) {
-        const { data: reactions } = await supabase
-          .from("message_reactions")
-          .select("*")
-          .in("message_id", messageIds);
-
-        const grouped: Record<string, Reaction[]> = {};
-        for (const r of reactions ?? []) {
-          grouped[r.message_id] = [...(grouped[r.message_id] ?? []), r];
-        }
-        setReactionsByMessage(grouped);
+      const grouped: Record<string, Reaction[]> = {};
+      const cleanMessages: PendingChatMessage[] = [];
+      for (const row of initialMessages ?? []) {
+        const { message_reactions, ...message } = row as ChatMessage & { message_reactions: Reaction[] };
+        if (message_reactions?.length) grouped[message.id] = message_reactions;
+        cleanMessages.push(message);
       }
 
+      setMessages(cleanMessages);
+      setReactionsByMessage(grouped);
       setLoading(false);
 
       if (cancelled) return;

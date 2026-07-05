@@ -3,7 +3,7 @@
 import { motion, type HTMLMotionProps } from "framer-motion";
 import { cn } from "@/lib/utils";
 
-type Variant = "primary" | "secondary" | "ghost";
+type Variant = "primary" | "secondary" | "ghost" | "danger";
 
 export function Button({
   variant = "primary",
@@ -21,6 +21,7 @@ export function Button({
         variant === "primary" && "bg-primary text-white shadow-md shadow-primary/30",
         variant === "secondary" && "bg-surface-muted text-primary hover:bg-surface-muted/70",
         variant === "ghost" && "text-secondary hover:bg-surface-muted",
+        variant === "danger" && "bg-accent text-white shadow-md shadow-accent/30",
         className
       )}
       {...props}

@@ -27,56 +27,81 @@ export function CalendarView() {
 
   const loadEvents = useCallback(async (currentUserId: string, groupId: string) => {
     const supabase = createClient();
+    const eventsSelect =
+      "*, rsvps(id, event_id, user_id, status, created_at, updated_at, profiles(display_name, avatar_color))";
 
-    const { data: schedule } = await supabase
-      .from("meeting_schedule")
-      .select("*")
-      .eq("group_id", groupId)
-      .eq("active", true)
-      .limit(1)
-      .maybeSingle<MeetingSchedule>();
+    // These three are independent of each other, so fetch them together -
+    // the schedule/topics round trips no longer sit in front of the events
+    // query one at a time.
+    const [{ data: schedule }, { data: eventRows }, { data: topicRows }] = await Promise.all([
+      supabase
+        .from("meeting_schedule")
+        .select("*")
+        .eq("group_id", groupId)
+        .eq("active", true)
+        .limit(1)
+        .maybeSingle<MeetingSchedule>(),
+      supabase
+        .from("events")
+        .select(eventsSelect)
+        .eq("group_id", groupId)
+        .gte("starts_at", new Date().toISOString())
+        .order("starts_at", { ascending: true })
+        .limit(20),
+      supabase.from("topics").select("id, title, topic_date").eq("group_id", groupId),
+    ]);
+
+    let finalEventRows = eventRows;
 
     if (schedule) {
       const occurrences = getUpcomingOccurrences(
         toRecurrenceConfig(schedule),
         OCCURRENCES_TO_MATERIALIZE
       );
-      const rows = occurrences.map((date) => {
-        const endsAt = new Date(date.getTime() + schedule.duration_minutes * 60_000);
-        return {
-          title: schedule.label,
-          starts_at: date.toISOString(),
-          ends_at: endsAt.toISOString(),
-          location: schedule.location,
-          created_by: currentUserId,
-          is_recurring: true,
-          schedule_id: schedule.id,
-          group_id: groupId,
-        };
-      });
-      await supabase.from("events").upsert(rows, { onConflict: "schedule_id,starts_at" });
-    }
+      // Most loads already have every upcoming occurrence materialized from a
+      // prior visit - only pay for the write (and a re-fetch) when one is
+      // actually missing, instead of upserting identical rows every time.
+      const existingTimes = new Set(
+        (eventRows ?? [])
+          .filter((e) => e.schedule_id === schedule.id)
+          .map((e) => new Date(e.starts_at).getTime())
+      );
+      const missing = occurrences.filter((date) => !existingTimes.has(date.getTime()));
 
-    const { data: eventRows } = await supabase
-      .from("events")
-      .select("*, rsvps(id, event_id, user_id, status, created_at, updated_at, profiles(display_name, avatar_color))")
-      .eq("group_id", groupId)
-      .gte("starts_at", new Date().toISOString())
-      .order("starts_at", { ascending: true })
-      .limit(20);
+      if (missing.length > 0) {
+        const rows = missing.map((date) => {
+          const endsAt = new Date(date.getTime() + schedule.duration_minutes * 60_000);
+          return {
+            title: schedule.label,
+            starts_at: date.toISOString(),
+            ends_at: endsAt.toISOString(),
+            location: schedule.location,
+            created_by: currentUserId,
+            is_recurring: true,
+            schedule_id: schedule.id,
+            group_id: groupId,
+          };
+        });
+        await supabase.from("events").upsert(rows, { onConflict: "schedule_id,starts_at" });
+
+        const { data: refreshedEventRows } = await supabase
+          .from("events")
+          .select(eventsSelect)
+          .eq("group_id", groupId)
+          .gte("starts_at", new Date().toISOString())
+          .order("starts_at", { ascending: true })
+          .limit(20);
+        finalEventRows = refreshedEventRows;
+      }
+    }
 
     const rsvpMap: Record<string, Rsvp[]> = {};
     const cleanEvents: CalendarEvent[] = [];
-    for (const row of eventRows ?? []) {
+    for (const row of finalEventRows ?? []) {
       const { rsvps, ...event } = row as CalendarEvent & { rsvps: Rsvp[] };
       rsvpMap[event.id] = rsvps ?? [];
       cleanEvents.push(event);
     }
-
-    const { data: topicRows } = await supabase
-      .from("topics")
-      .select("id, title, topic_date")
-      .eq("group_id", groupId);
 
     const dateMap: Record<string, RelatedTopic[]> = {};
     for (const topic of topicRows ?? []) {

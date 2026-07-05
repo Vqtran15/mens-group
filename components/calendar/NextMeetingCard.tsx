@@ -1,8 +1,14 @@
+"use client";
+
+import { useState } from "react";
 import Link from "next/link";
-import { ChatText, MapPin, PencilSimple, Sparkle } from "@phosphor-icons/react";
+import { motion } from "framer-motion";
+import { ChatText, MapPin, PencilSimple, Sparkle, Trash } from "@phosphor-icons/react";
+import { createClient } from "@/lib/supabase/client";
 import { formatTime } from "@/lib/utils";
 import { RSVPButtons } from "@/components/calendar/RSVPButtons";
 import { AttendeeList } from "@/components/calendar/AttendeeList";
+import { ConfirmSheet } from "@/components/ui/ConfirmSheet";
 import type { CalendarEvent, RelatedTopic, Rsvp, RsvpStatus } from "@/lib/types";
 
 export function NextMeetingCard({
@@ -18,12 +24,25 @@ export function NextMeetingCard({
   onChanged: () => void;
   relatedTopics?: RelatedTopic[];
 }) {
+  const [confirmOpen, setConfirmOpen] = useState(false);
   const currentStatus: RsvpStatus | null =
     rsvps.find((r) => r.user_id === userId)?.status ?? null;
   const startsAt = new Date(event.starts_at);
 
+  async function handleDelete() {
+    const supabase = createClient();
+    await supabase.from("events").delete().eq("id", event.id);
+    setConfirmOpen(false);
+    onChanged();
+  }
+
   return (
-    <div className="rounded-2xl bg-primary p-4 shadow-lg shadow-primary/40">
+    <motion.div
+      initial={{ x: -40, opacity: 0 }}
+      animate={{ x: 0, opacity: 1 }}
+      transition={{ type: "spring", stiffness: 260, damping: 24 }}
+      className="rounded-2xl bg-primary p-4 shadow-lg shadow-primary/40"
+    >
       <div className="flex items-start gap-3">
         <div className="flex h-14 w-14 shrink-0 flex-col items-center justify-center rounded-xl bg-highlight-light text-primary shadow-sm">
           <span className="text-[10px] font-semibold uppercase tracking-wide">
@@ -37,13 +56,23 @@ export function NextMeetingCard({
               <Sparkle size={14} weight="fill" /> Next meeting
             </p>
             {!event.is_recurring && (
-              <Link
-                href={`/calendar/${event.id}/edit`}
-                aria-label="Edit event"
-                className="shrink-0 rounded-full p-1.5 text-white transition-colors hover:bg-white/15"
-              >
-                <PencilSimple size={16} />
-              </Link>
+              <div className="flex shrink-0 items-center gap-0.5">
+                <Link
+                  href={`/calendar/${event.id}/edit`}
+                  aria-label="Edit event"
+                  className="rounded-full p-1.5 text-white transition-colors hover:bg-white/15"
+                >
+                  <PencilSimple size={16} />
+                </Link>
+                <button
+                  type="button"
+                  onClick={() => setConfirmOpen(true)}
+                  aria-label="Delete event"
+                  className="rounded-full p-1.5 text-white transition-colors hover:bg-white/15"
+                >
+                  <Trash size={16} />
+                </button>
+              </div>
             )}
           </div>
           <p className="mt-1 text-xl font-semibold text-white">{event.title}</p>
@@ -82,6 +111,15 @@ export function NextMeetingCard({
       <div className="mt-4">
         <AttendeeList rsvps={rsvps} textClassName="text-white" />
       </div>
-    </div>
+
+      <ConfirmSheet
+        open={confirmOpen}
+        title="Delete this meeting?"
+        description="This can't be undone. Everyone's RSVPs for it will be removed too."
+        confirmLabel="Delete"
+        onConfirm={handleDelete}
+        onCancel={() => setConfirmOpen(false)}
+      />
+    </motion.div>
   );
 }

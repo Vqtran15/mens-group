@@ -30,7 +30,12 @@ export function MessageComposer({
   }
 
   return (
-    <div className="border-t border-border/60 bg-white/90 backdrop-blur-sm">
+    <motion.div
+      initial={{ y: 24, opacity: 0 }}
+      animate={{ y: 0, opacity: 1 }}
+      transition={{ type: "spring", stiffness: 300, damping: 26 }}
+      className="border-t border-border/60 bg-white/90 backdrop-blur-sm"
+    >
       {replyingTo && (
         <div className="flex items-center justify-between gap-2 border-b border-border/60 px-3 py-2 text-sm">
           <p className="truncate text-secondary">
@@ -91,6 +96,6 @@ export function MessageComposer({
           <PaperPlaneTilt size={18} weight="fill" />
         </motion.button>
       </form>
-    </div>
+    </motion.div>
   );
 }

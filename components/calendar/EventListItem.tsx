@@ -1,8 +1,13 @@
+"use client";
+
+import { useState } from "react";
 import Link from "next/link";
-import { ChatText, MapPin, PencilSimple } from "@phosphor-icons/react";
+import { ChatText, MapPin, PencilSimple, Trash } from "@phosphor-icons/react";
+import { createClient } from "@/lib/supabase/client";
 import { formatTime } from "@/lib/utils";
 import { RSVPButtons } from "@/components/calendar/RSVPButtons";
 import { AttendeeList } from "@/components/calendar/AttendeeList";
+import { ConfirmSheet } from "@/components/ui/ConfirmSheet";
 import type { CalendarEvent, RelatedTopic, Rsvp, RsvpStatus } from "@/lib/types";
 
 export function EventListItem({
@@ -18,9 +23,17 @@ export function EventListItem({
   onChanged: () => void;
   relatedTopics?: RelatedTopic[];
 }) {
+  const [confirmOpen, setConfirmOpen] = useState(false);
   const currentStatus: RsvpStatus | null =
     rsvps.find((r) => r.user_id === userId)?.status ?? null;
   const startsAt = new Date(event.starts_at);
+
+  async function handleDelete() {
+    const supabase = createClient();
+    await supabase.from("events").delete().eq("id", event.id);
+    setConfirmOpen(false);
+    onChanged();
+  }
 
   return (
     <div className="flex gap-3 rounded-2xl border border-border/60 bg-white p-4 shadow-sm">
@@ -34,13 +47,23 @@ export function EventListItem({
         <div className="flex items-start justify-between gap-2">
           <p className="font-medium text-primary">{event.title}</p>
           {!event.is_recurring && (
-            <Link
-              href={`/calendar/${event.id}/edit`}
-              aria-label="Edit event"
-              className="shrink-0 rounded-full p-1.5 text-secondary transition-colors hover:bg-surface-muted"
-            >
-              <PencilSimple size={16} />
-            </Link>
+            <div className="flex shrink-0 items-center gap-0.5">
+              <Link
+                href={`/calendar/${event.id}/edit`}
+                aria-label="Edit event"
+                className="rounded-full p-1.5 text-secondary transition-colors hover:bg-surface-muted"
+              >
+                <PencilSimple size={16} />
+              </Link>
+              <button
+                type="button"
+                onClick={() => setConfirmOpen(true)}
+                aria-label="Delete event"
+                className="rounded-full p-1.5 text-secondary transition-colors hover:bg-surface-muted"
+              >
+                <Trash size={16} />
+              </button>
+            </div>
           )}
         </div>
         <p className="mt-1 text-sm text-secondary">{formatTime(startsAt)}</p>
@@ -75,6 +98,15 @@ export function EventListItem({
           <AttendeeList rsvps={rsvps} />
         </div>
       </div>
+
+      <ConfirmSheet
+        open={confirmOpen}
+        title="Delete this event?"
+        description="This can't be undone. Everyone's RSVPs for it will be removed too."
+        confirmLabel="Delete"
+        onConfirm={handleDelete}
+        onCancel={() => setConfirmOpen(false)}
+      />
     </div>
   );
 }
