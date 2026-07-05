@@ -1,9 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import Link from "next/link";
-import { motion } from "framer-motion";
-import { ChatText, MagnifyingGlass, Plus } from "@phosphor-icons/react";
+import { AnimatePresence, motion } from "framer-motion";
+import { ChatText, MagnifyingGlass, X } from "@phosphor-icons/react";
 import { createClient } from "@/lib/supabase/client";
 import { TopicListItem } from "@/components/topics/TopicListItem";
 import { Skeleton } from "@/components/ui/Skeleton";
@@ -18,6 +17,7 @@ export function TopicsView() {
   const [topics, setTopics] = useState<Topic[]>([]);
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState("");
+  const [searchOpen, setSearchOpen] = useState(false);
 
   useEffect(() => {
     const supabase = createClient();
@@ -40,29 +40,60 @@ export function TopicsView() {
     });
   }, [topics, query]);
 
+  function closeSearch() {
+    setSearchOpen(false);
+    setQuery("");
+  }
+
   return (
     <div className="space-y-4 p-4">
-      <div className="flex justify-end">
-        <Link
-          href="/topics/new"
-          className="flex items-center gap-1 rounded-full bg-primary px-3 py-1.5 text-sm font-medium text-white shadow-md shadow-primary/30 transition-transform active:scale-95"
-        >
-          <Plus size={16} /> Add topic
-        </Link>
-      </div>
-
       {!loading && topics.length > 0 && (
-        <div className="relative">
-          <MagnifyingGlass
-            size={18}
-            className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted"
-          />
-          <input
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search topics..."
-            className="w-full rounded-xl border border-border bg-white py-2.5 pl-10 pr-3 outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
-          />
+        <div className="flex justify-end">
+          <AnimatePresence mode="wait" initial={false}>
+            {searchOpen ? (
+              <motion.div
+                key="input"
+                initial={{ opacity: 0, width: "40%" }}
+                animate={{ opacity: 1, width: "100%" }}
+                exit={{ opacity: 0, width: "40%" }}
+                transition={{ duration: 0.18 }}
+                className="relative"
+              >
+                <MagnifyingGlass
+                  size={18}
+                  className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted"
+                />
+                <input
+                  autoFocus
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  placeholder="Search topics..."
+                  className="w-full rounded-xl border border-border bg-white py-2.5 pl-10 pr-9 outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
+                />
+                <button
+                  type="button"
+                  onClick={closeSearch}
+                  aria-label="Close search"
+                  className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full p-1 text-muted transition-colors hover:bg-surface-muted"
+                >
+                  <X size={16} />
+                </button>
+              </motion.div>
+            ) : (
+              <motion.button
+                key="icon"
+                type="button"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                onClick={() => setSearchOpen(true)}
+                aria-label="Search topics"
+                className="rounded-full p-2 text-secondary transition-colors hover:bg-surface-muted"
+              >
+                <MagnifyingGlass size={20} />
+              </motion.button>
+            )}
+          </AnimatePresence>
         </div>
       )}
 

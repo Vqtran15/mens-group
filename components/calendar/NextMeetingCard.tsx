@@ -23,11 +23,9 @@ export function NextMeetingCard({
   const startsAt = new Date(event.starts_at);
 
   return (
-    <div className="relative overflow-hidden rounded-2xl border border-highlight bg-gradient-to-br from-highlight/20 via-sand/10 to-white p-4 shadow-lg shadow-highlight/20">
-      <div className="pointer-events-none absolute -right-10 -top-10 h-32 w-32 rounded-full bg-highlight/30 blur-2xl" />
-      <div className="pointer-events-none absolute -bottom-12 -left-8 h-28 w-28 rounded-full bg-sand/20 blur-2xl" />
-      <div className="relative flex items-start gap-3">
-        <div className="flex h-14 w-14 shrink-0 flex-col items-center justify-center rounded-xl bg-highlight/30 text-primary shadow-sm">
+    <div className="rounded-2xl bg-highlight p-4 shadow-lg shadow-highlight/30">
+      <div className="flex items-start gap-3">
+        <div className="flex h-14 w-14 shrink-0 flex-col items-center justify-center rounded-xl bg-white/80 text-primary shadow-sm">
           <span className="text-[10px] font-semibold uppercase tracking-wide">
             {startsAt.toLocaleDateString("en-US", { month: "short" })}
           </span>
@@ -35,23 +33,23 @@ export function NextMeetingCard({
         </div>
         <div className="min-w-0 flex-1">
           <div className="flex items-start justify-between gap-2">
-            <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-accent">
+            <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-primary">
               <Sparkle size={14} weight="fill" /> Next meeting
             </p>
             {!event.is_recurring && (
               <Link
                 href={`/calendar/${event.id}/edit`}
                 aria-label="Edit event"
-                className="shrink-0 rounded-full p-1.5 text-secondary transition-colors hover:bg-white/60"
+                className="shrink-0 rounded-full p-1.5 text-primary transition-colors hover:bg-white/60"
               >
                 <PencilSimple size={16} />
               </Link>
             )}
           </div>
           <p className="mt-1 text-xl font-semibold text-primary">{event.title}</p>
-          <p className="mt-1 text-secondary">{formatTime(startsAt)}</p>
+          <p className="mt-1 text-primary/80">{formatTime(startsAt)}</p>
           {event.location && (
-            <p className="mt-1 flex items-center gap-1.5 text-sm text-muted">
+            <p className="mt-1 flex items-center gap-1.5 text-sm text-primary/70">
               <MapPin size={14} className="shrink-0" />
               {event.location}
             </p>
@@ -60,12 +58,12 @@ export function NextMeetingCard({
       </div>
 
       {relatedTopics.length > 0 && (
-        <div className="relative mt-3 flex flex-wrap gap-2">
+        <div className="mt-3 flex flex-wrap gap-2">
           {relatedTopics.map((topic) => (
             <Link
               key={topic.id}
               href={`/topics/${topic.id}`}
-              className="inline-flex items-center gap-1 rounded-full bg-white/70 px-2.5 py-1 text-xs font-medium text-primary shadow-sm transition-colors hover:bg-white"
+              className="inline-flex items-center gap-1 rounded-full bg-white/80 px-2.5 py-1 text-xs font-medium text-primary shadow-sm transition-colors hover:bg-white"
             >
               <ChatText size={12} /> {topic.title}
             </Link>
@@ -73,7 +71,7 @@ export function NextMeetingCard({
         </div>
       )}
 
-      <div className="relative mt-4">
+      <div className="mt-4">
         <RSVPButtons
           eventId={event.id}
           userId={userId}
@@ -81,7 +79,7 @@ export function NextMeetingCard({
           onChanged={onChanged}
         />
       </div>
-      <div className="relative mt-4">
+      <div className="mt-4">
         <AttendeeList rsvps={rsvps} />
       </div>
     </div>

@@ -1,9 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import Link from "next/link";
 import { AnimatePresence, motion } from "framer-motion";
-import { CalendarBlank, CaretDown, Plus } from "@phosphor-icons/react";
+import { CalendarBlank, CaretDown } from "@phosphor-icons/react";
 import { createClient } from "@/lib/supabase/client";
 import { getCurrentMembership } from "@/lib/supabase/current-membership";
 import { getUpcomingOccurrences, toRecurrenceConfig } from "@/lib/recurrence";
@@ -107,9 +106,6 @@ export function CalendarView() {
   if (loading || !userId || !groupId) {
     return (
       <div className="space-y-4 p-4">
-        <div className="flex justify-end">
-          <Skeleton className="h-8 w-28 rounded-full" />
-        </div>
         <Skeleton className="h-40 w-full rounded-2xl" />
         <Skeleton className="h-24 w-full rounded-2xl" />
         <Skeleton className="h-24 w-full rounded-2xl" />
@@ -121,15 +117,6 @@ export function CalendarView() {
 
   return (
     <div className="space-y-4 p-4">
-      <div className="flex justify-end">
-        <Link
-          href="/calendar/new"
-          className="flex items-center gap-1 rounded-full bg-primary px-3 py-1.5 text-sm font-medium text-white shadow-md shadow-primary/30 transition-transform active:scale-95"
-        >
-          <Plus size={16} /> Add event
-        </Link>
-      </div>
-
       {nextMeeting ? (
         <NextMeetingCard
           event={nextMeeting}
