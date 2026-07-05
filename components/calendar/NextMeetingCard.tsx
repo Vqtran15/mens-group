@@ -43,39 +43,40 @@ export function NextMeetingCard({
       transition={{ type: "spring", stiffness: 260, damping: 24 }}
       className="rounded-2xl bg-primary p-4 shadow-lg shadow-primary/40"
     >
-      <div className="flex items-start gap-3">
-        <div className="flex h-14 w-14 shrink-0 flex-col items-center justify-start rounded-xl bg-highlight-light pt-1.5 text-primary shadow-sm">
+      <div className="flex items-center justify-between gap-2">
+        <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-highlight-light">
+          <Sparkle size={14} weight="fill" /> Next meeting
+        </p>
+        {!event.is_recurring && (
+          <div className="flex shrink-0 items-center gap-0.5">
+            <Link
+              href={`/calendar/${event.id}/edit`}
+              aria-label="Edit event"
+              className="rounded-full p-1.5 text-white transition-colors hover:bg-white/15"
+            >
+              <PencilSimple size={16} />
+            </Link>
+            <button
+              type="button"
+              onClick={() => setConfirmOpen(true)}
+              aria-label="Delete event"
+              className="rounded-full p-1.5 text-white transition-colors hover:bg-white/15"
+            >
+              <Trash size={16} />
+            </button>
+          </div>
+        )}
+      </div>
+
+      <div className="mt-3 flex items-center gap-3">
+        <div className="flex h-14 w-14 shrink-0 flex-col items-center justify-center rounded-xl bg-highlight-light text-primary shadow-sm">
           <span className="text-[10px] font-semibold uppercase tracking-wide">
             {startsAt.toLocaleDateString("en-US", { month: "short" })}
           </span>
           <span className="text-xl font-bold leading-none">{startsAt.getDate()}</span>
         </div>
         <div className="min-w-0 flex-1">
-          <div className="flex items-start justify-between gap-2">
-            <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-highlight-light">
-              <Sparkle size={14} weight="fill" /> Next meeting
-            </p>
-            {!event.is_recurring && (
-              <div className="flex shrink-0 items-center gap-0.5">
-                <Link
-                  href={`/calendar/${event.id}/edit`}
-                  aria-label="Edit event"
-                  className="rounded-full p-1.5 text-white transition-colors hover:bg-white/15"
-                >
-                  <PencilSimple size={16} />
-                </Link>
-                <button
-                  type="button"
-                  onClick={() => setConfirmOpen(true)}
-                  aria-label="Delete event"
-                  className="rounded-full p-1.5 text-white transition-colors hover:bg-white/15"
-                >
-                  <Trash size={16} />
-                </button>
-              </div>
-            )}
-          </div>
-          <p className="mt-1 text-xl font-semibold text-white">{event.title}</p>
+          <p className="text-xl font-semibold text-white">{event.title}</p>
           <p className="mt-1 text-white">{formatTime(startsAt)}</p>
           {event.location && (
             <p className="mt-1 flex items-center gap-1.5 text-sm text-white">

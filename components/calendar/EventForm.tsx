@@ -9,7 +9,7 @@ import { SuccessButton, type SubmitStatus } from "@/components/ui/SuccessButton"
 import { Skeleton } from "@/components/ui/Skeleton";
 
 const fieldClass =
-  "w-full rounded-xl border border-border bg-white shadow-sm px-3 py-2.5 outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20";
+  "w-full min-w-0 max-w-full rounded-xl border border-border bg-white shadow-sm px-3 py-2.5 outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20";
 
 function toDateInputValue(iso: string): string {
   return iso.slice(0, 10);

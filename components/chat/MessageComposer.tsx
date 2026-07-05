@@ -31,8 +31,8 @@ export function MessageComposer({
 
   return (
     <motion.div
-      initial={{ y: 24, opacity: 0 }}
-      animate={{ y: 0, opacity: 1 }}
+      initial={{ x: -40, opacity: 0 }}
+      animate={{ x: 0, opacity: 1 }}
       transition={{ duration: 0.3, ease: "easeOut" }}
       className="border-t border-border/60 bg-white/90 backdrop-blur-sm"
     >
