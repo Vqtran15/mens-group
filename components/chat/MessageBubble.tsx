@@ -41,6 +41,7 @@ export function MessageBubble({
   const name = message.profiles?.display_name ?? "Someone";
   const avatarColor = message.profiles?.avatar_color;
   const [editValue, setEditValue] = useState(message.body);
+  const [imageLoaded, setImageLoaded] = useState(false);
 
   // While a message is still pending (optimistic, awaiting server confirmation
   // of its real id), skip gesture handling entirely - a long-press/double-tap
@@ -107,14 +108,20 @@ export function MessageBubble({
               </div>
             )}
             {message.image_url && (
-              <Image
-                src={message.image_url}
-                alt="Shared photo"
-                width={240}
-                height={240}
-                unoptimized
-                className="mb-1 max-h-60 w-full rounded-lg object-cover"
-              />
+              <div className="relative mb-1 h-60 w-full overflow-hidden rounded-lg bg-surface-muted">
+                {!imageLoaded && <div className="absolute inset-0 animate-pulse" />}
+                <Image
+                  src={message.image_url}
+                  alt="Shared photo"
+                  fill
+                  sizes="(max-width: 480px) 75vw, 240px"
+                  className={cn(
+                    "object-cover transition-opacity duration-200",
+                    imageLoaded ? "opacity-100" : "opacity-0"
+                  )}
+                  onLoad={() => setImageLoaded(true)}
+                />
+              </div>
             )}
             {message.body && <p className="whitespace-pre-wrap">{message.body}</p>}
           </div>
