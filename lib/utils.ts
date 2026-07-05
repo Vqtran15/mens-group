@@ -11,6 +11,17 @@ export function getInitials(name: string): string {
   return initials.join("") || "?";
 }
 
+// Deterministically maps a string to one color in a palette - used to give
+// avatars and topic cards varied, consistent color-coding without storing a
+// color per item.
+export function hashToColor(value: string, palette: string[]): string {
+  let hash = 0;
+  for (let i = 0; i < value.length; i++) {
+    hash = value.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  return palette[Math.abs(hash) % palette.length];
+}
+
 export function formatDate(date: Date): string {
   return date.toLocaleDateString("en-US", {
     weekday: "long",

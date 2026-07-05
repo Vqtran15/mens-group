@@ -1,4 +1,4 @@
-import { cn, getInitials } from "@/lib/utils";
+import { cn, getInitials, hashToColor } from "@/lib/utils";
 
 // A friendly, varied palette (not just the brand teal) so people are visually
 // distinct in a group, the way GroupMe/Slack color-code avatars per person.
@@ -16,14 +16,6 @@ export const AVATAR_COLORS = [
   "#5b6bc0",
 ];
 
-function getAvatarColor(name: string): string {
-  let hash = 0;
-  for (let i = 0; i < name.length; i++) {
-    hash = name.charCodeAt(i) + ((hash << 5) - hash);
-  }
-  return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length];
-}
-
 export function Avatar({
   name,
   color,
@@ -38,7 +30,7 @@ export function Avatar({
   return (
     <div
       style={{
-        backgroundColor: color || getAvatarColor(name),
+        backgroundColor: color || hashToColor(name, AVATAR_COLORS),
         width: size,
         height: size,
         fontSize: Math.max(10, size * 0.36),
