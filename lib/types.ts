@@ -22,6 +22,7 @@ export interface Topic {
   created_by: string;
   group_id: string;
   created_at: string;
+  profiles?: Pick<Profile, "display_name" | "avatar_color">;
 }
 
 export interface TopicNote {

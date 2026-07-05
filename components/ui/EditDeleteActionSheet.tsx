@@ -4,7 +4,7 @@ import Link from "next/link";
 import { AnimatePresence, motion } from "framer-motion";
 import { PencilSimple, Trash } from "@phosphor-icons/react";
 
-export function EventActionSheet({
+export function EditDeleteActionSheet({
   open,
   onClose,
   editHref,

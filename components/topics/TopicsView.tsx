@@ -10,10 +10,15 @@ import { useUnreadIndicator } from "@/components/UnreadIndicatorContext";
 import { PullToRefresh } from "@/components/ui/PullToRefresh";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { parseDateOnly } from "@/lib/utils";
 import type { Topic } from "@/lib/types";
 
 function stripHtml(html: string): string {
   return html.replace(/<[^>]+>/g, " ");
+}
+
+function monthLabel(dateStr: string): string {
+  return parseDateOnly(dateStr).toLocaleDateString("en-US", { month: "long", year: "numeric" });
 }
 
 export function TopicsView() {
@@ -26,7 +31,7 @@ export function TopicsView() {
     const supabase = createClient();
     const { data } = await supabase
       .from("topics")
-      .select("*")
+      .select("*, profiles(display_name, avatar_color)")
       .order("topic_date", { ascending: false })
       .order("created_at", { ascending: false });
     setTopics(data ?? []);
@@ -60,6 +65,22 @@ export function TopicsView() {
       return haystack.includes(q);
     });
   }, [topics, query]);
+
+  // Topics are already sorted by topic_date descending, so consecutive
+  // same-month topics are always contiguous - a single pass is enough.
+  const groupedTopics = useMemo(() => {
+    const groups: { label: string; topics: Topic[] }[] = [];
+    for (const topic of filteredTopics) {
+      const label = monthLabel(topic.topic_date);
+      const currentGroup = groups[groups.length - 1];
+      if (currentGroup?.label === label) {
+        currentGroup.topics.push(topic);
+      } else {
+        groups.push({ label, topics: [topic] });
+      }
+    }
+    return groups;
+  }, [filteredTopics]);
 
   function closeSearch() {
     setSearchOpen(false);
@@ -116,16 +137,23 @@ export function TopicsView() {
       ) : filteredTopics.length === 0 ? (
         <EmptyState icon={MagnifyingGlass} title="No topics found" subtitle={`Nothing matches "${query}"`} />
       ) : (
-        <div className="space-y-3">
-          {filteredTopics.map((topic, i) => (
-            <motion.div
-              key={topic.id}
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.2, delay: Math.min(i, 8) * 0.04 }}
-            >
-              <TopicListItem topic={topic} />
-            </motion.div>
+        <div className="space-y-4">
+          {groupedTopics.map((group) => (
+            <div key={group.label} className="space-y-3">
+              <p className="px-1 text-xs font-semibold uppercase tracking-wide text-muted">
+                {group.label}
+              </p>
+              {group.topics.map((topic, i) => (
+                <motion.div
+                  key={topic.id}
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.2, delay: Math.min(i, 8) * 0.04 }}
+                >
+                  <TopicListItem topic={topic} onChanged={loadTopics} />
+                </motion.div>
+              ))}
+            </div>
           ))}
         </div>
       )}

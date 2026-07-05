@@ -8,7 +8,7 @@ import { formatTime } from "@/lib/utils";
 import { RSVPButtons } from "@/components/calendar/RSVPButtons";
 import { AttendeeList } from "@/components/calendar/AttendeeList";
 import { ConfirmSheet } from "@/components/ui/ConfirmSheet";
-import { EventActionSheet } from "@/components/calendar/EventActionSheet";
+import { EditDeleteActionSheet } from "@/components/ui/EditDeleteActionSheet";
 import type { CalendarEvent, RelatedTopic, Rsvp, RsvpStatus } from "@/lib/types";
 
 export function EventListItem({
@@ -92,7 +92,7 @@ export function EventListItem({
         </div>
       </div>
 
-      <EventActionSheet
+      <EditDeleteActionSheet
         open={actionsOpen}
         onClose={() => setActionsOpen(false)}
         editHref={`/calendar/${event.id}/edit`}
