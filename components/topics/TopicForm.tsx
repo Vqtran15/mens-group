@@ -1,21 +1,43 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { WarningCircle } from "@phosphor-icons/react";
 import { createClient } from "@/lib/supabase/client";
 import { getCurrentMembership } from "@/lib/supabase/current-membership";
+import { getUpcomingMeetingDates } from "@/lib/supabase/getUpcomingMeetingDates";
 import { RichTextEditor } from "@/components/topics/RichTextEditor";
 import { SuccessButton, type SubmitStatus } from "@/components/ui/SuccessButton";
-import { toDateOnlyString } from "@/lib/utils";
+import { formatDate, parseDateOnly, toDateOnlyString } from "@/lib/utils";
+
+const fieldClass =
+  "w-full rounded-xl border border-border bg-background/50 px-3 py-2.5 outline-none transition focus:border-primary focus:bg-white focus:ring-2 focus:ring-primary/20";
 
 export function TopicForm() {
   const router = useRouter();
   const [title, setTitle] = useState("");
-  const [topicDate, setTopicDate] = useState(() => toDateOnlyString(new Date()));
+  const [topicDate, setTopicDate] = useState("");
+  const [meetingDates, setMeetingDates] = useState<string[]>([]);
+  const [loadingDates, setLoadingDates] = useState(true);
   const [description, setDescription] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [status, setStatus] = useState<SubmitStatus>("idle");
+
+  useEffect(() => {
+    async function init() {
+      const supabase = createClient();
+      const membership = await getCurrentMembership(supabase);
+      if (!membership) {
+        setLoadingDates(false);
+        return;
+      }
+      const dates = await getUpcomingMeetingDates(supabase, membership.groupId);
+      setMeetingDates(dates);
+      setTopicDate(dates[0] ?? toDateOnlyString(new Date()));
+      setLoadingDates(false);
+    }
+    init();
+  }, []);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -66,21 +88,42 @@ export function TopicForm() {
           required
           value={title}
           onChange={(e) => setTitle(e.target.value)}
-          className="w-full rounded-xl border border-border bg-background/50 px-3 py-2.5 outline-none transition focus:border-primary focus:bg-white focus:ring-2 focus:ring-primary/20"
+          className={fieldClass}
         />
       </div>
       <div>
         <label htmlFor="topicDate" className="mb-1.5 block text-sm font-medium text-secondary">
-          Date
+          Meeting date
         </label>
-        <input
-          id="topicDate"
-          type="date"
-          required
-          value={topicDate}
-          onChange={(e) => setTopicDate(e.target.value)}
-          className="w-full rounded-xl border border-border bg-background/50 px-3 py-2.5 outline-none transition focus:border-primary focus:bg-white focus:ring-2 focus:ring-primary/20"
-        />
+        {!loadingDates && meetingDates.length > 0 ? (
+          <select
+            id="topicDate"
+            required
+            value={topicDate}
+            onChange={(e) => setTopicDate(e.target.value)}
+            className={fieldClass}
+          >
+            {meetingDates.map((date) => (
+              <option key={date} value={date}>
+                {formatDate(parseDateOnly(date))}
+              </option>
+            ))}
+          </select>
+        ) : (
+          <input
+            id="topicDate"
+            type="date"
+            required
+            value={topicDate}
+            onChange={(e) => setTopicDate(e.target.value)}
+            className={fieldClass}
+          />
+        )}
+        <p className="mt-1.5 text-xs text-muted">
+          {!loadingDates && meetingDates.length === 0
+            ? "No meetings scheduled yet - pick any date."
+            : "Which meeting is this topic about?"}
+        </p>
       </div>
       <div>
         <label className="mb-1.5 block text-sm font-medium text-secondary">Description</label>

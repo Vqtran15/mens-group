@@ -42,8 +42,7 @@ export function TopicsView() {
 
   return (
     <div className="space-y-4 p-4">
-      <div className="flex items-center justify-between">
-        <h1 className="text-xl font-semibold text-primary">Topics</h1>
+      <div className="flex justify-end">
         <Link
           href="/topics/new"
           className="flex items-center gap-1 rounded-full bg-primary px-3 py-1.5 text-sm font-medium text-white shadow-md shadow-primary/30 transition-transform active:scale-95"

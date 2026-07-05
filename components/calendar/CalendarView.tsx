@@ -11,7 +11,8 @@ import { NextMeetingCard } from "@/components/calendar/NextMeetingCard";
 import { EventListItem } from "@/components/calendar/EventListItem";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { EmptyState } from "@/components/ui/EmptyState";
-import type { CalendarEvent, MeetingSchedule, Rsvp } from "@/lib/types";
+import { toDateOnlyString } from "@/lib/utils";
+import type { CalendarEvent, MeetingSchedule, RelatedTopic, Rsvp } from "@/lib/types";
 
 const OCCURRENCES_TO_MATERIALIZE = 6;
 
@@ -20,8 +21,9 @@ export function CalendarView() {
   const [groupId, setGroupId] = useState<string | null>(null);
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [rsvpsByEvent, setRsvpsByEvent] = useState<Record<string, Rsvp[]>>({});
+  const [topicsByDate, setTopicsByDate] = useState<Record<string, RelatedTopic[]>>({});
   const [loading, setLoading] = useState(true);
-  const [upcomingOpen, setUpcomingOpen] = useState(true);
+  const [upcomingOpen, setUpcomingOpen] = useState(false);
 
   const loadEvents = useCallback(async (currentUserId: string, groupId: string) => {
     const supabase = createClient();
@@ -71,8 +73,19 @@ export function CalendarView() {
       cleanEvents.push(event);
     }
 
+    const { data: topicRows } = await supabase
+      .from("topics")
+      .select("id, title, topic_date")
+      .eq("group_id", groupId);
+
+    const dateMap: Record<string, RelatedTopic[]> = {};
+    for (const topic of topicRows ?? []) {
+      dateMap[topic.topic_date] = [...(dateMap[topic.topic_date] ?? []), { id: topic.id, title: topic.title }];
+    }
+
     setEvents(cleanEvents);
     setRsvpsByEvent(rsvpMap);
+    setTopicsByDate(dateMap);
     setLoading(false);
   }, []);
 
@@ -94,8 +107,7 @@ export function CalendarView() {
   if (loading || !userId || !groupId) {
     return (
       <div className="space-y-4 p-4">
-        <div className="flex items-center justify-between">
-          <Skeleton className="h-7 w-28" />
+        <div className="flex justify-end">
           <Skeleton className="h-8 w-28 rounded-full" />
         </div>
         <Skeleton className="h-40 w-full rounded-2xl" />
@@ -109,8 +121,7 @@ export function CalendarView() {
 
   return (
     <div className="space-y-4 p-4">
-      <div className="flex items-center justify-between">
-        <h1 className="text-xl font-semibold text-primary">Calendar</h1>
+      <div className="flex justify-end">
         <Link
           href="/calendar/new"
           className="flex items-center gap-1 rounded-full bg-primary px-3 py-1.5 text-sm font-medium text-white shadow-md shadow-primary/30 transition-transform active:scale-95"
@@ -125,6 +136,7 @@ export function CalendarView() {
           rsvps={rsvpsByEvent[nextMeeting.id] ?? []}
           userId={userId}
           onChanged={() => loadEvents(userId, groupId)}
+          relatedTopics={topicsByDate[toDateOnlyString(new Date(nextMeeting.starts_at))] ?? []}
         />
       ) : (
         <EmptyState
@@ -168,6 +180,7 @@ export function CalendarView() {
                     rsvps={rsvpsByEvent[event.id] ?? []}
                     userId={userId}
                     onChanged={() => loadEvents(userId, groupId)}
+                    relatedTopics={topicsByDate[toDateOnlyString(new Date(event.starts_at))] ?? []}
                   />
                 ))}
               </motion.div>

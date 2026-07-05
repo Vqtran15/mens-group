@@ -1,4 +1,5 @@
 import { TopicDetailView } from "@/components/topics/TopicDetailView";
+import { PageEnter } from "@/components/ui/PageEnter";
 
 export default async function TopicDetailPage({
   params,
@@ -6,5 +7,9 @@ export default async function TopicDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  return <TopicDetailView topicId={id} />;
+  return (
+    <PageEnter className="flex h-full flex-col">
+      <TopicDetailView topicId={id} />
+    </PageEnter>
+  );
 }

@@ -91,3 +91,8 @@ export interface Reaction {
   emoji: string;
   created_at: string;
 }
+
+export interface RelatedTopic {
+  id: string;
+  title: string;
+}

@@ -1,20 +1,22 @@
 import Link from "next/link";
-import { MapPin, PencilSimple } from "@phosphor-icons/react";
+import { ChatText, MapPin, PencilSimple } from "@phosphor-icons/react";
 import { formatTime } from "@/lib/utils";
 import { RSVPButtons } from "@/components/calendar/RSVPButtons";
 import { AttendeeList } from "@/components/calendar/AttendeeList";
-import type { CalendarEvent, Rsvp, RsvpStatus } from "@/lib/types";
+import type { CalendarEvent, RelatedTopic, Rsvp, RsvpStatus } from "@/lib/types";
 
 export function EventListItem({
   event,
   rsvps,
   userId,
   onChanged,
+  relatedTopics = [],
 }: {
   event: CalendarEvent;
   rsvps: Rsvp[];
   userId: string;
   onChanged: () => void;
+  relatedTopics?: RelatedTopic[];
 }) {
   const currentStatus: RsvpStatus | null =
     rsvps.find((r) => r.user_id === userId)?.status ?? null;
@@ -47,6 +49,19 @@ export function EventListItem({
             <MapPin size={14} className="shrink-0" />
             {event.location}
           </p>
+        )}
+        {relatedTopics.length > 0 && (
+          <div className="mt-2 flex flex-wrap gap-2">
+            {relatedTopics.map((topic) => (
+              <Link
+                key={topic.id}
+                href={`/topics/${topic.id}`}
+                className="inline-flex items-center gap-1 rounded-full bg-teal/10 px-2.5 py-1 text-xs font-medium text-teal transition-colors hover:bg-teal/20"
+              >
+                <ChatText size={12} /> {topic.title}
+              </Link>
+            ))}
+          </div>
         )}
         <div className="mt-3">
           <RSVPButtons
