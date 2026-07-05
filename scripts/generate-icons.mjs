@@ -11,6 +11,7 @@ function squareSvg(size) {
       <text
         x="50%"
         y="50%"
+        dy="0.09em"
         font-family="-apple-system, Helvetica, Arial, sans-serif"
         font-size="${fontSize}"
         font-weight="700"
@@ -44,6 +45,7 @@ function maskableSvg(size) {
       <text
         x="50%"
         y="50%"
+        dy="0.09em"
         font-family="-apple-system, Helvetica, Arial, sans-serif"
         font-size="${fontSize}"
         font-weight="700"
