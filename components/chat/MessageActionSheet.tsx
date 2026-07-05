@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { ArrowBendUpLeft, PencilSimple, DotsThreeOutline } from "@phosphor-icons/react";
+import { ArrowBendUpLeft, PencilSimple, Trash, DotsThreeOutline } from "@phosphor-icons/react";
 import { FullEmojiPicker } from "@/components/chat/FullEmojiPicker";
 
 const QUICK_REACTIONS = ["❤️", "😂", "😮", "😢", "🙏", "👍"];
@@ -13,6 +13,7 @@ export function MessageActionSheet({
   canEdit,
   onReply,
   onEdit,
+  onDelete,
   onReact,
 }: {
   open: boolean;
@@ -20,6 +21,7 @@ export function MessageActionSheet({
   canEdit: boolean;
   onReply: () => void;
   onEdit: () => void;
+  onDelete: () => void;
   onReact: (emoji: string) => void;
 }) {
   const [showFullPicker, setShowFullPicker] = useState(false);
@@ -103,6 +105,18 @@ export function MessageActionSheet({
                   className="flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-left text-secondary transition-colors hover:bg-surface-muted"
                 >
                   <PencilSimple size={18} /> Edit
+                </button>
+              )}
+              {canEdit && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    onDelete();
+                    handleClose();
+                  }}
+                  className="flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-left text-accent transition-colors hover:bg-accent/10"
+                >
+                  <Trash size={18} /> Delete
                 </button>
               )}
             </div>

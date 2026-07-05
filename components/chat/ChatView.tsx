@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { HandWaving } from "@phosphor-icons/react";
+import { AnimatePresence, motion } from "framer-motion";
+import { ArrowDown, HandWaving } from "@phosphor-icons/react";
 import { createClient } from "@/lib/supabase/client";
 import { getCurrentMembership } from "@/lib/supabase/current-membership";
 import { uploadChatPhoto } from "@/lib/supabase/uploadChatPhoto";
@@ -10,8 +11,11 @@ import { MessageComposer } from "@/components/chat/MessageComposer";
 import { MessageActionSheet } from "@/components/chat/MessageActionSheet";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { ConfirmSheet } from "@/components/ui/ConfirmSheet";
 import { useUnreadIndicator } from "@/components/UnreadIndicatorContext";
 import type { ChatMessage, Reaction } from "@/lib/types";
+
+const NEAR_BOTTOM_THRESHOLD_PX = 120;
 
 const DEFAULT_REACTION = "❤️";
 
@@ -25,11 +29,15 @@ export function ChatView() {
   const [replyingTo, setReplyingTo] = useState<ChatMessage | null>(null);
   const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
   const [actionSheetMessageId, setActionSheetMessageId] = useState<string | null>(null);
+  const [deleteConfirmMessage, setDeleteConfirmMessage] = useState<ChatMessage | null>(null);
+  const [showJumpToLatest, setShowJumpToLatest] = useState(false);
 
   const profilesRef = useRef<Record<string, { display_name: string; avatar_color: string | null }>>({});
   const userIdRef = useRef<string | null>(null);
   const groupIdRef = useRef<string | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const isNearBottomRef = useRef(true);
   const { markChatSeen } = useUnreadIndicator();
 
   useEffect(() => {
@@ -116,6 +124,20 @@ export function ChatView() {
             );
           }
         )
+        .on(
+          "postgres_changes",
+          { event: "DELETE", schema: "public", table: "chat_messages" },
+          (payload) => {
+            const row = payload.old as ChatMessage;
+            setMessages((prev) => prev.filter((m) => m.id !== row.id));
+            setReactionsByMessage((prev) => {
+              if (!(row.id in prev)) return prev;
+              const rest = { ...prev };
+              delete rest[row.id];
+              return rest;
+            });
+          }
+        )
         .subscribe();
 
       reactionsChannel = supabase
@@ -155,9 +177,67 @@ export function ChatView() {
     };
   }, []);
 
-  useEffect(() => {
+  // Guards against the scroll listener seeing the in-flight frames of our
+  // own smooth-scroll-to-bottom as "the user scrolled away" and flashing the
+  // jump-to-latest button back on before the animation settles.
+  const suppressScrollDetectionRef = useRef(false);
+
+  function scrollToBottomSmooth() {
+    const container = containerRef.current;
+    suppressScrollDetectionRef.current = true;
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+
+    function settle() {
+      suppressScrollDetectionRef.current = false;
+      isNearBottomRef.current = true;
+      setShowJumpToLatest(false);
+      container?.removeEventListener("scrollend", settle);
+    }
+
+    // "scrollend" fires once the browser's smooth-scroll animation has
+    // actually finished - a fixed timeout can't track that reliably since
+    // duration scales with how far there was to scroll. Fall back to a
+    // timeout only where scrollend isn't supported.
+    if (container && "onscrollend" in window) {
+      container.addEventListener("scrollend", settle, { once: true });
+    } else {
+      window.setTimeout(settle, 700);
+    }
+  }
+
+  // Only auto-scroll when the user is already near the bottom - otherwise a
+  // message arriving while they're reading back through history would yank
+  // them away from what they're looking at.
+  useEffect(() => {
+    if (isNearBottomRef.current) {
+      scrollToBottomSmooth();
+    }
   }, [messages]);
+
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    function handleScroll() {
+      if (!container || suppressScrollDetectionRef.current) return;
+      const distanceFromBottom = container.scrollHeight - container.scrollTop - container.clientHeight;
+      const nearBottom = distanceFromBottom < NEAR_BOTTOM_THRESHOLD_PX;
+      isNearBottomRef.current = nearBottom;
+      setShowJumpToLatest(!nearBottom);
+    }
+
+    handleScroll();
+    container.addEventListener("scroll", handleScroll, { passive: true });
+    return () => container.removeEventListener("scroll", handleScroll);
+    // Re-attach once the real scrollable container mounts (it doesn't exist
+    // yet while the loading skeleton is showing).
+  }, [loading]);
+
+  function scrollToLatest() {
+    isNearBottomRef.current = true;
+    setShowJumpToLatest(false);
+    scrollToBottomSmooth();
+  }
 
   // Re-mark as seen whenever the message list changes while this view is
   // mounted, so a message arriving while you're actively looking at chat
@@ -188,6 +268,10 @@ export function ChatView() {
       },
       pending: true,
     };
+    // Sending is an explicit action - always jump to the new message even if
+    // the user had scrolled up to read history.
+    isNearBottomRef.current = true;
+    setShowJumpToLatest(false);
     setMessages((prev) => [...prev, optimisticMessage]);
     setReplyingTo(null);
 
@@ -282,12 +366,43 @@ export function ChatView() {
     await supabase.from("chat_messages").update({ body: newBody, edited_at: editedAt }).eq("id", messageId);
   }
 
+  async function handleDeleteMessage(messageId: string) {
+    const supabase = createClient();
+    setMessages((prev) => prev.filter((m) => m.id !== messageId));
+    setReactionsByMessage((prev) => {
+      if (!(messageId in prev)) return prev;
+      const rest = { ...prev };
+      delete rest[messageId];
+      return rest;
+    });
+    await supabase.from("chat_messages").delete().eq("id", messageId);
+  }
+
   if (loading || !userId) {
     return (
-      <div className="space-y-4 p-4">
-        <Skeleton className="h-12 w-2/3 rounded-2xl" />
-        <Skeleton className="ml-auto h-12 w-2/3 rounded-2xl" />
-        <Skeleton className="h-12 w-1/2 rounded-2xl" />
+      <div className="flex h-full flex-col">
+        <div className="flex-1 space-y-4 overflow-y-auto p-4">
+          <div className="flex gap-2">
+            <Skeleton className="h-8 w-8 shrink-0 rounded-full" />
+            <Skeleton className="h-12 w-2/3 rounded-2xl" />
+          </div>
+          <div className="flex flex-row-reverse gap-2">
+            <Skeleton className="h-8 w-8 shrink-0 rounded-full" />
+            <Skeleton className="h-10 w-1/2 rounded-2xl" />
+          </div>
+          <div className="flex gap-2">
+            <Skeleton className="h-8 w-8 shrink-0 rounded-full" />
+            <Skeleton className="h-16 w-2/3 rounded-2xl" />
+          </div>
+          <div className="flex flex-row-reverse gap-2">
+            <Skeleton className="h-8 w-8 shrink-0 rounded-full" />
+            <Skeleton className="h-12 w-1/3 rounded-2xl" />
+          </div>
+        </div>
+        <div className="flex items-center gap-2 border-t border-border bg-white p-3">
+          <Skeleton className="h-10 flex-1 rounded-full" />
+          <Skeleton className="h-10 w-10 shrink-0 rounded-full" />
+        </div>
       </div>
     );
   }
@@ -297,33 +412,56 @@ export function ChatView() {
 
   return (
     <div className="flex h-full flex-col">
-      <div className="flex-1 space-y-4 overflow-y-auto p-4">
-        {messages.length === 0 && (
-          <EmptyState
-            icon={HandWaving}
-            title="Say hello!"
-            subtitle="This is the start of your group chat. Send the first message."
-          />
-        )}
-        {messages.map((message) => (
-          <MessageBubble
-            key={message.id}
-            message={message}
-            isOwn={message.created_by === userId}
-            pending={message.pending}
-            reactions={reactionsByMessage[message.id] ?? []}
-            currentUserId={userId}
-            replyToMessage={message.reply_to_id ? messagesById.get(message.reply_to_id) : null}
-            isEditing={editingMessageId === message.id}
-            onDoubleTapReact={() => handleToggleReaction(message.id, DEFAULT_REACTION)}
-            onOpenActions={() => setActionSheetMessageId(message.id)}
-            onToggleReaction={(emoji) => handleToggleReaction(message.id, emoji)}
-            onSaveEdit={(body) => handleSaveEdit(message.id, body)}
-            onCancelEdit={() => setEditingMessageId(null)}
-          />
-        ))}
-        <div ref={bottomRef} />
+      <div className="relative min-h-0 flex-1">
+        <div
+          ref={containerRef}
+          data-chat-scroll-container
+          className="h-full space-y-4 overflow-y-auto p-4"
+        >
+          {messages.length === 0 && (
+            <EmptyState
+              icon={HandWaving}
+              title="Say hello!"
+              subtitle="This is the start of your group chat. Send the first message."
+            />
+          )}
+          {messages.map((message) => (
+            <MessageBubble
+              key={message.id}
+              message={message}
+              isOwn={message.created_by === userId}
+              pending={message.pending}
+              reactions={reactionsByMessage[message.id] ?? []}
+              currentUserId={userId}
+              replyToMessage={message.reply_to_id ? messagesById.get(message.reply_to_id) : null}
+              isEditing={editingMessageId === message.id}
+              onDoubleTapReact={() => handleToggleReaction(message.id, DEFAULT_REACTION)}
+              onOpenActions={() => setActionSheetMessageId(message.id)}
+              onToggleReaction={(emoji) => handleToggleReaction(message.id, emoji)}
+              onSaveEdit={(body) => handleSaveEdit(message.id, body)}
+              onCancelEdit={() => setEditingMessageId(null)}
+            />
+          ))}
+          <div ref={bottomRef} />
+        </div>
+
+        <AnimatePresence>
+          {showJumpToLatest && (
+            <motion.button
+              type="button"
+              initial={{ opacity: 0, y: 10, x: "-50%" }}
+              animate={{ opacity: 1, y: 0, x: "-50%" }}
+              exit={{ opacity: 0, y: 10, x: "-50%" }}
+              transition={{ duration: 0.2, ease: "easeOut" }}
+              onClick={scrollToLatest}
+              className="absolute bottom-3 left-1/2 flex items-center gap-1.5 rounded-full bg-primary px-3.5 py-2 text-sm font-medium text-white shadow-lg shadow-primary/30"
+            >
+              <ArrowDown size={16} weight="bold" /> Jump to latest
+            </motion.button>
+          )}
+        </AnimatePresence>
       </div>
+
       <MessageComposer onSend={handleSend} replyingTo={replyingTo} onCancelReply={() => setReplyingTo(null)} />
 
       <MessageActionSheet
@@ -336,9 +474,24 @@ export function ChatView() {
         onEdit={() => {
           if (actionSheetMessage) setEditingMessageId(actionSheetMessage.id);
         }}
+        onDelete={() => {
+          if (actionSheetMessage) setDeleteConfirmMessage(actionSheetMessage);
+        }}
         onReact={(emoji) => {
           if (actionSheetMessageId) handleToggleReaction(actionSheetMessageId, emoji);
         }}
+      />
+
+      <ConfirmSheet
+        open={deleteConfirmMessage !== null}
+        title="Delete this message?"
+        description="This can't be undone."
+        confirmLabel="Delete"
+        onConfirm={() => {
+          if (deleteConfirmMessage) handleDeleteMessage(deleteConfirmMessage.id);
+          setDeleteConfirmMessage(null);
+        }}
+        onCancel={() => setDeleteConfirmMessage(null)}
       />
     </div>
   );

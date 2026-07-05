@@ -27,6 +27,7 @@ export function TopicsView() {
     const { data } = await supabase
       .from("topics")
       .select("*")
+      .order("topic_date", { ascending: false })
       .order("created_at", { ascending: false });
     setTopics(data ?? []);
     setLoading(false);
