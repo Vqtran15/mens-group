@@ -90,9 +90,8 @@ export function SignUpForm({ onSwitchToSignIn }: { onSwitchToSignIn: () => void 
       },
     });
 
-    setSubmitting(false);
-
     if (error) {
+      setSubmitting(false);
       setError(error.message);
       return;
     }
@@ -103,6 +102,9 @@ export function SignUpForm({ onSwitchToSignIn }: { onSwitchToSignIn: () => void 
     }
 
     // If email confirmation is disabled, signUp already returns a live session.
+    // `submitting` is intentionally left true on every path below - each one
+    // either navigates away (so the button reverting first would flicker
+    // right before the page changes) or swaps to a different view entirely.
     if (data.session) {
       if (group.mode === "create") {
         setHasSession(true);

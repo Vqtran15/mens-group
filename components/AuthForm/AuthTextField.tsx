@@ -42,7 +42,7 @@ export function AuthTextField({
           autoComplete={autoComplete}
           value={value}
           onChange={(e) => onChange(e.target.value)}
-          className="w-full rounded-xl border border-border bg-background/50 py-2.5 pl-10 pr-10 text-base outline-none transition focus:border-primary focus:bg-white focus:ring-2 focus:ring-primary/20"
+          className="w-full rounded-xl border border-border bg-white shadow-sm py-2.5 pl-10 pr-10 text-base outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
         />
         {isPassword && (
           <button

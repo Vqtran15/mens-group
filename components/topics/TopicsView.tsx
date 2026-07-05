@@ -86,7 +86,7 @@ export function TopicsView() {
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Search topics..."
-              className="w-full rounded-xl border border-border bg-white py-2.5 pl-10 pr-9 outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
+              className="w-full rounded-xl border border-border bg-white py-2.5 pl-10 pr-9 shadow-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
             />
             <button
               type="button"

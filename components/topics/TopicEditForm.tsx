@@ -11,7 +11,7 @@ import { Skeleton } from "@/components/ui/Skeleton";
 import { formatDate, parseDateOnly } from "@/lib/utils";
 
 const fieldClass =
-  "w-full rounded-xl border border-border bg-background/50 px-3 py-2.5 outline-none transition focus:border-primary focus:bg-white focus:ring-2 focus:ring-primary/20";
+  "w-full rounded-xl border border-border bg-white shadow-sm px-3 py-2.5 outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20";
 
 export function TopicEditForm({ topicId }: { topicId: string }) {
   const router = useRouter();

@@ -38,7 +38,7 @@ export function RichTextEditor({
   }
 
   return (
-    <div className="rounded-xl border border-border bg-background/50 transition focus-within:border-primary focus-within:bg-white focus-within:ring-2 focus-within:ring-primary/20">
+    <div className="rounded-xl border border-border bg-white shadow-sm transition focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/20">
       <div className="flex gap-1 border-b border-border/60 p-1.5">
         <ToolbarButton onClick={() => exec("bold")} label="Bold">
           <TextB size={16} />

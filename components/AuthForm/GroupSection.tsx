@@ -101,7 +101,7 @@ export function GroupSection({
                     <input
                       readOnly
                       value={value.inviteCode}
-                      className="w-full rounded-xl border border-border bg-background/50 py-2.5 pl-10 pr-3 font-mono text-base tracking-[0.2em] outline-none transition focus:border-primary focus:bg-white focus:ring-2 focus:ring-primary/20"
+                      className="w-full rounded-xl border border-border bg-white shadow-sm py-2.5 pl-10 pr-3 font-mono text-base tracking-[0.2em] outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
                     />
                   </div>
                   <motion.button
@@ -144,7 +144,7 @@ export function GroupSection({
                     value={value.selectedGroupId}
                     onChange={(e) => onChange({ ...value, selectedGroupId: e.target.value })}
                     disabled={loadingGroups || groups.length === 0}
-                    className="w-full appearance-none rounded-xl border border-border bg-background/50 py-2.5 pl-10 pr-3 text-base outline-none transition focus:border-primary focus:bg-white focus:ring-2 focus:ring-primary/20"
+                    className="w-full appearance-none rounded-xl border border-border bg-white shadow-sm py-2.5 pl-10 pr-3 text-base outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
                   >
                     <option value="" disabled>
                       {loadingGroups

@@ -22,13 +22,16 @@ export function SignInForm({ onSwitchToSignUp }: { onSwitchToSignUp: () => void 
     const supabase = createClient();
     const { error } = await supabase.auth.signInWithPassword({ email, password });
 
-    setSubmitting(false);
-
     if (error) {
+      setSubmitting(false);
       setError(error.message);
       return;
     }
 
+    // Leave `submitting` true (button stays showing "Signing in...") instead
+    // of resetting it here - router.push/refresh aren't instant, and
+    // flipping back to "Sign in" while that's still in flight is what
+    // caused the button to visibly revert right before the page changed.
     router.push("/calendar");
     router.refresh();
   }

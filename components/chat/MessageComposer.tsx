@@ -33,7 +33,7 @@ export function MessageComposer({
     <motion.div
       initial={{ y: 24, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
-      transition={{ type: "spring", stiffness: 300, damping: 26 }}
+      transition={{ duration: 0.3, ease: "easeOut" }}
       className="border-t border-border/60 bg-white/90 backdrop-blur-sm"
     >
       {replyingTo && (
@@ -84,7 +84,7 @@ export function MessageComposer({
           value={body}
           onChange={(e) => setBody(e.target.value)}
           placeholder="Message..."
-          className="flex-1 rounded-full border border-border bg-background/60 px-4 py-2 outline-none transition focus:border-primary focus:bg-white focus:ring-2 focus:ring-primary/20"
+          className="flex-1 rounded-full border border-border bg-white px-4 py-2 shadow-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
         />
         <motion.button
           whileTap={{ scale: 0.85, rotate: -15 }}

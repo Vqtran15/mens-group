@@ -9,7 +9,7 @@ import { SuccessButton, type SubmitStatus } from "@/components/ui/SuccessButton"
 import { Skeleton } from "@/components/ui/Skeleton";
 
 const fieldClass =
-  "w-full rounded-xl border border-border bg-background/50 px-3 py-2.5 outline-none transition focus:border-primary focus:bg-white focus:ring-2 focus:ring-primary/20";
+  "w-full rounded-xl border border-border bg-white shadow-sm px-3 py-2.5 outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20";
 
 function toDateInputValue(iso: string): string {
   return iso.slice(0, 10);
@@ -142,33 +142,31 @@ export function EventForm({ eventId }: { eventId?: string }) {
           className={fieldClass}
         />
       </div>
-      <div className="flex gap-3">
-        <div className="flex-1">
-          <label htmlFor="date" className="mb-1.5 block text-sm font-medium text-secondary">
-            Date
-          </label>
-          <input
-            id="date"
-            type="date"
-            required
-            value={date}
-            onChange={(e) => setDate(e.target.value)}
-            className={fieldClass}
-          />
-        </div>
-        <div className="flex-1">
-          <label htmlFor="time" className="mb-1.5 block text-sm font-medium text-secondary">
-            Time
-          </label>
-          <input
-            id="time"
-            type="time"
-            required
-            value={time}
-            onChange={(e) => setTime(e.target.value)}
-            className={fieldClass}
-          />
-        </div>
+      <div>
+        <label htmlFor="date" className="mb-1.5 block text-sm font-medium text-secondary">
+          Date
+        </label>
+        <input
+          id="date"
+          type="date"
+          required
+          value={date}
+          onChange={(e) => setDate(e.target.value)}
+          className={fieldClass}
+        />
+      </div>
+      <div>
+        <label htmlFor="time" className="mb-1.5 block text-sm font-medium text-secondary">
+          Time
+        </label>
+        <input
+          id="time"
+          type="time"
+          required
+          value={time}
+          onChange={(e) => setTime(e.target.value)}
+          className={fieldClass}
+        />
       </div>
       <div>
         <label htmlFor="location" className="mb-1.5 block text-sm font-medium text-secondary">
