@@ -5,6 +5,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { ChatText, MagnifyingGlass, X } from "@phosphor-icons/react";
 import { createClient } from "@/lib/supabase/client";
 import { TopicListItem } from "@/components/topics/TopicListItem";
+import { useTopicsSearch } from "@/components/topics/TopicsSearchContext";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { EmptyState } from "@/components/ui/EmptyState";
 import type { Topic } from "@/lib/types";
@@ -16,8 +17,7 @@ function stripHtml(html: string): string {
 export function TopicsView() {
   const [topics, setTopics] = useState<Topic[]>([]);
   const [loading, setLoading] = useState(true);
-  const [query, setQuery] = useState("");
-  const [searchOpen, setSearchOpen] = useState(false);
+  const { query, setQuery, open: searchOpen, setOpen: setSearchOpen } = useTopicsSearch();
 
   useEffect(() => {
     const supabase = createClient();
@@ -29,6 +29,16 @@ export function TopicsView() {
         setTopics(data ?? []);
         setLoading(false);
       });
+  }, []);
+
+  // Reset shared search state when leaving the page, so it doesn't come back
+  // stale (still open, old query) the next time this page mounts.
+  useEffect(() => {
+    return () => {
+      setSearchOpen(false);
+      setQuery("");
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const filteredTopics = useMemo(() => {
@@ -47,55 +57,37 @@ export function TopicsView() {
 
   return (
     <div className="space-y-4 p-4">
-      {!loading && topics.length > 0 && (
-        <div className="flex justify-end">
-          <AnimatePresence mode="wait" initial={false}>
-            {searchOpen ? (
-              <motion.div
-                key="input"
-                initial={{ opacity: 0, width: "40%" }}
-                animate={{ opacity: 1, width: "100%" }}
-                exit={{ opacity: 0, width: "40%" }}
-                transition={{ duration: 0.18 }}
-                className="relative"
-              >
-                <MagnifyingGlass
-                  size={18}
-                  className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted"
-                />
-                <input
-                  autoFocus
-                  value={query}
-                  onChange={(e) => setQuery(e.target.value)}
-                  placeholder="Search topics..."
-                  className="w-full rounded-xl border border-border bg-white py-2.5 pl-10 pr-9 outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
-                />
-                <button
-                  type="button"
-                  onClick={closeSearch}
-                  aria-label="Close search"
-                  className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full p-1 text-muted transition-colors hover:bg-surface-muted"
-                >
-                  <X size={16} />
-                </button>
-              </motion.div>
-            ) : (
-              <motion.button
-                key="icon"
-                type="button"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                onClick={() => setSearchOpen(true)}
-                aria-label="Search topics"
-                className="rounded-full p-2 text-secondary transition-colors hover:bg-surface-muted"
-              >
-                <MagnifyingGlass size={20} />
-              </motion.button>
-            )}
-          </AnimatePresence>
-        </div>
-      )}
+      <AnimatePresence initial={false}>
+        {searchOpen && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: "auto" }}
+            exit={{ opacity: 0, height: 0 }}
+            transition={{ duration: 0.18 }}
+            className="relative overflow-hidden"
+          >
+            <MagnifyingGlass
+              size={18}
+              className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted"
+            />
+            <input
+              autoFocus
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search topics..."
+              className="w-full rounded-xl border border-border bg-white py-2.5 pl-10 pr-9 outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
+            />
+            <button
+              type="button"
+              onClick={closeSearch}
+              aria-label="Close search"
+              className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full p-1 text-muted transition-colors hover:bg-surface-muted"
+            >
+              <X size={16} />
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {loading ? (
         <div className="space-y-3">

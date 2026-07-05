@@ -23,9 +23,9 @@ export function NextMeetingCard({
   const startsAt = new Date(event.starts_at);
 
   return (
-    <div className="rounded-2xl bg-highlight p-4 shadow-lg shadow-highlight/30">
+    <div className="rounded-2xl bg-primary p-4 shadow-lg shadow-primary/40">
       <div className="flex items-start gap-3">
-        <div className="flex h-14 w-14 shrink-0 flex-col items-center justify-center rounded-xl bg-white/80 text-primary shadow-sm">
+        <div className="flex h-14 w-14 shrink-0 flex-col items-center justify-center rounded-xl bg-highlight text-primary shadow-sm">
           <span className="text-[10px] font-semibold uppercase tracking-wide">
             {startsAt.toLocaleDateString("en-US", { month: "short" })}
           </span>
@@ -33,23 +33,23 @@ export function NextMeetingCard({
         </div>
         <div className="min-w-0 flex-1">
           <div className="flex items-start justify-between gap-2">
-            <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-primary">
+            <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-highlight">
               <Sparkle size={14} weight="fill" /> Next meeting
             </p>
             {!event.is_recurring && (
               <Link
                 href={`/calendar/${event.id}/edit`}
                 aria-label="Edit event"
-                className="shrink-0 rounded-full p-1.5 text-primary transition-colors hover:bg-white/60"
+                className="shrink-0 rounded-full p-1.5 text-white transition-colors hover:bg-white/15"
               >
                 <PencilSimple size={16} />
               </Link>
             )}
           </div>
-          <p className="mt-1 text-xl font-semibold text-primary">{event.title}</p>
-          <p className="mt-1 text-primary">{formatTime(startsAt)}</p>
+          <p className="mt-1 text-xl font-semibold text-white">{event.title}</p>
+          <p className="mt-1 text-white">{formatTime(startsAt)}</p>
           {event.location && (
-            <p className="mt-1 flex items-center gap-1.5 text-sm text-primary">
+            <p className="mt-1 flex items-center gap-1.5 text-sm text-white">
               <MapPin size={14} className="shrink-0" />
               {event.location}
             </p>
@@ -63,7 +63,7 @@ export function NextMeetingCard({
             <Link
               key={topic.id}
               href={`/topics/${topic.id}`}
-              className="inline-flex items-center gap-1 rounded-full bg-white/80 px-2.5 py-1 text-xs font-medium text-primary shadow-sm transition-colors hover:bg-white"
+              className="inline-flex items-center gap-1 rounded-full bg-white/90 px-2.5 py-1 text-xs font-medium text-primary shadow-sm transition-colors hover:bg-white"
             >
               <ChatText size={12} /> {topic.title}
             </Link>
@@ -80,7 +80,7 @@ export function NextMeetingCard({
         />
       </div>
       <div className="mt-4">
-        <AttendeeList rsvps={rsvps} textClassName="text-primary" />
+        <AttendeeList rsvps={rsvps} textClassName="text-white" />
       </div>
     </div>
   );

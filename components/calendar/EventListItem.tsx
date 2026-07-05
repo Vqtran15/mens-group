@@ -24,7 +24,7 @@ export function EventListItem({
 
   return (
     <div className="flex gap-3 rounded-2xl border border-border/60 bg-white p-4 shadow-sm">
-      <div className="flex h-14 w-14 shrink-0 flex-col items-center justify-center rounded-xl bg-teal/10 text-teal">
+      <div className="flex h-14 w-14 shrink-0 flex-col items-center justify-center rounded-xl bg-teal/10 text-teal shadow-sm">
         <span className="text-[10px] font-semibold uppercase tracking-wide">
           {startsAt.toLocaleDateString("en-US", { month: "short" })}
         </span>
