@@ -1,11 +1,13 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { ChatText, MagnifyingGlass, X } from "@phosphor-icons/react";
 import { createClient } from "@/lib/supabase/client";
 import { TopicListItem } from "@/components/topics/TopicListItem";
 import { useTopicsSearch } from "@/components/topics/TopicsSearchContext";
+import { useUnreadIndicator } from "@/components/UnreadIndicatorContext";
+import { PullToRefresh } from "@/components/ui/PullToRefresh";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { EmptyState } from "@/components/ui/EmptyState";
 import type { Topic } from "@/lib/types";
@@ -18,18 +20,26 @@ export function TopicsView() {
   const [topics, setTopics] = useState<Topic[]>([]);
   const [loading, setLoading] = useState(true);
   const { query, setQuery, open: searchOpen, setOpen: setSearchOpen } = useTopicsSearch();
+  const { markTopicsSeen } = useUnreadIndicator();
 
-  useEffect(() => {
+  const loadTopics = useCallback(async () => {
     const supabase = createClient();
-    supabase
+    const { data } = await supabase
       .from("topics")
       .select("*")
-      .order("created_at", { ascending: false })
-      .then(({ data }) => {
-        setTopics(data ?? []);
-        setLoading(false);
-      });
+      .order("created_at", { ascending: false });
+    setTopics(data ?? []);
+    setLoading(false);
   }, []);
+
+  useEffect(() => {
+    async function init() {
+      await loadTopics();
+      markTopicsSeen();
+    }
+    init();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loadTopics]);
 
   // Reset shared search state when leaving the page, so it doesn't come back
   // stale (still open, old query) the next time this page mounts.
@@ -56,6 +66,7 @@ export function TopicsView() {
   }
 
   return (
+    <PullToRefresh onRefresh={loadTopics}>
     <div className="space-y-4 p-4">
       <AnimatePresence initial={false}>
         {searchOpen && (
@@ -118,5 +129,6 @@ export function TopicsView() {
         </div>
       )}
     </div>
+    </PullToRefresh>
   );
 }

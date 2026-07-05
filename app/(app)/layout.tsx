@@ -7,6 +7,7 @@ import { BottomNav } from "@/components/BottomNav";
 import { SettingsLink } from "@/components/SettingsLink";
 import { PushPermissionPrompt } from "@/components/PushPermissionPrompt";
 import { TopicsSearchProvider, useTopicsSearch } from "@/components/topics/TopicsSearchContext";
+import { UnreadIndicatorProvider } from "@/components/UnreadIndicatorContext";
 
 const SECTION_TITLES: { prefix: string; title: string }[] = [
   { prefix: "/calendar", title: "Calendar" },
@@ -68,13 +69,15 @@ export default function AppLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <TopicsSearchProvider>
-      <div className="flex h-dvh flex-col bg-background">
-        <AppHeader />
-        <PushPermissionPrompt />
-        <main className="min-h-0 flex-1 overflow-y-auto">{children}</main>
-        <BottomNav />
-      </div>
-    </TopicsSearchProvider>
+    <UnreadIndicatorProvider>
+      <TopicsSearchProvider>
+        <div className="flex h-dvh flex-col bg-background">
+          <AppHeader />
+          <PushPermissionPrompt />
+          <main className="min-h-0 flex-1 overflow-y-auto">{children}</main>
+          <BottomNav />
+        </div>
+      </TopicsSearchProvider>
+    </UnreadIndicatorProvider>
   );
 }

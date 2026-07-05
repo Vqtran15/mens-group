@@ -25,7 +25,7 @@ export function NextMeetingCard({
   return (
     <div className="rounded-2xl bg-primary p-4 shadow-lg shadow-primary/40">
       <div className="flex items-start gap-3">
-        <div className="flex h-14 w-14 shrink-0 flex-col items-center justify-center rounded-xl bg-highlight text-primary shadow-sm">
+        <div className="flex h-14 w-14 shrink-0 flex-col items-center justify-center rounded-xl bg-highlight-light text-primary shadow-sm">
           <span className="text-[10px] font-semibold uppercase tracking-wide">
             {startsAt.toLocaleDateString("en-US", { month: "short" })}
           </span>
@@ -33,7 +33,7 @@ export function NextMeetingCard({
         </div>
         <div className="min-w-0 flex-1">
           <div className="flex items-start justify-between gap-2">
-            <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-highlight">
+            <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-highlight-light">
               <Sparkle size={14} weight="fill" /> Next meeting
             </p>
             {!event.is_recurring && (

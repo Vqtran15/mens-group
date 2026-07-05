@@ -5,21 +5,29 @@ import { usePathname } from "next/navigation";
 import { motion } from "framer-motion";
 import { CalendarBlank, Notebook, ChatCircle } from "@phosphor-icons/react";
 import { cn } from "@/lib/utils";
+import { useUnreadIndicator } from "@/components/UnreadIndicatorContext";
 
 const TABS = [
   { href: "/calendar", label: "Calendar", icon: CalendarBlank },
   { href: "/topics", label: "Topics", icon: Notebook },
   { href: "/chat", label: "Chat", icon: ChatCircle },
-];
+] as const;
 
 export function BottomNav() {
   const pathname = usePathname();
+  const { chatUnread, topicsUnread } = useUnreadIndicator();
+
+  const unreadByHref: Record<string, boolean> = {
+    "/topics": topicsUnread,
+    "/chat": chatUnread,
+  };
 
   return (
     <nav className="border-t border-border bg-white/90 pb-[env(safe-area-inset-bottom)] backdrop-blur-sm">
       <ul className="flex">
         {TABS.map(({ href, label, icon: Icon }) => {
           const active = pathname.startsWith(href);
+          const unread = unreadByHref[href];
           return (
             <li key={href} className="flex-1">
               <Link
@@ -44,8 +52,12 @@ export function BottomNav() {
                     initial={active ? { scale: 0.6 } : false}
                     animate={{ scale: 1 }}
                     transition={{ type: "spring", stiffness: 500, damping: 15 }}
+                    className="relative"
                   >
                     <Icon size={24} weight={active ? "fill" : "regular"} />
+                    {unread && (
+                      <span className="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full bg-accent ring-2 ring-white" />
+                    )}
                   </motion.span>
                   {label}
                 </span>

@@ -10,6 +10,7 @@ import { MessageComposer } from "@/components/chat/MessageComposer";
 import { MessageActionSheet } from "@/components/chat/MessageActionSheet";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { useUnreadIndicator } from "@/components/UnreadIndicatorContext";
 import type { ChatMessage, Reaction } from "@/lib/types";
 
 const DEFAULT_REACTION = "❤️";
@@ -29,6 +30,7 @@ export function ChatView() {
   const userIdRef = useRef<string | null>(null);
   const groupIdRef = useRef<string | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const { markChatSeen } = useUnreadIndicator();
 
   useEffect(() => {
     const supabase = createClient();
@@ -156,6 +158,14 @@ export function ChatView() {
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
+
+  // Re-mark as seen whenever the message list changes while this view is
+  // mounted, so a message arriving while you're actively looking at chat
+  // doesn't leave the nav badge lit.
+  useEffect(() => {
+    if (messages.length > 0) markChatSeen();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [messages.length]);
 
   async function handleSend({ body, imageFile }: { body: string; imageFile: File | null }) {
     if (!userId || !groupIdRef.current) return;
