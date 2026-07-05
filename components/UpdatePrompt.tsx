@@ -8,6 +8,7 @@ const CHECK_INTERVAL_MS = 60_000;
 
 export function UpdatePrompt() {
   const [waitingWorker, setWaitingWorker] = useState<ServiceWorker | null>(null);
+  const [reloadRequested, setReloadRequested] = useState(false);
 
   useEffect(() => {
     let registration: ServiceWorkerRegistration | null = null;
@@ -43,23 +44,27 @@ export function UpdatePrompt() {
   }, []);
 
   useEffect(() => {
-    if (!waitingWorker) return;
+    // Only reload in response to a controllerchange once the user has
+    // actually asked for it. A waiting worker can also get activated by the
+    // browser's own lifecycle (e.g. once no other tab holds the old one),
+    // which fires this same event with no user action involved - listening
+    // unconditionally as soon as a banner is shown meant an unrelated
+    // activation could force an unannounced reload.
+    if (!reloadRequested) return;
 
-    let reloaded = false;
     function handleControllerChange() {
-      if (reloaded) return;
-      reloaded = true;
       window.location.reload();
     }
 
     navigator.serviceWorker.addEventListener("controllerchange", handleControllerChange);
     return () =>
       navigator.serviceWorker.removeEventListener("controllerchange", handleControllerChange);
-  }, [waitingWorker]);
+  }, [reloadRequested]);
 
   if (!waitingWorker) return null;
 
   function handleReload() {
+    setReloadRequested(true);
     waitingWorker?.postMessage("SKIP_WAITING");
   }
 
