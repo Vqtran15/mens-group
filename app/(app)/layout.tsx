@@ -6,6 +6,7 @@ import { MagnifyingGlass, Plus } from "@phosphor-icons/react";
 import { BottomNav } from "@/components/BottomNav";
 import { SettingsLink } from "@/components/SettingsLink";
 import { PushPermissionPrompt } from "@/components/PushPermissionPrompt";
+import { UpdatePrompt } from "@/components/UpdatePrompt";
 import { TopicsSearchProvider, useTopicsSearch } from "@/components/topics/TopicsSearchContext";
 import { UnreadIndicatorProvider } from "@/components/UnreadIndicatorContext";
 
@@ -73,6 +74,7 @@ export default function AppLayout({
       <TopicsSearchProvider>
         <div className="flex h-dvh flex-col bg-background">
           <AppHeader />
+          <UpdatePrompt />
           <PushPermissionPrompt />
           <main className="min-h-0 flex-1 overflow-y-auto">{children}</main>
           <BottomNav />
