@@ -135,22 +135,23 @@ export function CalendarView() {
 
       {rest.length > 0 && (
         <div className="space-y-3">
-          <button
+          <motion.button
             type="button"
+            whileTap={{ scale: 0.98 }}
             onClick={() => setUpcomingOpen((o) => !o)}
-            className="flex w-full items-center justify-between"
+            className="flex w-full items-center justify-between rounded-2xl border border-border/60 bg-white px-4 py-3 shadow-sm transition-colors hover:bg-surface-muted/60"
           >
-            <h2 className="text-sm font-semibold uppercase tracking-wide text-secondary">
+            <h2 className="text-sm font-semibold uppercase tracking-wide text-primary">
               Upcoming ({rest.length})
             </h2>
             <motion.span
               animate={{ rotate: upcomingOpen ? 0 : -90 }}
               transition={{ duration: 0.2 }}
-              className="text-secondary"
+              className="text-primary"
             >
               <CaretDown size={16} />
             </motion.span>
-          </button>
+          </motion.button>
           <AnimatePresence initial={false}>
             {upcomingOpen && (
               <motion.div
