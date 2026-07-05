@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { WarningCircle } from "@phosphor-icons/react";
+import { WarningCircle, CalendarBlank, Clock } from "@phosphor-icons/react";
 import { createClient } from "@/lib/supabase/client";
 import { getCurrentMembership } from "@/lib/supabase/current-membership";
 import { SuccessButton, type SubmitStatus } from "@/components/ui/SuccessButton";
@@ -146,27 +146,39 @@ export function EventForm({ eventId }: { eventId?: string }) {
         <label htmlFor="date" className="mb-1.5 block text-sm font-medium text-secondary">
           Date
         </label>
-        <input
-          id="date"
-          type="date"
-          required
-          value={date}
-          onChange={(e) => setDate(e.target.value)}
-          className={fieldClass}
-        />
+        <div className="relative">
+          <input
+            id="date"
+            type="date"
+            required
+            value={date}
+            onChange={(e) => setDate(e.target.value)}
+            className={`${fieldClass} appearance-none pr-9`}
+          />
+          <CalendarBlank
+            size={18}
+            className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-secondary/60"
+          />
+        </div>
       </div>
       <div>
         <label htmlFor="time" className="mb-1.5 block text-sm font-medium text-secondary">
           Time
         </label>
-        <input
-          id="time"
-          type="time"
-          required
-          value={time}
-          onChange={(e) => setTime(e.target.value)}
-          className={fieldClass}
-        />
+        <div className="relative">
+          <input
+            id="time"
+            type="time"
+            required
+            value={time}
+            onChange={(e) => setTime(e.target.value)}
+            className={`${fieldClass} appearance-none pr-9`}
+          />
+          <Clock
+            size={18}
+            className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-secondary/60"
+          />
+        </div>
       </div>
       <div>
         <label htmlFor="location" className="mb-1.5 block text-sm font-medium text-secondary">

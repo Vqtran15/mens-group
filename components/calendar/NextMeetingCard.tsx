@@ -3,12 +3,13 @@
 import { useState } from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { ChatText, MapPin, PencilSimple, Sparkle, Trash } from "@phosphor-icons/react";
+import { ChatText, DotsThreeVertical, MapPin, Sparkle } from "@phosphor-icons/react";
 import { createClient } from "@/lib/supabase/client";
 import { formatTime } from "@/lib/utils";
 import { RSVPButtons } from "@/components/calendar/RSVPButtons";
 import { AttendeeList } from "@/components/calendar/AttendeeList";
 import { ConfirmSheet } from "@/components/ui/ConfirmSheet";
+import { EventActionSheet } from "@/components/calendar/EventActionSheet";
 import type { CalendarEvent, RelatedTopic, Rsvp, RsvpStatus } from "@/lib/types";
 
 export function NextMeetingCard({
@@ -25,6 +26,7 @@ export function NextMeetingCard({
   relatedTopics?: RelatedTopic[];
 }) {
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [actionsOpen, setActionsOpen] = useState(false);
   const currentStatus: RsvpStatus | null =
     rsvps.find((r) => r.user_id === userId)?.status ?? null;
   const startsAt = new Date(event.starts_at);
@@ -48,23 +50,14 @@ export function NextMeetingCard({
           <Sparkle size={14} weight="fill" /> Next meeting
         </p>
         {!event.is_recurring && (
-          <div className="flex shrink-0 items-center gap-0.5">
-            <Link
-              href={`/calendar/${event.id}/edit`}
-              aria-label="Edit event"
-              className="rounded-full p-1.5 text-white transition-colors hover:bg-white/15"
-            >
-              <PencilSimple size={16} />
-            </Link>
-            <button
-              type="button"
-              onClick={() => setConfirmOpen(true)}
-              aria-label="Delete event"
-              className="rounded-full p-1.5 text-white transition-colors hover:bg-white/15"
-            >
-              <Trash size={16} />
-            </button>
-          </div>
+          <button
+            type="button"
+            onClick={() => setActionsOpen(true)}
+            aria-label="Meeting actions"
+            className="shrink-0 rounded-full p-1.5 text-white transition-colors hover:bg-white/15"
+          >
+            <DotsThreeVertical size={18} weight="bold" />
+          </button>
         )}
       </div>
 
@@ -113,6 +106,12 @@ export function NextMeetingCard({
         <AttendeeList rsvps={rsvps} textClassName="text-white" />
       </div>
 
+      <EventActionSheet
+        open={actionsOpen}
+        onClose={() => setActionsOpen(false)}
+        editHref={`/calendar/${event.id}/edit`}
+        onDelete={() => setConfirmOpen(true)}
+      />
       <ConfirmSheet
         open={confirmOpen}
         title="Delete this meeting?"

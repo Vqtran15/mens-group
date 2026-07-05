@@ -2,12 +2,13 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { ChatText, MapPin, PencilSimple, Trash } from "@phosphor-icons/react";
+import { ChatText, DotsThreeVertical, MapPin } from "@phosphor-icons/react";
 import { createClient } from "@/lib/supabase/client";
 import { formatTime } from "@/lib/utils";
 import { RSVPButtons } from "@/components/calendar/RSVPButtons";
 import { AttendeeList } from "@/components/calendar/AttendeeList";
 import { ConfirmSheet } from "@/components/ui/ConfirmSheet";
+import { EventActionSheet } from "@/components/calendar/EventActionSheet";
 import type { CalendarEvent, RelatedTopic, Rsvp, RsvpStatus } from "@/lib/types";
 
 export function EventListItem({
@@ -24,6 +25,7 @@ export function EventListItem({
   relatedTopics?: RelatedTopic[];
 }) {
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [actionsOpen, setActionsOpen] = useState(false);
   const currentStatus: RsvpStatus | null =
     rsvps.find((r) => r.user_id === userId)?.status ?? null;
   const startsAt = new Date(event.starts_at);
@@ -47,23 +49,14 @@ export function EventListItem({
         <div className="flex items-start justify-between gap-2">
           <p className="font-medium text-primary">{event.title}</p>
           {!event.is_recurring && (
-            <div className="flex shrink-0 items-center gap-0.5">
-              <Link
-                href={`/calendar/${event.id}/edit`}
-                aria-label="Edit event"
-                className="rounded-full p-1.5 text-secondary transition-colors hover:bg-surface-muted"
-              >
-                <PencilSimple size={16} />
-              </Link>
-              <button
-                type="button"
-                onClick={() => setConfirmOpen(true)}
-                aria-label="Delete event"
-                className="rounded-full p-1.5 text-secondary transition-colors hover:bg-surface-muted"
-              >
-                <Trash size={16} />
-              </button>
-            </div>
+            <button
+              type="button"
+              onClick={() => setActionsOpen(true)}
+              aria-label="Event actions"
+              className="shrink-0 rounded-full p-1.5 text-secondary transition-colors hover:bg-surface-muted"
+            >
+              <DotsThreeVertical size={18} weight="bold" />
+            </button>
           )}
         </div>
         <p className="mt-1 text-sm text-secondary">{formatTime(startsAt)}</p>
@@ -99,6 +92,12 @@ export function EventListItem({
         </div>
       </div>
 
+      <EventActionSheet
+        open={actionsOpen}
+        onClose={() => setActionsOpen(false)}
+        editHref={`/calendar/${event.id}/edit`}
+        onDelete={() => setConfirmOpen(true)}
+      />
       <ConfirmSheet
         open={confirmOpen}
         title="Delete this event?"

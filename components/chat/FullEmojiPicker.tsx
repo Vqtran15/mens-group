@@ -11,6 +11,7 @@ export function FullEmojiPicker({ onSelect }: { onSelect: (emoji: string) => voi
       height={360}
       previewConfig={{ showPreview: false }}
       skinTonesDisabled
+      autoFocusSearch={false}
     />
   );
 }
