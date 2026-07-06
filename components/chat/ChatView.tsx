@@ -62,12 +62,16 @@ export function ChatView() {
       // instead of one after the other. Reactions are embedded directly in
       // the messages query (message_reactions has a FK to chat_messages),
       // which skips what used to be a third sequential round trip.
+      // Descending + limit gets the most recent 100 rows - ascending would
+      // instead grab the oldest 100 ever sent, which would strand every
+      // group past its first 100 messages on permanently stale history from
+      // here on, since a fresh load would never reach anything recent.
       const [{ data: profiles }, { data: initialMessages }] = await Promise.all([
         supabase.from("profiles").select("id, display_name, avatar_color").eq("group_id", membership.groupId),
         supabase
           .from("chat_messages")
           .select("*, profiles(display_name, avatar_color), message_reactions(*)")
-          .order("created_at", { ascending: true })
+          .order("created_at", { ascending: false })
           .limit(100),
       ]);
 
@@ -77,7 +81,7 @@ export function ChatView() {
 
       const grouped: Record<string, Reaction[]> = {};
       const cleanMessages: PendingChatMessage[] = [];
-      for (const row of initialMessages ?? []) {
+      for (const row of (initialMessages ?? []).reverse()) {
         const { message_reactions, ...message } = row as ChatMessage & { message_reactions: Reaction[] };
         if (message_reactions?.length) grouped[message.id] = message_reactions;
         cleanMessages.push(message);
@@ -182,6 +186,12 @@ export function ChatView() {
   // own smooth-scroll-to-bottom as "the user scrolled away" and flashing the
   // jump-to-latest button back on before the animation settles.
   const suppressScrollDetectionRef = useRef(false);
+  // The very first time messages populate (opening Chat), jumping instantly
+  // is correct - animating a smooth scroll from the top would visibly play
+  // through the entire loaded history first, getting worse the longer a
+  // group's been chatting. Only scroll *changes* after that (a new message
+  // arriving) should animate.
+  const hasScrolledInitialLoadRef = useRef(false);
 
   function scrollToBottomSmooth() {
     const container = containerRef.current;
@@ -210,9 +220,15 @@ export function ChatView() {
   // message arriving while they're reading back through history would yank
   // them away from what they're looking at.
   useEffect(() => {
-    if (isNearBottomRef.current) {
-      scrollToBottomSmooth();
+    if (messages.length === 0 || !isNearBottomRef.current) return;
+
+    if (!hasScrolledInitialLoadRef.current) {
+      hasScrolledInitialLoadRef.current = true;
+      bottomRef.current?.scrollIntoView({ behavior: "auto" });
+      return;
     }
+
+    scrollToBottomSmooth();
   }, [messages]);
 
   useEffect(() => {
