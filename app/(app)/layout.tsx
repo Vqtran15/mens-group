@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { motion } from "framer-motion";
 import { usePathname, useRouter } from "next/navigation";
 import { MagnifyingGlass, Plus } from "@phosphor-icons/react";
 import { createClient } from "@/lib/supabase/client";
@@ -26,6 +27,8 @@ const ADD_ACTIONS: { path: string; href: string; label: string }[] = [
   { path: "/calendar", href: "/calendar/new", label: "Add event" },
   { path: "/topics", href: "/topics/new", label: "Add topic" },
 ];
+
+const MotionLink = motion.create(Link);
 
 function TopicsSearchToggle() {
   const { open, setOpen } = useTopicsSearch();
@@ -53,13 +56,15 @@ function AppHeader() {
       <div className="flex items-center gap-1">
         {pathname === "/topics" && <TopicsSearchToggle />}
         {addAction && (
-          <Link
+          <MotionLink
             href={addAction.href}
             aria-label={addAction.label}
+            whileTap={{ scale: 0.85 }}
+            transition={{ duration: 0.15 }}
             className="rounded-full p-2 text-secondary transition-colors hover:bg-surface-muted hover:text-primary"
           >
             <Plus size={22} />
-          </Link>
+          </MotionLink>
         )}
         <SettingsLink />
       </div>

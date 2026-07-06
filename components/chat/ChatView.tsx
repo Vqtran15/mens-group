@@ -475,6 +475,7 @@ export function ChatView() {
         open={actionSheetMessageId !== null}
         onClose={() => setActionSheetMessageId(null)}
         canEdit={actionSheetMessage?.created_by === userId}
+        messageBody={actionSheetMessage?.body ?? ""}
         onReply={() => {
           if (actionSheetMessage) setReplyingTo(actionSheetMessage);
         }}

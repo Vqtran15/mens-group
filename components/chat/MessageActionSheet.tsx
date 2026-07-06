@@ -3,7 +3,7 @@
 import { useState } from "react";
 import dynamic from "next/dynamic";
 import { AnimatePresence, motion } from "framer-motion";
-import { ArrowBendUpLeft, PencilSimple, Trash, DotsThreeOutline } from "@phosphor-icons/react";
+import { ArrowBendUpLeft, Copy, PencilSimple, Trash, DotsThreeOutline } from "@phosphor-icons/react";
 
 // Keeps emoji-picker-react's ~150KB+ bundle out of the initial /chat load -
 // see EmojiPickerPopover.tsx for the same pattern.
@@ -18,6 +18,7 @@ export function MessageActionSheet({
   open,
   onClose,
   canEdit,
+  messageBody,
   onReply,
   onEdit,
   onDelete,
@@ -26,6 +27,7 @@ export function MessageActionSheet({
   open: boolean;
   onClose: () => void;
   canEdit: boolean;
+  messageBody: string;
   onReply: () => void;
   onEdit: () => void;
   onDelete: () => void;
@@ -36,6 +38,11 @@ export function MessageActionSheet({
   function handleClose() {
     setShowFullPicker(false);
     onClose();
+  }
+
+  async function handleCopy() {
+    await navigator.clipboard.writeText(messageBody);
+    handleClose();
   }
 
   return (
@@ -102,6 +109,15 @@ export function MessageActionSheet({
               >
                 <ArrowBendUpLeft size={18} /> Reply
               </button>
+              {messageBody && (
+                <button
+                  type="button"
+                  onClick={handleCopy}
+                  className="flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-left text-secondary transition-colors hover:bg-surface-muted"
+                >
+                  <Copy size={18} /> Copy
+                </button>
+              )}
               {canEdit && (
                 <button
                   type="button"
