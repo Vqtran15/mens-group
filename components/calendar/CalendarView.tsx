@@ -14,7 +14,7 @@ import { PullToRefresh } from "@/components/ui/PullToRefresh";
 import { toDateOnlyString } from "@/lib/utils";
 import type { CalendarEvent, MeetingSchedule, RelatedTopic, Rsvp } from "@/lib/types";
 
-const OCCURRENCES_TO_MATERIALIZE = 6;
+const OCCURRENCES_TO_MATERIALIZE = 3;
 
 export function CalendarView() {
   const [userId, setUserId] = useState<string | null>(null);
@@ -58,15 +58,24 @@ export function CalendarView() {
         toRecurrenceConfig(schedule),
         OCCURRENCES_TO_MATERIALIZE
       );
+      const occurrenceTimes = new Set(occurrences.map((d) => d.getTime()));
+      const scheduleEventRows = (eventRows ?? []).filter((e) => e.schedule_id === schedule.id);
+
       // Most loads already have every upcoming occurrence materialized from a
       // prior visit - only pay for the write (and a re-fetch) when one is
       // actually missing, instead of upserting identical rows every time.
-      const existingTimes = new Set(
-        (eventRows ?? [])
-          .filter((e) => e.schedule_id === schedule.id)
-          .map((e) => new Date(e.starts_at).getTime())
-      );
+      const existingTimes = new Set(scheduleEventRows.map((e) => new Date(e.starts_at).getTime()));
       const missing = occurrences.filter((date) => !existingTimes.has(date.getTime()));
+
+      // Anything already materialized beyond the current target count (e.g.
+      // left over from before OCCURRENCES_TO_MATERIALIZE was lowered) no
+      // longer belongs in "next N" and gets cleared out too, rather than
+      // lingering just because it was written under an older, higher count.
+      const staleIds = scheduleEventRows
+        .filter((e) => !occurrenceTimes.has(new Date(e.starts_at).getTime()))
+        .map((e) => e.id);
+
+      let needsRefresh = false;
 
       if (missing.length > 0) {
         const rows = missing.map((date) => {
@@ -83,7 +92,15 @@ export function CalendarView() {
           };
         });
         await supabase.from("events").upsert(rows, { onConflict: "schedule_id,starts_at" });
+        needsRefresh = true;
+      }
 
+      if (staleIds.length > 0) {
+        await supabase.from("events").delete().in("id", staleIds);
+        needsRefresh = true;
+      }
+
+      if (needsRefresh) {
         const { data: refreshedEventRows } = await supabase
           .from("events")
           .select(eventsSelect)
