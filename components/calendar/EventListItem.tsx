@@ -30,9 +30,19 @@ export function EventListItem({
     rsvps.find((r) => r.user_id === userId)?.status ?? null;
   const startsAt = new Date(event.starts_at);
 
+  // A single recurring occurrence can't be edited/deleted on its own - it'd
+  // just get re-materialized from the schedule on the next Calendar load -
+  // so for these the "•••" menu targets the underlying meeting_schedule
+  // instead, which is what actually controls every future occurrence.
+  const isRecurring = event.is_recurring;
+
   async function handleDelete() {
     const supabase = createClient();
-    await supabase.from("events").delete().eq("id", event.id);
+    if (isRecurring && event.schedule_id) {
+      await supabase.from("meeting_schedule").delete().eq("id", event.schedule_id);
+    } else {
+      await supabase.from("events").delete().eq("id", event.id);
+    }
     setConfirmOpen(false);
     onChanged();
   }
@@ -48,16 +58,14 @@ export function EventListItem({
       <div className="min-w-0 flex-1">
         <div className="flex items-start justify-between gap-2">
           <p className="font-medium text-primary">{event.title}</p>
-          {!event.is_recurring && (
-            <button
-              type="button"
-              onClick={() => setActionsOpen(true)}
-              aria-label="Event actions"
-              className="shrink-0 rounded-full p-1.5 text-secondary transition-colors hover:bg-surface-muted"
-            >
-              <DotsThreeVertical size={18} weight="bold" />
-            </button>
-          )}
+          <button
+            type="button"
+            onClick={() => setActionsOpen(true)}
+            aria-label="Event actions"
+            className="shrink-0 rounded-full p-1.5 text-secondary transition-colors hover:bg-surface-muted"
+          >
+            <DotsThreeVertical size={18} weight="bold" />
+          </button>
         </div>
         <p className="mt-1 text-sm text-secondary">{formatTime(startsAt)}</p>
         {event.location && (
@@ -95,13 +103,17 @@ export function EventListItem({
       <EditDeleteActionSheet
         open={actionsOpen}
         onClose={() => setActionsOpen(false)}
-        editHref={`/calendar/${event.id}/edit`}
+        editHref={isRecurring ? "/calendar/schedule/edit" : `/calendar/${event.id}/edit`}
         onDelete={() => setConfirmOpen(true)}
       />
       <ConfirmSheet
         open={confirmOpen}
-        title="Delete this event?"
-        description="This can't be undone. Everyone's RSVPs for it will be removed too."
+        title={isRecurring ? "Delete this meeting series?" : "Delete this event?"}
+        description={
+          isRecurring
+            ? "This stops all future occurrences of this recurring meeting and removes the ones already on the calendar. This can't be undone."
+            : "This can't be undone. Everyone's RSVPs for it will be removed too."
+        }
         confirmLabel="Delete"
         onConfirm={handleDelete}
         onCancel={() => setConfirmOpen(false)}

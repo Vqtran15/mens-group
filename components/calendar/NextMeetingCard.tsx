@@ -31,9 +31,19 @@ export function NextMeetingCard({
     rsvps.find((r) => r.user_id === userId)?.status ?? null;
   const startsAt = new Date(event.starts_at);
 
+  // A single recurring occurrence can't be edited/deleted on its own - it'd
+  // just get re-materialized from the schedule on the next Calendar load -
+  // so for these the "•••" menu targets the underlying meeting_schedule
+  // instead, which is what actually controls every future occurrence.
+  const isRecurring = event.is_recurring;
+
   async function handleDelete() {
     const supabase = createClient();
-    await supabase.from("events").delete().eq("id", event.id);
+    if (isRecurring && event.schedule_id) {
+      await supabase.from("meeting_schedule").delete().eq("id", event.schedule_id);
+    } else {
+      await supabase.from("events").delete().eq("id", event.id);
+    }
     setConfirmOpen(false);
     onChanged();
   }
@@ -49,16 +59,14 @@ export function NextMeetingCard({
         <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-highlight-light">
           <Sparkle size={14} weight="fill" /> Next meeting
         </p>
-        {!event.is_recurring && (
-          <button
-            type="button"
-            onClick={() => setActionsOpen(true)}
-            aria-label="Meeting actions"
-            className="shrink-0 rounded-full p-1.5 text-white transition-colors hover:bg-white/15"
-          >
-            <DotsThreeVertical size={18} weight="bold" />
-          </button>
-        )}
+        <button
+          type="button"
+          onClick={() => setActionsOpen(true)}
+          aria-label="Meeting actions"
+          className="shrink-0 rounded-full p-1.5 text-white transition-colors hover:bg-white/15"
+        >
+          <DotsThreeVertical size={18} weight="bold" />
+        </button>
       </div>
 
       <div className="mt-3 flex items-center gap-3">
@@ -109,13 +117,17 @@ export function NextMeetingCard({
       <EditDeleteActionSheet
         open={actionsOpen}
         onClose={() => setActionsOpen(false)}
-        editHref={`/calendar/${event.id}/edit`}
+        editHref={isRecurring ? "/calendar/schedule/edit" : `/calendar/${event.id}/edit`}
         onDelete={() => setConfirmOpen(true)}
       />
       <ConfirmSheet
         open={confirmOpen}
-        title="Delete this meeting?"
-        description="This can't be undone. Everyone's RSVPs for it will be removed too."
+        title={isRecurring ? "Delete this meeting series?" : "Delete this meeting?"}
+        description={
+          isRecurring
+            ? "This stops all future occurrences of this recurring meeting and removes the ones already on the calendar. This can't be undone."
+            : "This can't be undone. Everyone's RSVPs for it will be removed too."
+        }
         confirmLabel="Delete"
         onConfirm={handleDelete}
         onCancel={() => setConfirmOpen(false)}
