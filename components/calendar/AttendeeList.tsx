@@ -26,7 +26,7 @@ export function AttendeeList({
     return (
       <p className={cn("flex items-center gap-1.5 text-sm", textClassName)}>
         <HandsClapping size={16} className="shrink-0" />
-        No RSVPs yet — be the first to say you&apos;re in!
+        No RSVPs yet
       </p>
     );
   }

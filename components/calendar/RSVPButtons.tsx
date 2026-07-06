@@ -29,12 +29,16 @@ export function RSVPButtons({
   async function handleSelect(status: RsvpStatus) {
     setSubmitting(status);
     const supabase = createClient();
-    await supabase
-      .from("rsvps")
-      .upsert(
-        { event_id: eventId, user_id: userId, status, updated_at: new Date().toISOString() },
-        { onConflict: "event_id,user_id" }
-      );
+    if (currentStatus === status) {
+      await supabase.from("rsvps").delete().eq("event_id", eventId).eq("user_id", userId);
+    } else {
+      await supabase
+        .from("rsvps")
+        .upsert(
+          { event_id: eventId, user_id: userId, status, updated_at: new Date().toISOString() },
+          { onConflict: "event_id,user_id" }
+        );
+    }
     setSubmitting(null);
     onChanged();
   }
