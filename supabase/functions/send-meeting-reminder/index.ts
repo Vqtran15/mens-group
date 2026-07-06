@@ -18,7 +18,14 @@ interface RecurrenceConfig {
   timeOfDay: string;
 }
 
-function getNextOccurrence(config: RecurrenceConfig, from: Date): Date {
+function toDateOnlyString(date: Date): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function getNextOccurrence(config: RecurrenceConfig, from: Date, skipDates: Set<string>): Date {
   let year = from.getFullYear();
   let month = from.getMonth();
 
@@ -29,7 +36,7 @@ function getNextOccurrence(config: RecurrenceConfig, from: Date): Date {
       const date = new Date(year, month, day);
       if (date.getDay() === config.dayOfWeek) {
         matchIndex++;
-        if (config.occurrencesInMonth.includes(matchIndex)) {
+        if (config.occurrencesInMonth.includes(matchIndex) && !skipDates.has(toDateOnlyString(date))) {
           const [hours, minutes] = config.timeOfDay.split(":").map(Number);
           date.setHours(hours, minutes, 0, 0);
           if (date.getTime() >= from.getTime()) return date;
@@ -77,7 +84,8 @@ Deno.serve(async () => {
         occurrencesInMonth: schedule.occurrences_in_month,
         timeOfDay: schedule.time_of_day,
       },
-      now
+      now,
+      new Set<string>(schedule.skipped_dates ?? [])
     );
 
     if (!isSameCalendarDay(next, tomorrow)) {

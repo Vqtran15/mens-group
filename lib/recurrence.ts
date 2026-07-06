@@ -1,4 +1,5 @@
 import type { MeetingSchedule } from "@/lib/types";
+import { toDateOnlyString } from "@/lib/utils";
 
 export interface RecurrenceConfig {
   dayOfWeek: number;
@@ -49,7 +50,8 @@ export function getOccurrencesInMonth(
 export function getUpcomingOccurrences(
   config: RecurrenceConfig,
   count: number,
-  from: Date = new Date()
+  from: Date = new Date(),
+  skipDates: Set<string> = new Set()
 ): Date[] {
   const results: Date[] = [];
   let year = from.getFullYear();
@@ -58,7 +60,7 @@ export function getUpcomingOccurrences(
   while (results.length < count) {
     const monthOccurrences = getOccurrencesInMonth(year, month, config);
     for (const occurrence of monthOccurrences) {
-      if (occurrence.getTime() >= from.getTime()) {
+      if (occurrence.getTime() >= from.getTime() && !skipDates.has(toDateOnlyString(occurrence))) {
         results.push(occurrence);
       }
     }
@@ -72,6 +74,10 @@ export function getUpcomingOccurrences(
   return results.slice(0, count);
 }
 
-export function getNextOccurrence(config: RecurrenceConfig, from: Date = new Date()): Date {
-  return getUpcomingOccurrences(config, 1, from)[0];
+export function getNextOccurrence(
+  config: RecurrenceConfig,
+  from: Date = new Date(),
+  skipDates: Set<string> = new Set()
+): Date {
+  return getUpcomingOccurrences(config, 1, from, skipDates)[0];
 }

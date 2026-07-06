@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { ChatText, DotsThreeVertical, MapPin } from "@phosphor-icons/react";
 import { createClient } from "@/lib/supabase/client";
-import { formatTime } from "@/lib/utils";
+import { formatTime, toDateOnlyString } from "@/lib/utils";
 import { RSVPButtons } from "@/components/calendar/RSVPButtons";
 import { AttendeeList } from "@/components/calendar/AttendeeList";
 import { ConfirmSheet } from "@/components/ui/ConfirmSheet";
@@ -25,6 +25,7 @@ export function EventListItem({
   relatedTopics?: RelatedTopic[];
 }) {
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [skipConfirmOpen, setSkipConfirmOpen] = useState(false);
   const [actionsOpen, setActionsOpen] = useState(false);
   const currentStatus: RsvpStatus | null =
     rsvps.find((r) => r.user_id === userId)?.status ?? null;
@@ -44,6 +45,25 @@ export function EventListItem({
       await supabase.from("events").delete().eq("id", event.id);
     }
     setConfirmOpen(false);
+    onChanged();
+  }
+
+  async function handleSkip() {
+    if (!event.schedule_id) return;
+    const supabase = createClient();
+    const { data } = await supabase
+      .from("meeting_schedule")
+      .select("skipped_dates")
+      .eq("id", event.schedule_id)
+      .single();
+    const skippedDates = Array.from(
+      new Set([...(data?.skipped_dates ?? []), toDateOnlyString(startsAt)])
+    );
+    await supabase
+      .from("meeting_schedule")
+      .update({ skipped_dates: skippedDates })
+      .eq("id", event.schedule_id);
+    setSkipConfirmOpen(false);
     onChanged();
   }
 
@@ -105,6 +125,7 @@ export function EventListItem({
         onClose={() => setActionsOpen(false)}
         editHref={isRecurring ? "/calendar/schedule/edit" : `/calendar/${event.id}/edit`}
         onDelete={() => setConfirmOpen(true)}
+        onSkip={isRecurring ? () => setSkipConfirmOpen(true) : undefined}
       />
       <ConfirmSheet
         open={confirmOpen}
@@ -117,6 +138,14 @@ export function EventListItem({
         confirmLabel="Delete"
         onConfirm={handleDelete}
         onCancel={() => setConfirmOpen(false)}
+      />
+      <ConfirmSheet
+        open={skipConfirmOpen}
+        title="Skip this meeting?"
+        description="This date won't appear on the calendar, but the rest of the series continues as usual."
+        confirmLabel="Skip"
+        onConfirm={handleSkip}
+        onCancel={() => setSkipConfirmOpen(false)}
       />
     </div>
   );

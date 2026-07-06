@@ -2,18 +2,20 @@
 
 import Link from "next/link";
 import { AnimatePresence, motion } from "framer-motion";
-import { PencilSimple, Trash } from "@phosphor-icons/react";
+import { PencilSimple, SkipForward, Trash } from "@phosphor-icons/react";
 
 export function EditDeleteActionSheet({
   open,
   onClose,
   editHref,
   onDelete,
+  onSkip,
 }: {
   open: boolean;
   onClose: () => void;
   editHref: string;
   onDelete: () => void;
+  onSkip?: () => void;
 }) {
   return (
     <AnimatePresence>
@@ -41,6 +43,18 @@ export function EditDeleteActionSheet({
               >
                 <PencilSimple size={18} /> Edit
               </Link>
+              {onSkip && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    onSkip();
+                    onClose();
+                  }}
+                  className="flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-left text-secondary transition-colors hover:bg-surface-muted"
+                >
+                  <SkipForward size={18} /> Skip Meeting
+                </button>
+              )}
               <button
                 type="button"
                 onClick={() => {

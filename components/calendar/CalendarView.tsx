@@ -54,7 +54,9 @@ export function CalendarView() {
     if (schedule) {
       const occurrences = getUpcomingOccurrences(
         toRecurrenceConfig(schedule),
-        OCCURRENCES_TO_MATERIALIZE
+        OCCURRENCES_TO_MATERIALIZE,
+        new Date(),
+        new Set(schedule.skipped_dates)
       );
       const occurrenceTimes = new Set(occurrences.map((d) => d.getTime()));
       const scheduleEventRows = (eventRows ?? []).filter((e) => e.schedule_id === schedule.id);

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { motion } from "framer-motion";
 import { WarningCircle } from "@phosphor-icons/react";
 import { createClient } from "@/lib/supabase/client";
 import { getCurrentMembership } from "@/lib/supabase/current-membership";
@@ -100,7 +101,11 @@ export function TopicForm() {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4 p-4">
-      <div>
+      <motion.div
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.25, ease: "easeOut" }}
+      >
         <label htmlFor="title" className="mb-1.5 block text-sm font-medium text-secondary">
           Title
         </label>
@@ -111,8 +116,12 @@ export function TopicForm() {
           onChange={(e) => setTitle(e.target.value)}
           className={fieldClass}
         />
-      </div>
-      <div>
+      </motion.div>
+      <motion.div
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.25, delay: 0.08, ease: "easeOut" }}
+      >
         <label htmlFor="topicDate" className="mb-1.5 block text-sm font-medium text-secondary">
           Meeting date
         </label>
@@ -145,18 +154,28 @@ export function TopicForm() {
             ? "No meetings scheduled yet - pick any date."
             : "Which meeting is this topic about?"}
         </p>
-      </div>
-      <div>
+      </motion.div>
+      <motion.div
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.25, delay: 0.16, ease: "easeOut" }}
+      >
         <label className="mb-1.5 block text-sm font-medium text-secondary">Description</label>
         <RichTextEditor value={description} onChange={setDescription} />
-      </div>
+      </motion.div>
       {error && (
         <p className="flex items-center gap-1.5 rounded-lg bg-accent/10 px-3 py-2 text-sm text-accent">
           <WarningCircle size={16} className="shrink-0" />
           {error}
         </p>
       )}
-      <SuccessButton status={status} idleLabel="Add topic" submittingLabel="Adding..." className="w-full" />
+      <motion.div
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.25, delay: 0.24, ease: "easeOut" }}
+      >
+        <SuccessButton status={status} idleLabel="Add topic" submittingLabel="Adding..." className="w-full" />
+      </motion.div>
     </form>
   );
 }

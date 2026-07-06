@@ -45,6 +45,7 @@ export interface MeetingSchedule {
   notes: string | null;
   active: boolean;
   group_id: string;
+  skipped_dates: string[];
 }
 
 export interface CalendarEvent {
