@@ -1,8 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { AnimatePresence, motion } from "framer-motion";
-import { CalendarBlank, CaretDown } from "@phosphor-icons/react";
+import { CalendarBlank } from "@phosphor-icons/react";
 import { createClient } from "@/lib/supabase/client";
 import { getCurrentMembership } from "@/lib/supabase/current-membership";
 import { getUpcomingOccurrences, toRecurrenceConfig } from "@/lib/recurrence";
@@ -23,7 +22,6 @@ export function CalendarView() {
   const [rsvpsByEvent, setRsvpsByEvent] = useState<Record<string, Rsvp[]>>({});
   const [topicsByDate, setTopicsByDate] = useState<Record<string, RelatedTopic[]>>({});
   const [loading, setLoading] = useState(true);
-  const [upcomingOpen, setUpcomingOpen] = useState(false);
 
   const loadEvents = useCallback(async (currentUserId: string, groupId: string) => {
     const supabase = createClient();
@@ -192,45 +190,19 @@ export function CalendarView() {
 
       {rest.length > 0 && (
         <div className="space-y-3">
-          <motion.button
-            type="button"
-            whileTap={{ scale: 0.98 }}
-            onClick={() => setUpcomingOpen((o) => !o)}
-            className="flex w-full items-center justify-between rounded-2xl border border-border/60 bg-white px-4 py-3 shadow-sm transition-colors hover:bg-surface-muted/60"
-          >
-            <h2 className="text-sm font-semibold uppercase tracking-wide text-primary">
-              Upcoming ({rest.length})
-            </h2>
-            <motion.span
-              animate={{ rotate: upcomingOpen ? 0 : -90 }}
-              transition={{ duration: 0.2 }}
-              className="text-primary"
-            >
-              <CaretDown size={16} />
-            </motion.span>
-          </motion.button>
-          <AnimatePresence initial={false}>
-            {upcomingOpen && (
-              <motion.div
-                initial={{ height: 0, opacity: 0 }}
-                animate={{ height: "auto", opacity: 1 }}
-                exit={{ height: 0, opacity: 0 }}
-                transition={{ duration: 0.25, ease: "easeInOut" }}
-                className="space-y-3 overflow-hidden"
-              >
-                {rest.map((event) => (
-                  <EventListItem
-                    key={event.id}
-                    event={event}
-                    rsvps={rsvpsByEvent[event.id] ?? []}
-                    userId={userId}
-                    onChanged={() => loadEvents(userId, groupId)}
-                    relatedTopics={topicsByDate[toDateOnlyString(new Date(event.starts_at))] ?? []}
-                  />
-                ))}
-              </motion.div>
-            )}
-          </AnimatePresence>
+          <h2 className="px-1 text-sm font-semibold uppercase tracking-wide text-primary">
+            Upcoming
+          </h2>
+          {rest.map((event) => (
+            <EventListItem
+              key={event.id}
+              event={event}
+              rsvps={rsvpsByEvent[event.id] ?? []}
+              userId={userId}
+              onChanged={() => loadEvents(userId, groupId)}
+              relatedTopics={topicsByDate[toDateOnlyString(new Date(event.starts_at))] ?? []}
+            />
+          ))}
         </div>
       )}
     </div>
