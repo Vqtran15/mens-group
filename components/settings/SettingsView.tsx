@@ -31,6 +31,10 @@ export function SettingsView() {
   const [deletingGroup, setDeletingGroup] = useState(false);
   const [deleteGroupError, setDeleteGroupError] = useState<string | null>(null);
 
+  const [deleteAccountConfirmOpen, setDeleteAccountConfirmOpen] = useState(false);
+  const [deletingAccount, setDeletingAccount] = useState(false);
+  const [deleteAccountError, setDeleteAccountError] = useState<string | null>(null);
+
   const [avatarColor, setAvatarColor] = useState<string | null>(null);
   const [colorStatus, setColorStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
 
@@ -158,6 +162,29 @@ export function SettingsView() {
     // nothing left for this session to show - sign out rather than leave the
     // app sitting on a now-groupless profile with no recovery flow yet.
     await supabase.auth.signOut();
+    router.push("/sign-in");
+    router.refresh();
+  }
+
+  async function handleDeleteAccount() {
+    setDeletingAccount(true);
+    setDeleteAccountError(null);
+
+    const supabase = createClient();
+    const { error } = await supabase.rpc("delete_own_account");
+
+    if (error) {
+      setDeleteAccountError(error.message);
+      setDeletingAccount(false);
+      return;
+    }
+
+    setDeleteAccountConfirmOpen(false);
+    // The account is already gone server-side at this point, so the auth
+    // server has nothing left to invalidate - signOut()'s own network call
+    // predictably 403s. It still clears the local session either way, which
+    // is all that's left to do, so the failure is expected and safe to ignore.
+    await supabase.auth.signOut().catch(() => {});
     router.push("/sign-in");
     router.refresh();
   }
@@ -308,28 +335,49 @@ export function SettingsView() {
         </form>
       </section>
 
-      {isGroupCreator && (
-        <section className="space-y-3 rounded-2xl border border-accent/30 bg-accent/5 p-4 shadow-sm">
-          <h2 className="font-semibold text-accent">Danger zone</h2>
+      <section className="space-y-4 rounded-2xl border border-accent/30 bg-accent/5 p-4 shadow-sm">
+        <h2 className="font-semibold text-accent">Danger zone</h2>
+
+        {isGroupCreator && (
+          <div className="space-y-3 border-b border-accent/20 pb-4">
+            <p className="text-sm text-secondary">
+              Permanently delete {groupName} and everything in it - the calendar, topics, and
+              chat. Other members will be removed from the group too. This can&apos;t be undone.
+            </p>
+            {deleteGroupError && (
+              <p className="flex items-center gap-1.5 rounded-lg bg-accent/10 px-3 py-2 text-sm text-accent">
+                <WarningCircle size={16} className="shrink-0" />
+                {deleteGroupError}
+              </p>
+            )}
+            <Button type="button" variant="danger" onClick={() => setDeleteGroupConfirmOpen(true)}>
+              <Trash size={16} /> Delete group
+            </Button>
+          </div>
+        )}
+
+        <div className="space-y-3">
           <p className="text-sm text-secondary">
-            Permanently delete {groupName} and everything in it - the calendar, topics, and
-            chat. Other members will be removed from the group too. This can&apos;t be undone.
+            {isGroupCreator
+              ? "Delete your group above before you can delete your account."
+              : "Permanently delete your account. Topics, events, and messages you've posted will stay, just credited to \"Someone\" instead of your name."}
           </p>
-          {deleteGroupError && (
+          {deleteAccountError && (
             <p className="flex items-center gap-1.5 rounded-lg bg-accent/10 px-3 py-2 text-sm text-accent">
               <WarningCircle size={16} className="shrink-0" />
-              {deleteGroupError}
+              {deleteAccountError}
             </p>
           )}
           <Button
             type="button"
             variant="danger"
-            onClick={() => setDeleteGroupConfirmOpen(true)}
+            disabled={isGroupCreator}
+            onClick={() => setDeleteAccountConfirmOpen(true)}
           >
-            <Trash size={16} /> Delete group
+            <Trash size={16} /> Delete account
           </Button>
-        </section>
-      )}
+        </div>
+      </section>
 
       <SignOutButton />
 
@@ -340,6 +388,15 @@ export function SettingsView() {
         confirmLabel={deletingGroup ? "Deleting..." : "Delete group"}
         onConfirm={handleDeleteGroup}
         onCancel={() => setDeleteGroupConfirmOpen(false)}
+      />
+
+      <ConfirmSheet
+        open={deleteAccountConfirmOpen}
+        title="Delete your account?"
+        description="This can't be undone. You'll be signed out and removed from the group; anything you've posted stays, credited to &quot;Someone&quot;."
+        confirmLabel={deletingAccount ? "Deleting..." : "Delete account"}
+        onConfirm={handleDeleteAccount}
+        onCancel={() => setDeleteAccountConfirmOpen(false)}
       />
     </div>
   );
