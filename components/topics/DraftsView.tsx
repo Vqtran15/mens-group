@@ -11,6 +11,8 @@ import { Skeleton } from "@/components/ui/Skeleton";
 import { EmptyState } from "@/components/ui/EmptyState";
 import type { TopicDraft } from "@/lib/types";
 
+const MotionLink = motion.create(Link);
+
 export function DraftsView() {
   const router = useRouter();
   const [drafts, setDrafts] = useState<TopicDraft[]>([]);
@@ -53,13 +55,15 @@ export function DraftsView() {
         />
       ) : (
         <>
-          <Link
+          <MotionLink
             href="/topics/drafts/new"
+            whileTap={{ scale: 0.98 }}
+            transition={{ duration: 0.15 }}
             className="flex items-center gap-2 rounded-2xl border border-dashed border-border bg-white/60 px-4 py-3 text-sm font-medium text-primary transition-colors hover:bg-white/80"
           >
             <Plus size={18} />
             New draft
-          </Link>
+          </MotionLink>
           {drafts.map((draft, i) => (
             <motion.div
               key={draft.id}
