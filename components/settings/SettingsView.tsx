@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { CheckCircle, Copy, Trash, WarningCircle } from "@phosphor-icons/react";
+import { CaretRight, CheckCircle, Copy, Trash, UsersThree, WarningCircle } from "@phosphor-icons/react";
 import { createClient } from "@/lib/supabase/client";
 import { Avatar, AVATAR_COLORS } from "@/components/Avatar";
 import { Button } from "@/components/ui/Button";
@@ -285,6 +286,14 @@ export function SettingsView() {
               {codeCopied ? "Copied" : "Copy"}
             </Button>
           </div>
+          <Link
+            href="/settings/members"
+            className="flex items-center gap-2 rounded-xl border border-border/60 px-3 py-2.5 text-secondary transition-colors hover:bg-surface-muted"
+          >
+            <UsersThree size={18} />
+            <span className="flex-1 text-sm font-medium">View members</span>
+            <CaretRight size={16} className="text-muted" />
+          </Link>
         </section>
       )}
 

@@ -7,7 +7,6 @@ import { ChatText, MagnifyingGlass, X } from "@phosphor-icons/react";
 import { createClient } from "@/lib/supabase/client";
 import { TopicListItem } from "@/components/topics/TopicListItem";
 import { useTopicsSearch } from "@/components/topics/TopicsSearchContext";
-import { useUnreadIndicator } from "@/components/UnreadIndicatorContext";
 import { PullToRefresh } from "@/components/ui/PullToRefresh";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -27,7 +26,6 @@ export function TopicsView() {
   const [topics, setTopics] = useState<Topic[]>([]);
   const [loading, setLoading] = useState(true);
   const { query, setQuery, open: searchOpen, setOpen: setSearchOpen } = useTopicsSearch();
-  const { markTopicsSeen } = useUnreadIndicator();
 
   const loadTopics = useCallback(async () => {
     const supabase = createClient();
@@ -41,12 +39,10 @@ export function TopicsView() {
   }, []);
 
   useEffect(() => {
-    async function init() {
-      await loadTopics();
-      markTopicsSeen();
+    function init() {
+      loadTopics();
     }
     init();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loadTopics]);
 
   // Reset shared search state when leaving the page, so it doesn't come back

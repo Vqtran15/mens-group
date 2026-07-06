@@ -2,12 +2,12 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { WarningCircle, Timer, Clock } from "@phosphor-icons/react";
+import { WarningCircle, Timer, Clock, ArrowCounterClockwise } from "@phosphor-icons/react";
 import { createClient } from "@/lib/supabase/client";
 import { getCurrentMembership } from "@/lib/supabase/current-membership";
 import { SuccessButton, type SubmitStatus } from "@/components/ui/SuccessButton";
 import { Skeleton } from "@/components/ui/Skeleton";
-import { cn } from "@/lib/utils";
+import { cn, formatDate, parseDateOnly, toDateOnlyString } from "@/lib/utils";
 
 const fieldClass =
   "w-full min-w-0 max-w-full rounded-xl border border-border bg-white shadow-sm px-3 py-2.5 outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20";
@@ -41,6 +41,8 @@ export function MeetingScheduleForm() {
   const [duration, setDuration] = useState(90);
   const [location, setLocation] = useState("");
   const [notes, setNotes] = useState("");
+  const [skippedDates, setSkippedDates] = useState<string[]>([]);
+  const [unskipping, setUnskipping] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [status, setStatus] = useState<SubmitStatus>("idle");
 
@@ -70,6 +72,13 @@ export function MeetingScheduleForm() {
         setDuration(data.duration_minutes);
         setLocation(data.location ?? "");
         setNotes(data.notes ?? "");
+        // Past skipped dates will never be materialized again anyway - only
+        // upcoming ones are worth showing, so the list doesn't grow stale
+        // and cluttered indefinitely.
+        const today = toDateOnlyString(new Date());
+        setSkippedDates(
+          (data.skipped_dates ?? []).filter((d: string) => d >= today).sort()
+        );
       }
       setLoading(false);
     }
@@ -80,6 +89,19 @@ export function MeetingScheduleForm() {
     setOccurrences((prev) =>
       prev.includes(value) ? prev.filter((v) => v !== value) : [...prev, value].sort((a, b) => a - b)
     );
+  }
+
+  async function handleUnskip(date: string) {
+    if (!scheduleId) return;
+    setUnskipping(date);
+    const supabase = createClient();
+    const updated = skippedDates.filter((d) => d !== date);
+    const { error } = await supabase
+      .from("meeting_schedule")
+      .update({ skipped_dates: updated })
+      .eq("id", scheduleId);
+    setUnskipping(null);
+    if (!error) setSkippedDates(updated);
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -208,6 +230,31 @@ export function MeetingScheduleForm() {
           e.g. 1st and 3rd for the first and third {DAYS_OF_WEEK[dayOfWeek].label} of each month.
         </p>
       </div>
+
+      {skippedDates.length > 0 && (
+        <div>
+          <p className="mb-1.5 text-sm font-medium text-secondary">Skipped dates</p>
+          <div className="space-y-2">
+            {skippedDates.map((date) => (
+              <div
+                key={date}
+                className="flex items-center gap-2 rounded-xl border border-border bg-white px-3 py-2.5 shadow-sm"
+              >
+                <p className="flex-1 text-sm text-secondary">{formatDate(parseDateOnly(date))}</p>
+                <button
+                  type="button"
+                  onClick={() => handleUnskip(date)}
+                  disabled={unskipping === date}
+                  className="flex items-center gap-1.5 rounded-lg px-2 py-1 text-sm font-medium text-primary transition-colors hover:bg-primary/10 disabled:opacity-60"
+                >
+                  <ArrowCounterClockwise size={16} />
+                  {unskipping === date ? "Unskipping..." : "Unskip"}
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       <div>
         <label htmlFor="time" className="mb-1.5 block text-sm font-medium text-secondary">
