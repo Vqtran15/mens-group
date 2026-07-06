@@ -1,8 +1,11 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { MagnifyingGlass, Plus } from "@phosphor-icons/react";
+import { createClient } from "@/lib/supabase/client";
+import { getCurrentMembership } from "@/lib/supabase/current-membership";
 import { BottomNav } from "@/components/BottomNav";
 import { SettingsLink } from "@/components/SettingsLink";
 import { PushPermissionPrompt } from "@/components/PushPermissionPrompt";
@@ -69,6 +72,35 @@ export default function AppLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const router = useRouter();
+  const pathname = usePathname();
+  const [hasGroup, setHasGroup] = useState<boolean | null>(null);
+
+  // Re-checks on every navigation, not just on first mount - Next.js keeps
+  // this layout mounted across sibling routes under (app), so a mount-only
+  // check would miss a group disappearing (e.g. deleted by its creator)
+  // while this tab was already sitting on one of its pages.
+  useEffect(() => {
+    async function checkMembership() {
+      const supabase = createClient();
+      const membership = await getCurrentMembership(supabase);
+      // proxy.ts already guarantees a session by the time this layout
+      // renders, so a null result here specifically means "no group"
+      // (e.g. their group was just deleted) rather than "signed out".
+      if (!membership) {
+        router.replace("/onboarding");
+        return;
+      }
+      setHasGroup(true);
+    }
+    checkMembership();
+  }, [pathname, router]);
+
+  // Only block rendering on the very first check - once membership is
+  // confirmed, later re-checks happen quietly and just redirect if needed,
+  // instead of flashing this blank state on every navigation.
+  if (hasGroup === null) return <div className="h-dvh bg-background" />;
+
   return (
     <UnreadIndicatorProvider>
       <TopicsSearchProvider>
