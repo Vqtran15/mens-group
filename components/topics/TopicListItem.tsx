@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { CaretRight, DotsThreeVertical } from "@phosphor-icons/react";
+import { DotsThreeVertical } from "@phosphor-icons/react";
 import { Avatar, AVATAR_COLORS } from "@/components/Avatar";
 import { EditDeleteActionSheet } from "@/components/ui/EditDeleteActionSheet";
 import { ConfirmSheet } from "@/components/ui/ConfirmSheet";
@@ -41,21 +41,18 @@ export function TopicListItem({ topic, onChanged }: { topic: Topic; onChanged: (
       >
         <DotsThreeVertical size={18} weight="bold" />
       </button>
-      <Link href={`/topics/${topic.id}`} className="flex items-center gap-3">
-        <div className="min-w-0 flex-1 pr-7">
-          <div className="flex items-baseline gap-2">
-            <p className="truncate font-medium text-primary">{topic.title}</p>
-            <p className="shrink-0 text-xs font-medium text-secondary">
-              {formatDate(parseDateOnly(topic.topic_date))}
-            </p>
-          </div>
-          {preview && <p className="mt-1 line-clamp-2 text-sm text-secondary">{preview}</p>}
-          <div className="mt-2 flex items-center gap-1.5">
-            <Avatar name={authorName} color={topic.profiles?.avatar_color} size={18} />
-            <span className="text-xs text-muted">{authorName}</span>
-          </div>
+      <Link href={`/topics/${topic.id}`} className="block pr-7">
+        <div className="flex items-baseline gap-2">
+          <p className="truncate font-medium text-primary">{topic.title}</p>
+          <p className="shrink-0 text-xs font-medium text-secondary">
+            {formatDate(parseDateOnly(topic.topic_date))}
+          </p>
         </div>
-        <CaretRight size={18} className="shrink-0 text-muted" />
+        {preview && <p className="mt-1 line-clamp-2 text-sm text-secondary">{preview}</p>}
+        <div className="mt-2 flex items-center gap-1.5">
+          <Avatar name={authorName} color={topic.profiles?.avatar_color} size={18} />
+          <span className="text-xs text-muted">{authorName}</span>
+        </div>
       </Link>
 
       <EditDeleteActionSheet
