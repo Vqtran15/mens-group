@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { motion } from "framer-motion";
 import { CalendarBlank, ChatText, MagnifyingGlass, PencilSimple } from "@phosphor-icons/react";
 import { createClient } from "@/lib/supabase/client";
 import { AVATAR_COLORS } from "@/components/Avatar";
@@ -68,13 +69,21 @@ export function TopicDetailView({ topicId }: { topicId: string }) {
           <div className="flex items-center gap-2">
             <BackButton href="/topics" />
             <div className="flex items-center gap-2.5">
-              <div
+              <motion.div
+                initial={{ scale: 0.6, rotate: -10, opacity: 0 }}
+                animate={{ scale: 1, rotate: 0, opacity: 1 }}
+                transition={{ type: "spring", stiffness: 300, damping: 15 }}
                 className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full"
                 style={{ backgroundColor: accentColor }}
               >
                 <ChatText size={18} weight="fill" className="text-white" />
-              </div>
-              <div className="min-w-0">
+              </motion.div>
+              <motion.div
+                initial={{ opacity: 0, x: -12 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.25, delay: 0.05, ease: "easeOut" }}
+                className="min-w-0"
+              >
                 <h1 className="break-words text-xl font-semibold text-primary">{topic.title}</h1>
                 <span
                   className="mt-1 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium"
@@ -83,7 +92,7 @@ export function TopicDetailView({ topicId }: { topicId: string }) {
                   <CalendarBlank size={12} />
                   {formatDate(parseDateOnly(topic.topic_date))}
                 </span>
-              </div>
+              </motion.div>
             </div>
           </div>
           <Link
@@ -95,7 +104,12 @@ export function TopicDetailView({ topicId }: { topicId: string }) {
           </Link>
         </div>
       </div>
-      <div className="min-w-0 flex-1 overflow-y-auto p-4">
+      <motion.div
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.25, delay: 0.15, ease: "easeOut" }}
+        className="min-w-0 flex-1 overflow-y-auto p-4"
+      >
         {topic.description ? (
           <div className="min-w-0 rounded-2xl border border-border/60 bg-white p-4 shadow-sm">
             <div
@@ -109,7 +123,7 @@ export function TopicDetailView({ topicId }: { topicId: string }) {
             Nothing here yet — tap the pencil to add some details
           </p>
         )}
-      </div>
+      </motion.div>
     </div>
   );
 }

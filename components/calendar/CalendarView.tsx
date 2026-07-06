@@ -8,7 +8,6 @@ import { getCurrentMembership } from "@/lib/supabase/current-membership";
 import { getUpcomingOccurrences, toRecurrenceConfig } from "@/lib/recurrence";
 import { NextMeetingCard } from "@/components/calendar/NextMeetingCard";
 import { EventListItem } from "@/components/calendar/EventListItem";
-import { Skeleton } from "@/components/ui/Skeleton";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { PullToRefresh } from "@/components/ui/PullToRefresh";
 import { toDateOnlyString } from "@/lib/utils";
@@ -146,26 +145,7 @@ export function CalendarView() {
   }, [loadEvents]);
 
   if (loading || !userId || !groupId) {
-    return (
-      <div className="space-y-4 p-4">
-        <div className="rounded-2xl bg-primary/10 p-4">
-          <div className="flex items-start gap-3">
-            <Skeleton className="h-14 w-14 shrink-0 rounded-xl bg-primary/15" />
-            <div className="flex-1 space-y-2 pt-1">
-              <Skeleton className="h-3 w-24 bg-primary/15" />
-              <Skeleton className="h-5 w-3/4 bg-primary/15" />
-              <Skeleton className="h-4 w-1/3 bg-primary/15" />
-            </div>
-          </div>
-          <div className="mt-4 flex gap-2">
-            <Skeleton className="h-8 w-16 rounded-full bg-primary/15" />
-            <Skeleton className="h-8 w-20 rounded-full bg-primary/15" />
-            <Skeleton className="h-8 w-14 rounded-full bg-primary/15" />
-          </div>
-        </div>
-        <Skeleton className="h-12 w-full rounded-2xl" />
-      </div>
-    );
+    return null;
   }
 
   const [nextMeeting, ...rest] = events;

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { motion } from "framer-motion";
 import { DotsThreeVertical } from "@phosphor-icons/react";
 import { Avatar, AVATAR_COLORS } from "@/components/Avatar";
 import { EditDeleteActionSheet } from "@/components/ui/EditDeleteActionSheet";
@@ -9,6 +10,8 @@ import { ConfirmSheet } from "@/components/ui/ConfirmSheet";
 import { createClient } from "@/lib/supabase/client";
 import { formatDate, hashToColor, parseDateOnly } from "@/lib/utils";
 import type { Topic } from "@/lib/types";
+
+const MotionLink = motion.create(Link);
 
 function stripHtml(html: string): string {
   return html.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
@@ -41,7 +44,12 @@ export function TopicListItem({ topic, onChanged }: { topic: Topic; onChanged: (
       >
         <DotsThreeVertical size={18} weight="bold" />
       </button>
-      <Link href={`/topics/${topic.id}`} className="block pr-7">
+      <MotionLink
+        href={`/topics/${topic.id}`}
+        whileTap={{ scale: 0.97, backgroundColor: "rgba(0,0,0,0.03)" }}
+        transition={{ duration: 0.15 }}
+        className="block rounded-xl pr-7"
+      >
         <div className="flex items-baseline gap-2">
           <p className="truncate font-medium text-primary">{topic.title}</p>
           <p className="shrink-0 text-xs font-medium text-secondary">
@@ -53,7 +61,7 @@ export function TopicListItem({ topic, onChanged }: { topic: Topic; onChanged: (
           <Avatar name={authorName} color={topic.profiles?.avatar_color} size={18} />
           <span className="text-xs text-muted">{authorName}</span>
         </div>
-      </Link>
+      </MotionLink>
 
       <EditDeleteActionSheet
         open={actionsOpen}
