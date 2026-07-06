@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 
 const RELOAD_GUARD_KEY = "chunk-error-reload-attempted";
 const CHUNK_ERROR_PATTERN =
@@ -12,11 +12,18 @@ const CHUNK_ERROR_PATTERN =
 // hangs - the fix is just a reload to pick up the current build. Guarded by
 // sessionStorage so a genuinely broken deploy doesn't reload-loop forever.
 export function ChunkErrorRecovery() {
+  const [recovering, setRecovering] = useState(false);
+
   useEffect(() => {
     function attemptRecovery() {
       if (sessionStorage.getItem(RELOAD_GUARD_KEY)) return;
       sessionStorage.setItem(RELOAD_GUARD_KEY, "1");
-      window.location.reload();
+      setRecovering(true);
+      // Reloading right away can win the race against React's next paint,
+      // so the "Updating..." overlay below never actually appears and the
+      // stale screen just silently swaps to a blank one instead - this is
+      // what read as the app "freezing". Give it two frames to paint first.
+      requestAnimationFrame(() => requestAnimationFrame(() => window.location.reload()));
     }
 
     function handleError(event: ErrorEvent) {
@@ -36,5 +43,12 @@ export function ChunkErrorRecovery() {
     };
   }, []);
 
-  return null;
+  if (!recovering) return null;
+
+  return (
+    <div className="fixed inset-0 z-[60] flex flex-col items-center justify-center gap-3 bg-primary">
+      <div className="h-8 w-8 animate-spin rounded-full border-[3px] border-white/30 border-t-white" />
+      <p className="text-sm font-medium text-white">Updating to the latest version...</p>
+    </div>
+  );
 }
