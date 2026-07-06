@@ -1,10 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
-import { CaretRight, ChatText, MagnifyingGlass, NotePencil, X } from "@phosphor-icons/react";
+import { ChatText, MagnifyingGlass, X } from "@phosphor-icons/react";
 import { createClient } from "@/lib/supabase/client";
 import { TopicListItem } from "@/components/topics/TopicListItem";
 import { useTopicsSearch } from "@/components/topics/TopicsSearchContext";
@@ -25,22 +24,17 @@ function monthLabel(dateStr: string): string {
 export function TopicsView() {
   const router = useRouter();
   const [topics, setTopics] = useState<Topic[]>([]);
-  const [draftCount, setDraftCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const { query, setQuery, open: searchOpen, setOpen: setSearchOpen } = useTopicsSearch();
 
   const loadTopics = useCallback(async () => {
     const supabase = createClient();
-    const [{ data }, { count }] = await Promise.all([
-      supabase
-        .from("topics")
-        .select("*, profiles(display_name, avatar_color)")
-        .order("topic_date", { ascending: false })
-        .order("created_at", { ascending: false }),
-      supabase.from("topic_drafts").select("id", { count: "exact", head: true }),
-    ]);
+    const { data } = await supabase
+      .from("topics")
+      .select("*, profiles(display_name, avatar_color)")
+      .order("topic_date", { ascending: false })
+      .order("created_at", { ascending: false });
     setTopics(data ?? []);
-    setDraftCount(count ?? 0);
     setLoading(false);
   }, []);
 
@@ -125,17 +119,6 @@ export function TopicsView() {
           </motion.div>
         )}
       </AnimatePresence>
-
-      <Link
-        href="/topics/drafts"
-        className="flex items-center gap-2 rounded-2xl border border-border/60 bg-white px-4 py-3 shadow-sm transition-colors hover:bg-surface-muted/60"
-      >
-        <NotePencil size={18} className="shrink-0 text-secondary" />
-        <span className="flex-1 text-sm font-medium text-primary">
-          Drafts{draftCount > 0 ? ` (${draftCount})` : ""}
-        </span>
-        <CaretRight size={16} className="text-muted" />
-      </Link>
 
       {loading ? (
         <div className="space-y-3">

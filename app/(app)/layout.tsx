@@ -13,6 +13,7 @@ import { PushPermissionPrompt } from "@/components/PushPermissionPrompt";
 import { UpdatePrompt } from "@/components/UpdatePrompt";
 import { OfflineBanner } from "@/components/OfflineBanner";
 import { TopicsSearchProvider, useTopicsSearch } from "@/components/topics/TopicsSearchContext";
+import { TopicsAddMenu } from "@/components/topics/TopicsAddMenu";
 import { UnreadIndicatorProvider } from "@/components/UnreadIndicatorContext";
 
 const SECTION_TITLES: { prefix: string; title: string }[] = [
@@ -23,10 +24,11 @@ const SECTION_TITLES: { prefix: string; title: string }[] = [
 ];
 
 // Only the tab-root routes get a header "add" shortcut - sub-pages like
-// /calendar/new or /topics/[id] already are the add/detail flow.
+// /calendar/new or /topics/[id] already are the add/detail flow. Topics
+// isn't listed here - it gets a small menu (New Topic/New Draft/Drafts)
+// via TopicsAddMenu instead of a single direct link.
 const ADD_ACTIONS: { path: string; href: string; label: string }[] = [
   { path: "/calendar", href: "/calendar/new", label: "Add event" },
-  { path: "/topics", href: "/topics/new", label: "Add topic" },
 ];
 
 const MotionLink = motion.create(Link);
@@ -56,6 +58,7 @@ function AppHeader() {
       <span className="text-2xl font-extrabold tracking-tight text-primary">{title}</span>
       <div className="flex items-center gap-1">
         {pathname === "/topics" && <TopicsSearchToggle />}
+        {pathname === "/topics" && <TopicsAddMenu />}
         {addAction && (
           <MotionLink
             href={addAction.href}
