@@ -15,7 +15,7 @@ export function SignUpForm({ onSwitchToSignIn }: { onSwitchToSignIn: () => void 
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [group, setGroup] = useState<GroupSelection>({
-    mode: "create",
+    mode: "join",
     groupName: "",
     inviteCode: "",
     selectedGroupId: "",
