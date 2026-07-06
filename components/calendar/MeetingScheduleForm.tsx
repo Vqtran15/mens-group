@@ -60,7 +60,6 @@ export function MeetingScheduleForm() {
   const [time, setTime] = useState("");
   const [endTime, setEndTime] = useState("");
   const [location, setLocation] = useState("");
-  const [notes, setNotes] = useState("");
   const [skippedDates, setSkippedDates] = useState<string[]>([]);
   const [unskipping, setUnskipping] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -94,7 +93,6 @@ export function MeetingScheduleForm() {
         setTime(startTime);
         setEndTime(addMinutesToTime(startTime, data.duration_minutes));
         setLocation(data.location ?? "");
-        setNotes(data.notes ?? "");
         // Past skipped dates will never be materialized again anyway - only
         // upcoming ones are worth showing, so the list doesn't grow stale
         // and cluttered indefinitely.
@@ -159,7 +157,6 @@ export function MeetingScheduleForm() {
           time_of_day: time,
           duration_minutes: durationMinutes,
           location: location || null,
-          notes: notes || null,
         })
         .eq("id", scheduleId);
 
@@ -186,7 +183,6 @@ export function MeetingScheduleForm() {
         time_of_day: time,
         duration_minutes: durationMinutes,
         location: location || null,
-        notes: notes || null,
         created_by: userId,
         group_id: groupId,
       });
@@ -380,22 +376,6 @@ export function MeetingScheduleForm() {
         />
       </motion.div>
 
-      <motion.div
-        initial={{ opacity: 0, y: 12 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.25, delay: 0.36, ease: "easeOut" }}
-      >
-        <label htmlFor="notes" className="mb-1.5 block text-sm font-medium text-secondary">
-          Notes
-        </label>
-        <textarea
-          id="notes"
-          value={notes}
-          onChange={(e) => setNotes(e.target.value)}
-          className={fieldClass}
-        />
-      </motion.div>
-
       <p className="text-xs text-muted">
         {scheduleId
           ? "Saving refreshes the upcoming meetings this schedule generates - any RSVPs already on them will be cleared."
@@ -412,7 +392,7 @@ export function MeetingScheduleForm() {
       <motion.div
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.25, delay: 0.42, ease: "easeOut" }}
+        transition={{ duration: 0.25, delay: 0.36, ease: "easeOut" }}
       >
         <SuccessButton
           status={status}

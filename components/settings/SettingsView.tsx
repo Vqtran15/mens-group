@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { motion } from "framer-motion";
 import { CaretRight, CheckCircle, Copy, Trash, UsersThree, WarningCircle } from "@phosphor-icons/react";
 import { createClient } from "@/lib/supabase/client";
 import { Avatar, AVATAR_COLORS } from "@/components/Avatar";
@@ -201,7 +202,12 @@ export function SettingsView() {
 
   return (
     <div className="space-y-6 p-4">
-      <section className="space-y-3 rounded-2xl border border-border/60 bg-white p-4 shadow-sm">
+      <motion.section
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.25, ease: "easeOut" }}
+        className="space-y-3 rounded-2xl border border-border/60 bg-white p-4 shadow-sm"
+      >
         <h2 className="font-semibold text-primary">Profile</h2>
         <p className="text-sm text-muted">{email}</p>
         <form onSubmit={handleSaveName} className="space-y-3">
@@ -234,9 +240,14 @@ export function SettingsView() {
             )}
           </Button>
         </form>
-      </section>
+      </motion.section>
 
-      <section className="space-y-3 rounded-2xl border border-border/60 bg-white p-4 shadow-sm">
+      <motion.section
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.25, delay: 0.06, ease: "easeOut" }}
+        className="space-y-3 rounded-2xl border border-border/60 bg-white p-4 shadow-sm"
+      >
         <h2 className="font-semibold text-primary">Avatar color</h2>
         <div className="flex items-center gap-3">
           <Avatar name={displayName || "?"} color={avatarColor} size={40} />
@@ -263,10 +274,15 @@ export function SettingsView() {
             </button>
           ))}
         </div>
-      </section>
+      </motion.section>
 
       {inviteCode && (
-        <section className="space-y-3 rounded-2xl border border-border/60 bg-white p-4 shadow-sm">
+        <motion.section
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.25, delay: 0.12, ease: "easeOut" }}
+          className="space-y-3 rounded-2xl border border-border/60 bg-white p-4 shadow-sm"
+        >
           <h2 className="font-semibold text-primary">{groupName}</h2>
           <p className="text-sm text-secondary">Share this invite code so others can join:</p>
           <div className="flex items-center gap-2">
@@ -294,10 +310,15 @@ export function SettingsView() {
             <span className="flex-1 text-sm font-medium">View members</span>
             <CaretRight size={16} className="text-muted" />
           </Link>
-        </section>
+        </motion.section>
       )}
 
-      <section className="space-y-3 rounded-2xl border border-border/60 bg-white p-4 shadow-sm">
+      <motion.section
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.25, delay: 0.18, ease: "easeOut" }}
+        className="space-y-3 rounded-2xl border border-border/60 bg-white p-4 shadow-sm"
+      >
         <h2 className="font-semibold text-primary">Change password</h2>
         <form onSubmit={handleChangePassword} className="space-y-3">
           <div>
@@ -342,9 +363,14 @@ export function SettingsView() {
             )}
           </Button>
         </form>
-      </section>
+      </motion.section>
 
-      <section className="space-y-4 rounded-2xl border border-accent/30 bg-accent/5 p-4 shadow-sm">
+      <motion.section
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.25, delay: 0.24, ease: "easeOut" }}
+        className="space-y-4 rounded-2xl border border-accent/30 bg-accent/5 p-4 shadow-sm"
+      >
         <h2 className="font-semibold text-accent">Danger zone</h2>
 
         {isGroupCreator && (
@@ -386,9 +412,15 @@ export function SettingsView() {
             <Trash size={16} /> Delete account
           </Button>
         </div>
-      </section>
+      </motion.section>
 
-      <SignOutButton />
+      <motion.div
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.25, delay: 0.3, ease: "easeOut" }}
+      >
+        <SignOutButton />
+      </motion.div>
 
       <ConfirmSheet
         open={deleteGroupConfirmOpen}

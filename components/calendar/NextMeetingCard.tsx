@@ -120,10 +120,6 @@ export function NextMeetingCard({
         </div>
       </div>
 
-      {event.description && (
-        <p className="mt-3 whitespace-pre-wrap text-sm text-highlight-light">{event.description}</p>
-      )}
-
       {relatedTopics.length > 0 && (
         <div className="mt-3 flex flex-wrap gap-2">
           {relatedTopics.map((topic) => (

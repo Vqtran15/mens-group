@@ -106,9 +106,6 @@ export function EventListItem({
             {event.location}
           </p>
         )}
-        {event.description && (
-          <p className="mt-1.5 whitespace-pre-wrap text-sm text-secondary">{event.description}</p>
-        )}
         {relatedTopics.length > 0 && (
           <div className="mt-2 flex flex-wrap gap-2">
             {relatedTopics.map((topic) => (

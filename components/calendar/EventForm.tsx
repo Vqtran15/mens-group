@@ -26,7 +26,6 @@ export function EventForm({ eventId }: { eventId?: string }) {
   const isEditing = Boolean(eventId);
   const [loading, setLoading] = useState(isEditing);
   const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
   const [date, setDate] = useState("");
   const [time, setTime] = useState("");
   const [location, setLocation] = useState("");
@@ -38,13 +37,12 @@ export function EventForm({ eventId }: { eventId?: string }) {
     const supabase = createClient();
     supabase
       .from("events")
-      .select("title, description, starts_at, location")
+      .select("title, starts_at, location")
       .eq("id", eventId)
       .single()
       .then(({ data }) => {
         if (data) {
           setTitle(data.title);
-          setDescription(data.description ?? "");
           setDate(toDateInputValue(data.starts_at));
           setTime(toTimeInputValue(data.starts_at));
           setLocation(data.location ?? "");
@@ -66,7 +64,6 @@ export function EventForm({ eventId }: { eventId?: string }) {
         .from("events")
         .update({
           title,
-          description: description || null,
           starts_at: startsAt.toISOString(),
           location: location || null,
         })
@@ -87,7 +84,6 @@ export function EventForm({ eventId }: { eventId?: string }) {
 
       const { error } = await supabase.from("events").insert({
         title,
-        description: description || null,
         starts_at: startsAt.toISOString(),
         location: location || null,
         created_by: membership.userId,
@@ -141,21 +137,6 @@ export function EventForm({ eventId }: { eventId?: string }) {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.25, delay: 0.06, ease: "easeOut" }}
       >
-        <label htmlFor="description" className="mb-1.5 block text-sm font-medium text-secondary">
-          Description
-        </label>
-        <textarea
-          id="description"
-          value={description}
-          onChange={(e) => setDescription(e.target.value)}
-          className={fieldClass}
-        />
-      </motion.div>
-      <motion.div
-        initial={{ opacity: 0, y: 12 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.25, delay: 0.12, ease: "easeOut" }}
-      >
         <label htmlFor="date" className="mb-1.5 block text-sm font-medium text-secondary">
           Date
         </label>
@@ -177,7 +158,7 @@ export function EventForm({ eventId }: { eventId?: string }) {
       <motion.div
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.25, delay: 0.18, ease: "easeOut" }}
+        transition={{ duration: 0.25, delay: 0.12, ease: "easeOut" }}
       >
         <label htmlFor="time" className="mb-1.5 block text-sm font-medium text-secondary">
           Time
@@ -200,7 +181,7 @@ export function EventForm({ eventId }: { eventId?: string }) {
       <motion.div
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.25, delay: 0.24, ease: "easeOut" }}
+        transition={{ duration: 0.25, delay: 0.18, ease: "easeOut" }}
       >
         <label htmlFor="location" className="mb-1.5 block text-sm font-medium text-secondary">
           Location
@@ -221,7 +202,7 @@ export function EventForm({ eventId }: { eventId?: string }) {
       <motion.div
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.25, delay: 0.3, ease: "easeOut" }}
+        transition={{ duration: 0.25, delay: 0.24, ease: "easeOut" }}
       >
         <SuccessButton
           status={status}
