@@ -130,7 +130,12 @@ export function CalendarView() {
       dateMap[topic.topic_date] = [...(dateMap[topic.topic_date] ?? []), { id: topic.id, title: topic.title }];
     }
 
-    setEvents(cleanEvents);
+    // OCCURRENCES_TO_MATERIALIZE only bounds how many *recurring* occurrences
+    // get generated - one-off events sitting alongside them aren't capped by
+    // that, so the calendar could show more than 3 total. Slicing the
+    // already-soonest-first list down here caps what's actually shown to 3,
+    // regardless of how many of those are recurring vs one-off.
+    setEvents(cleanEvents.slice(0, OCCURRENCES_TO_MATERIALIZE));
     setRsvpsByEvent(rsvpMap);
     setTopicsByDate(dateMap);
     setLoading(false);

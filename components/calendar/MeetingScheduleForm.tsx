@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { motion } from "framer-motion";
 import { WarningCircle, Timer, Clock, ArrowCounterClockwise } from "@phosphor-icons/react";
 import { createClient } from "@/lib/supabase/client";
 import { getCurrentMembership } from "@/lib/supabase/current-membership";
@@ -197,7 +198,11 @@ export function MeetingScheduleForm() {
           Your group doesn&apos;t have a recurring meeting yet - set one up below.
         </p>
       )}
-      <div>
+      <motion.div
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.25, ease: "easeOut" }}
+      >
         <label htmlFor="label" className="mb-1.5 block text-sm font-medium text-secondary">
           Meeting name
         </label>
@@ -208,9 +213,13 @@ export function MeetingScheduleForm() {
           onChange={(e) => setLabel(e.target.value)}
           className={fieldClass}
         />
-      </div>
+      </motion.div>
 
-      <div>
+      <motion.div
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.25, delay: 0.06, ease: "easeOut" }}
+      >
         <label htmlFor="dayOfWeek" className="mb-1.5 block text-sm font-medium text-secondary">
           Day of week
         </label>
@@ -226,9 +235,13 @@ export function MeetingScheduleForm() {
             </option>
           ))}
         </select>
-      </div>
+      </motion.div>
 
-      <div>
+      <motion.div
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.25, delay: 0.12, ease: "easeOut" }}
+      >
         <p className="mb-1.5 text-sm font-medium text-secondary">Which occurrences</p>
         <div className="flex flex-wrap gap-2">
           {OCCURRENCE_OPTIONS.map((option) => (
@@ -250,10 +263,14 @@ export function MeetingScheduleForm() {
         <p className="mt-1.5 text-xs text-muted">
           e.g. 1st and 3rd for the first and third {DAYS_OF_WEEK[dayOfWeek].label} of each month.
         </p>
-      </div>
+      </motion.div>
 
       {skippedDates.length > 0 && (
-        <div>
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.25, delay: 0.18, ease: "easeOut" }}
+        >
           <p className="mb-1.5 text-sm font-medium text-secondary">Skipped dates</p>
           <div className="space-y-2">
             {skippedDates.map((date) => (
@@ -274,10 +291,14 @@ export function MeetingScheduleForm() {
               </div>
             ))}
           </div>
-        </div>
+        </motion.div>
       )}
 
-      <div>
+      <motion.div
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.25, delay: 0.24, ease: "easeOut" }}
+      >
         <label htmlFor="time" className="mb-1.5 block text-sm font-medium text-secondary">
           Time
         </label>
@@ -295,9 +316,13 @@ export function MeetingScheduleForm() {
             className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-secondary/60"
           />
         </div>
-      </div>
+      </motion.div>
 
-      <div>
+      <motion.div
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.25, delay: 0.3, ease: "easeOut" }}
+      >
         <label htmlFor="duration" className="mb-1.5 block text-sm font-medium text-secondary">
           Duration (minutes)
         </label>
@@ -317,9 +342,13 @@ export function MeetingScheduleForm() {
             className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-secondary/60"
           />
         </div>
-      </div>
+      </motion.div>
 
-      <div>
+      <motion.div
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.25, delay: 0.36, ease: "easeOut" }}
+      >
         <label htmlFor="location" className="mb-1.5 block text-sm font-medium text-secondary">
           Location
         </label>
@@ -329,9 +358,13 @@ export function MeetingScheduleForm() {
           onChange={(e) => setLocation(e.target.value)}
           className={fieldClass}
         />
-      </div>
+      </motion.div>
 
-      <div>
+      <motion.div
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.25, delay: 0.42, ease: "easeOut" }}
+      >
         <label htmlFor="notes" className="mb-1.5 block text-sm font-medium text-secondary">
           Notes
         </label>
@@ -341,7 +374,7 @@ export function MeetingScheduleForm() {
           onChange={(e) => setNotes(e.target.value)}
           className={fieldClass}
         />
-      </div>
+      </motion.div>
 
       <p className="text-xs text-muted">
         {scheduleId
@@ -356,12 +389,18 @@ export function MeetingScheduleForm() {
         </p>
       )}
 
-      <SuccessButton
-        status={status}
-        idleLabel={scheduleId ? "Save changes" : "Create schedule"}
-        submittingLabel={scheduleId ? "Saving..." : "Creating..."}
-        className="w-full"
-      />
+      <motion.div
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.25, delay: 0.48, ease: "easeOut" }}
+      >
+        <SuccessButton
+          status={status}
+          idleLabel={scheduleId ? "Save changes" : "Create schedule"}
+          submittingLabel={scheduleId ? "Saving..." : "Creating..."}
+          className="w-full"
+        />
+      </motion.div>
     </form>
   );
 }
