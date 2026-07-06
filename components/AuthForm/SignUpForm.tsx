@@ -86,6 +86,7 @@ export function SignUpForm({ onSwitchToSignIn }: { onSwitchToSignIn: () => void 
           display_name: displayName || email.split("@")[0],
           group_id: groupId,
           invite_code: inviteCode,
+          is_creator: group.mode === "create",
         },
       },
     });

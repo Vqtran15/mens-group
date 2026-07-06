@@ -1,11 +1,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { CheckCircle, Copy, WarningCircle } from "@phosphor-icons/react";
+import { useRouter } from "next/navigation";
+import { CheckCircle, Copy, Trash, WarningCircle } from "@phosphor-icons/react";
 import { createClient } from "@/lib/supabase/client";
 import { Avatar, AVATAR_COLORS } from "@/components/Avatar";
 import { Button } from "@/components/ui/Button";
 import { Skeleton } from "@/components/ui/Skeleton";
+import { ConfirmSheet } from "@/components/ui/ConfirmSheet";
 import { SignOutButton } from "@/components/SignOutButton";
 import { cn } from "@/lib/utils";
 
@@ -13,14 +15,21 @@ const fieldClass =
   "w-full rounded-xl border border-border bg-white shadow-sm px-3 py-2.5 outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20";
 
 export function SettingsView() {
+  const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [displayName, setDisplayName] = useState("");
   const [email, setEmail] = useState("");
+  const [groupId, setGroupId] = useState<string | null>(null);
   const [groupName, setGroupName] = useState("");
   const [inviteCode, setInviteCode] = useState("");
+  const [isGroupCreator, setIsGroupCreator] = useState(false);
   const [codeCopied, setCodeCopied] = useState(false);
   const [nameStatus, setNameStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const [nameError, setNameError] = useState<string | null>(null);
+
+  const [deleteGroupConfirmOpen, setDeleteGroupConfirmOpen] = useState(false);
+  const [deletingGroup, setDeletingGroup] = useState(false);
+  const [deleteGroupError, setDeleteGroupError] = useState<string | null>(null);
 
   const [avatarColor, setAvatarColor] = useState<string | null>(null);
   const [colorStatus, setColorStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
@@ -37,14 +46,20 @@ export function SettingsView() {
       setEmail(data.user.email ?? "");
       const { data: profile } = await supabase
         .from("profiles")
-        .select("display_name, group_id, avatar_color, groups(name, invite_code)")
+        .select("display_name, group_id, avatar_color, groups(name, invite_code, created_by)")
         .eq("id", data.user.id)
         .single();
       setDisplayName(profile?.display_name ?? "");
       setAvatarColor(profile?.avatar_color ?? null);
-      const group = profile?.groups as unknown as { name: string; invite_code: string } | null;
+      setGroupId(profile?.group_id ?? null);
+      const group = profile?.groups as unknown as {
+        name: string;
+        invite_code: string;
+        created_by: string | null;
+      } | null;
       setGroupName(group?.name ?? "");
       setInviteCode(group?.invite_code ?? "");
+      setIsGroupCreator(!!group?.created_by && group.created_by === data.user.id);
       setLoading(false);
     });
   }, []);
@@ -122,6 +137,29 @@ export function SettingsView() {
     setConfirmPassword("");
     setPasswordStatus("saved");
     setTimeout(() => setPasswordStatus("idle"), 1500);
+  }
+
+  async function handleDeleteGroup() {
+    if (!groupId) return;
+    setDeletingGroup(true);
+    setDeleteGroupError(null);
+
+    const supabase = createClient();
+    const { error } = await supabase.from("groups").delete().eq("id", groupId);
+
+    if (error) {
+      setDeleteGroupError(error.message);
+      setDeletingGroup(false);
+      return;
+    }
+
+    setDeleteGroupConfirmOpen(false);
+    // The group (and this account's own membership in it) is gone, so there's
+    // nothing left for this session to show - sign out rather than leave the
+    // app sitting on a now-groupless profile with no recovery flow yet.
+    await supabase.auth.signOut();
+    router.push("/sign-in");
+    router.refresh();
   }
 
   if (loading) {
@@ -270,7 +308,39 @@ export function SettingsView() {
         </form>
       </section>
 
+      {isGroupCreator && (
+        <section className="space-y-3 rounded-2xl border border-accent/30 bg-accent/5 p-4 shadow-sm">
+          <h2 className="font-semibold text-accent">Danger zone</h2>
+          <p className="text-sm text-secondary">
+            Permanently delete {groupName} and everything in it - the calendar, topics, and
+            chat. Other members will be removed from the group too. This can&apos;t be undone.
+          </p>
+          {deleteGroupError && (
+            <p className="flex items-center gap-1.5 rounded-lg bg-accent/10 px-3 py-2 text-sm text-accent">
+              <WarningCircle size={16} className="shrink-0" />
+              {deleteGroupError}
+            </p>
+          )}
+          <Button
+            type="button"
+            variant="danger"
+            onClick={() => setDeleteGroupConfirmOpen(true)}
+          >
+            <Trash size={16} /> Delete group
+          </Button>
+        </section>
+      )}
+
       <SignOutButton />
+
+      <ConfirmSheet
+        open={deleteGroupConfirmOpen}
+        title={`Delete ${groupName}?`}
+        description="This permanently deletes the group's calendar, topics, and chat, and removes every member (including you). This can't be undone."
+        confirmLabel={deletingGroup ? "Deleting..." : "Delete group"}
+        onConfirm={handleDeleteGroup}
+        onCancel={() => setDeleteGroupConfirmOpen(false)}
+      />
     </div>
   );
 }
