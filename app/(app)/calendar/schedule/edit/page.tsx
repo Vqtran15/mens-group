@@ -7,7 +7,7 @@ export default function EditMeetingSchedulePage() {
     <PageEnter>
       <div className="flex items-center gap-2 p-4 pb-0">
         <BackButton href="/calendar" />
-        <h1 className="text-xl font-semibold text-primary">Edit meeting schedule</h1>
+        <h1 className="text-xl font-semibold text-primary">Meeting schedule</h1>
       </div>
       <MeetingScheduleForm />
     </PageEnter>

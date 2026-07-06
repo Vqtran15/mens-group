@@ -1,8 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import Link from "next/link";
 import { motion } from "framer-motion";
-import { CalendarBlank } from "@phosphor-icons/react";
+import { CalendarBlank, CaretRight, Repeat } from "@phosphor-icons/react";
 import { createClient } from "@/lib/supabase/client";
 import { getCurrentMembership } from "@/lib/supabase/current-membership";
 import { getUpcomingOccurrences, toRecurrenceConfig } from "@/lib/recurrence";
@@ -15,9 +16,12 @@ import type { CalendarEvent, MeetingSchedule, RelatedTopic, Rsvp } from "@/lib/t
 
 const OCCURRENCES_TO_MATERIALIZE = 3;
 
+const MotionLink = motion.create(Link);
+
 export function CalendarView() {
   const [userId, setUserId] = useState<string | null>(null);
   const [groupId, setGroupId] = useState<string | null>(null);
+  const [hasSchedule, setHasSchedule] = useState(true);
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [rsvpsByEvent, setRsvpsByEvent] = useState<Record<string, Rsvp[]>>({});
   const [topicsByDate, setTopicsByDate] = useState<Record<string, RelatedTopic[]>>({});
@@ -50,6 +54,7 @@ export function CalendarView() {
     ]);
 
     let finalEventRows = eventRows;
+    setHasSchedule(!!schedule);
 
     if (schedule) {
       const occurrences = getUpcomingOccurrences(
@@ -169,6 +174,19 @@ export function CalendarView() {
           title="Nothing on the calendar"
           subtitle="Plan a hangout and let everyone know!"
         />
+      )}
+
+      {!hasSchedule && (
+        <MotionLink
+          href="/calendar/schedule/edit"
+          whileTap={{ scale: 0.98 }}
+          transition={{ duration: 0.15 }}
+          className="flex items-center gap-2 rounded-2xl border border-dashed border-border bg-white/60 px-4 py-3 text-primary transition-colors hover:bg-white/80"
+        >
+          <Repeat size={18} className="shrink-0" />
+          <span className="flex-1 text-sm font-medium">Set up a recurring meeting</span>
+          <CaretRight size={16} className="text-muted" />
+        </MotionLink>
       )}
 
       {rest.length > 0 && (

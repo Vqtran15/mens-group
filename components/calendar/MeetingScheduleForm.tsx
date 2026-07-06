@@ -33,6 +33,8 @@ const OCCURRENCE_OPTIONS = [
 export function MeetingScheduleForm() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
+  const [groupId, setGroupId] = useState<string | null>(null);
+  const [userId, setUserId] = useState<string | null>(null);
   const [scheduleId, setScheduleId] = useState<string | null>(null);
   const [label, setLabel] = useState("");
   const [dayOfWeek, setDayOfWeek] = useState(4);
@@ -54,6 +56,8 @@ export function MeetingScheduleForm() {
         setLoading(false);
         return;
       }
+      setGroupId(membership.groupId);
+      setUserId(membership.userId);
 
       const { data } = await supabase
         .from("meeting_schedule")
@@ -112,17 +116,45 @@ export function MeetingScheduleForm() {
       setError("Pick at least one occurrence (e.g. 1st and 3rd).");
       return;
     }
-    if (!scheduleId) {
-      setError("No meeting schedule found for your group.");
+    if (!groupId) {
+      setError("You must be signed in and belong to a group.");
       return;
     }
 
     setStatus("submitting");
     const supabase = createClient();
 
-    const { error } = await supabase
-      .from("meeting_schedule")
-      .update({
+    if (scheduleId) {
+      const { error } = await supabase
+        .from("meeting_schedule")
+        .update({
+          label,
+          day_of_week: dayOfWeek,
+          occurrences_in_month: occurrences,
+          time_of_day: time,
+          duration_minutes: duration,
+          location: location || null,
+          notes: notes || null,
+        })
+        .eq("id", scheduleId);
+
+      if (error) {
+        setError(error.message);
+        setStatus("idle");
+        return;
+      }
+
+      // Already-materialized future occurrences were generated from the old
+      // rule (title, day/time, location) and won't match the new one - clear
+      // them out so Calendar's next load regenerates fresh ones from the
+      // updated schedule instead of showing stale entries alongside new ones.
+      await supabase
+        .from("events")
+        .delete()
+        .eq("schedule_id", scheduleId)
+        .gte("starts_at", new Date().toISOString());
+    } else {
+      const { error } = await supabase.from("meeting_schedule").insert({
         label,
         day_of_week: dayOfWeek,
         occurrences_in_month: occurrences,
@@ -130,24 +162,16 @@ export function MeetingScheduleForm() {
         duration_minutes: duration,
         location: location || null,
         notes: notes || null,
-      })
-      .eq("id", scheduleId);
+        created_by: userId,
+        group_id: groupId,
+      });
 
-    if (error) {
-      setError(error.message);
-      setStatus("idle");
-      return;
+      if (error) {
+        setError(error.message);
+        setStatus("idle");
+        return;
+      }
     }
-
-    // Already-materialized future occurrences were generated from the old
-    // rule (title, day/time, location) and won't match the new one - clear
-    // them out so Calendar's next load regenerates fresh ones from the
-    // updated schedule instead of showing stale entries alongside new ones.
-    await supabase
-      .from("events")
-      .delete()
-      .eq("schedule_id", scheduleId)
-      .gte("starts_at", new Date().toISOString());
 
     setStatus("success");
     setTimeout(() => {
@@ -166,16 +190,13 @@ export function MeetingScheduleForm() {
     );
   }
 
-  if (!scheduleId) {
-    return (
-      <div className="p-4">
-        <p className="text-secondary">Your group doesn&apos;t have a meeting schedule yet.</p>
-      </div>
-    );
-  }
-
   return (
     <form onSubmit={handleSubmit} className="space-y-4 p-4">
+      {!scheduleId && (
+        <p className="text-sm text-secondary">
+          Your group doesn&apos;t have a recurring meeting yet - set one up below.
+        </p>
+      )}
       <div>
         <label htmlFor="label" className="mb-1.5 block text-sm font-medium text-secondary">
           Meeting name
@@ -323,8 +344,9 @@ export function MeetingScheduleForm() {
       </div>
 
       <p className="text-xs text-muted">
-        Saving refreshes the upcoming meetings this schedule generates - any RSVPs already on
-        them will be cleared.
+        {scheduleId
+          ? "Saving refreshes the upcoming meetings this schedule generates - any RSVPs already on them will be cleared."
+          : "This generates the next few upcoming meetings on your Calendar automatically."}
       </p>
 
       {error && (
@@ -336,8 +358,8 @@ export function MeetingScheduleForm() {
 
       <SuccessButton
         status={status}
-        idleLabel="Save changes"
-        submittingLabel="Saving..."
+        idleLabel={scheduleId ? "Save changes" : "Create schedule"}
+        submittingLabel={scheduleId ? "Saving..." : "Creating..."}
         className="w-full"
       />
     </form>
