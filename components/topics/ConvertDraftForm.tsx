@@ -1,0 +1,199 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { motion } from "framer-motion";
+import { WarningCircle } from "@phosphor-icons/react";
+import { createClient } from "@/lib/supabase/client";
+import { getCurrentMembership } from "@/lib/supabase/current-membership";
+import { getUpcomingMeetingDates } from "@/lib/supabase/getUpcomingMeetingDates";
+import { RichTextEditor } from "@/components/topics/RichTextEditor";
+import { SuccessButton, type SubmitStatus } from "@/components/ui/SuccessButton";
+import { Skeleton } from "@/components/ui/Skeleton";
+import { formatDate, parseDateOnly, toDateOnlyString } from "@/lib/utils";
+
+const fieldClass =
+  "h-[46px] w-full rounded-xl border border-border bg-white shadow-sm px-3 py-2.5 outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20";
+
+export function ConvertDraftForm({ draftId }: { draftId: string }) {
+  const router = useRouter();
+  const [loading, setLoading] = useState(true);
+  const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
+  const [topicDate, setTopicDate] = useState("");
+  const [meetingDates, setMeetingDates] = useState<string[]>([]);
+  const [error, setError] = useState<string | null>(null);
+  const [status, setStatus] = useState<SubmitStatus>("idle");
+
+  useEffect(() => {
+    async function init() {
+      const supabase = createClient();
+      const membership = await getCurrentMembership(supabase);
+      if (!membership) {
+        setLoading(false);
+        return;
+      }
+
+      const [{ data: draft }, dates] = await Promise.all([
+        supabase.from("topic_drafts").select("title, description").eq("id", draftId).single(),
+        getUpcomingMeetingDates(supabase, membership.groupId),
+      ]);
+
+      if (draft) {
+        setTitle(draft.title);
+        setDescription(draft.description ?? "");
+      }
+      setMeetingDates(dates);
+      setTopicDate(dates[0] ?? toDateOnlyString(new Date()));
+      setLoading(false);
+    }
+    init();
+  }, [draftId]);
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setError(null);
+    setStatus("submitting");
+
+    const supabase = createClient();
+    const membership = await getCurrentMembership(supabase);
+    if (!membership) {
+      setError("You must be signed in and belong to a group.");
+      setStatus("idle");
+      return;
+    }
+
+    const { data: topic, error } = await supabase
+      .from("topics")
+      .insert({
+        title,
+        topic_date: topicDate,
+        description: description || null,
+        created_by: membership.userId,
+        group_id: membership.groupId,
+      })
+      .select()
+      .single();
+
+    if (error) {
+      setError(error.message);
+      setStatus("idle");
+      return;
+    }
+
+    // The draft has now become a real topic - remove the scratchpad copy so
+    // it doesn't linger in Drafts alongside the published version.
+    await supabase.from("topic_drafts").delete().eq("id", draftId);
+
+    setStatus("success");
+    setTimeout(() => {
+      router.push(`/topics/${topic.id}`);
+      router.refresh();
+    }, 500);
+  }
+
+  if (loading) {
+    return (
+      <div className="space-y-4 p-4">
+        <div>
+          <Skeleton className="mb-1.5 h-[17px] w-10" />
+          <Skeleton className="h-[46px] w-full" />
+        </div>
+        <div>
+          <Skeleton className="mb-1.5 h-[17px] w-24" />
+          <Skeleton className="h-[46px] w-full" />
+        </div>
+        <div>
+          <Skeleton className="mb-1.5 h-[17px] w-20" />
+          <Skeleton className="h-40 w-full" />
+        </div>
+        <Skeleton className="h-11 w-full rounded-xl" />
+      </div>
+    );
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4 p-4">
+      <motion.div
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.25, ease: "easeOut" }}
+      >
+        <label htmlFor="title" className="mb-1.5 block text-sm font-medium text-secondary">
+          Title
+        </label>
+        <input
+          id="title"
+          required
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          className={fieldClass}
+        />
+      </motion.div>
+      <motion.div
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.25, delay: 0.08, ease: "easeOut" }}
+      >
+        <label htmlFor="topicDate" className="mb-1.5 block text-sm font-medium text-secondary">
+          Meeting date
+        </label>
+        {meetingDates.length > 0 ? (
+          <select
+            id="topicDate"
+            required
+            value={topicDate}
+            onChange={(e) => setTopicDate(e.target.value)}
+            className={fieldClass}
+          >
+            {meetingDates.map((date) => (
+              <option key={date} value={date}>
+                {formatDate(parseDateOnly(date))}
+              </option>
+            ))}
+          </select>
+        ) : (
+          <input
+            id="topicDate"
+            type="date"
+            required
+            value={topicDate}
+            onChange={(e) => setTopicDate(e.target.value)}
+            className={fieldClass}
+          />
+        )}
+        <p className="mt-1.5 text-xs text-muted">
+          {meetingDates.length === 0
+            ? "No meetings scheduled yet - pick any date."
+            : "Which meeting is this topic about?"}
+        </p>
+      </motion.div>
+      <motion.div
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.25, delay: 0.16, ease: "easeOut" }}
+      >
+        <label className="mb-1.5 block text-sm font-medium text-secondary">Description</label>
+        <RichTextEditor value={description} onChange={setDescription} />
+      </motion.div>
+      {error && (
+        <p className="flex items-center gap-1.5 rounded-lg bg-accent/10 px-3 py-2 text-sm text-accent">
+          <WarningCircle size={16} className="shrink-0" />
+          {error}
+        </p>
+      )}
+      <motion.div
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.25, delay: 0.24, ease: "easeOut" }}
+      >
+        <SuccessButton
+          status={status}
+          idleLabel="Convert to topic"
+          submittingLabel="Converting..."
+          className="w-full"
+        />
+      </motion.div>
+    </form>
+  );
+}

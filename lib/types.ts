@@ -25,6 +25,16 @@ export interface Topic {
   profiles?: Pick<Profile, "display_name" | "avatar_color">;
 }
 
+export interface TopicDraft {
+  id: string;
+  title: string;
+  description: string | null;
+  created_by: string;
+  group_id: string;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface TopicNote {
   id: string;
   topic_id: string;
