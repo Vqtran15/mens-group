@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import { WarningCircle, Timer, Clock, ArrowCounterClockwise } from "@phosphor-icons/react";
+import { WarningCircle, Clock, ArrowCounterClockwise } from "@phosphor-icons/react";
 import { createClient } from "@/lib/supabase/client";
 import { getCurrentMembership } from "@/lib/supabase/current-membership";
 import { SuccessButton, type SubmitStatus } from "@/components/ui/SuccessButton";
@@ -12,6 +12,23 @@ import { cn, formatDate, parseDateOnly, toDateOnlyString } from "@/lib/utils";
 
 const fieldClass =
   "w-full min-w-0 max-w-full rounded-xl border border-border bg-white shadow-sm px-3 py-2.5 outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20";
+
+function addMinutesToTime(time: string, minutes: number): string {
+  const [h, m] = time.split(":").map(Number);
+  const wrapped = (((h * 60 + m + minutes) % 1440) + 1440) % 1440;
+  return `${String(Math.floor(wrapped / 60)).padStart(2, "0")}:${String(wrapped % 60).padStart(2, "0")}`;
+}
+
+// Meetings are assumed to end the same day they start - crossing midnight
+// wraps the duration all the way around to (almost) 24 hours rather than
+// being treated as a short overnight meeting.
+function minutesBetween(start: string, end: string): number {
+  const [sh, sm] = start.split(":").map(Number);
+  const [eh, em] = end.split(":").map(Number);
+  const startTotal = sh * 60 + sm;
+  const endTotal = eh * 60 + em;
+  return endTotal > startTotal ? endTotal - startTotal : endTotal + 1440 - startTotal;
+}
 
 const DAYS_OF_WEEK = [
   { value: 0, label: "Sunday" },
@@ -41,7 +58,7 @@ export function MeetingScheduleForm() {
   const [dayOfWeek, setDayOfWeek] = useState(4);
   const [occurrences, setOccurrences] = useState<number[]>([]);
   const [time, setTime] = useState("");
-  const [duration, setDuration] = useState(90);
+  const [endTime, setEndTime] = useState("");
   const [location, setLocation] = useState("");
   const [notes, setNotes] = useState("");
   const [skippedDates, setSkippedDates] = useState<string[]>([]);
@@ -73,8 +90,9 @@ export function MeetingScheduleForm() {
         setLabel(data.label);
         setDayOfWeek(data.day_of_week);
         setOccurrences(data.occurrences_in_month);
-        setTime(data.time_of_day.slice(0, 5));
-        setDuration(data.duration_minutes);
+        const startTime = data.time_of_day.slice(0, 5);
+        setTime(startTime);
+        setEndTime(addMinutesToTime(startTime, data.duration_minutes));
         setLocation(data.location ?? "");
         setNotes(data.notes ?? "");
         // Past skipped dates will never be materialized again anyway - only
@@ -122,6 +140,12 @@ export function MeetingScheduleForm() {
       return;
     }
 
+    if (time === endTime) {
+      setError("End time must be different from start time.");
+      return;
+    }
+    const durationMinutes = minutesBetween(time, endTime);
+
     setStatus("submitting");
     const supabase = createClient();
 
@@ -133,7 +157,7 @@ export function MeetingScheduleForm() {
           day_of_week: dayOfWeek,
           occurrences_in_month: occurrences,
           time_of_day: time,
-          duration_minutes: duration,
+          duration_minutes: durationMinutes,
           location: location || null,
           notes: notes || null,
         })
@@ -160,7 +184,7 @@ export function MeetingScheduleForm() {
         day_of_week: dayOfWeek,
         occurrences_in_month: occurrences,
         time_of_day: time,
-        duration_minutes: duration,
+        duration_minutes: durationMinutes,
         location: location || null,
         notes: notes || null,
         created_by: userId,
@@ -298,23 +322,45 @@ export function MeetingScheduleForm() {
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.25, delay: 0.24, ease: "easeOut" }}
+        className="flex gap-3"
       >
-        <label htmlFor="time" className="mb-1.5 block text-sm font-medium text-secondary">
-          Time
-        </label>
-        <div className="relative">
-          <input
-            id="time"
-            type="time"
-            required
-            value={time}
-            onChange={(e) => setTime(e.target.value)}
-            className={`${fieldClass} appearance-none pr-9`}
-          />
-          <Clock
-            size={18}
-            className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-secondary/60"
-          />
+        <div className="flex-1">
+          <label htmlFor="time" className="mb-1.5 block text-sm font-medium text-secondary">
+            Start time
+          </label>
+          <div className="relative">
+            <input
+              id="time"
+              type="time"
+              required
+              value={time}
+              onChange={(e) => setTime(e.target.value)}
+              className={`${fieldClass} appearance-none pr-9`}
+            />
+            <Clock
+              size={18}
+              className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-secondary/60"
+            />
+          </div>
+        </div>
+        <div className="flex-1">
+          <label htmlFor="endTime" className="mb-1.5 block text-sm font-medium text-secondary">
+            End time
+          </label>
+          <div className="relative">
+            <input
+              id="endTime"
+              type="time"
+              required
+              value={endTime}
+              onChange={(e) => setEndTime(e.target.value)}
+              className={`${fieldClass} appearance-none pr-9`}
+            />
+            <Clock
+              size={18}
+              className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-secondary/60"
+            />
+          </div>
         </div>
       </motion.div>
 
@@ -322,32 +368,6 @@ export function MeetingScheduleForm() {
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.25, delay: 0.3, ease: "easeOut" }}
-      >
-        <label htmlFor="duration" className="mb-1.5 block text-sm font-medium text-secondary">
-          Duration (minutes)
-        </label>
-        <div className="relative">
-          <input
-            id="duration"
-            type="number"
-            min={15}
-            step={15}
-            required
-            value={duration}
-            onChange={(e) => setDuration(Number(e.target.value))}
-            className={`${fieldClass} appearance-none pr-9`}
-          />
-          <Timer
-            size={18}
-            className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-secondary/60"
-          />
-        </div>
-      </motion.div>
-
-      <motion.div
-        initial={{ opacity: 0, y: 12 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.25, delay: 0.36, ease: "easeOut" }}
       >
         <label htmlFor="location" className="mb-1.5 block text-sm font-medium text-secondary">
           Location
@@ -363,7 +383,7 @@ export function MeetingScheduleForm() {
       <motion.div
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.25, delay: 0.42, ease: "easeOut" }}
+        transition={{ duration: 0.25, delay: 0.36, ease: "easeOut" }}
       >
         <label htmlFor="notes" className="mb-1.5 block text-sm font-medium text-secondary">
           Notes
@@ -392,7 +412,7 @@ export function MeetingScheduleForm() {
       <motion.div
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.25, delay: 0.48, ease: "easeOut" }}
+        transition={{ duration: 0.25, delay: 0.42, ease: "easeOut" }}
       >
         <SuccessButton
           status={status}

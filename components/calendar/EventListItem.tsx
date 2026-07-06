@@ -9,6 +9,7 @@ import { RSVPButtons } from "@/components/calendar/RSVPButtons";
 import { AttendeeList } from "@/components/calendar/AttendeeList";
 import { ConfirmSheet } from "@/components/ui/ConfirmSheet";
 import { EditDeleteActionSheet } from "@/components/ui/EditDeleteActionSheet";
+import { EditLocationSheet } from "@/components/ui/EditLocationSheet";
 import type { CalendarEvent, RelatedTopic, Rsvp, RsvpStatus } from "@/lib/types";
 
 export function EventListItem({
@@ -26,6 +27,7 @@ export function EventListItem({
 }) {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [skipConfirmOpen, setSkipConfirmOpen] = useState(false);
+  const [locationSheetOpen, setLocationSheetOpen] = useState(false);
   const [actionsOpen, setActionsOpen] = useState(false);
   const currentStatus: RsvpStatus | null =
     rsvps.find((r) => r.user_id === userId)?.status ?? null;
@@ -67,6 +69,16 @@ export function EventListItem({
     onChanged();
   }
 
+  async function handleSaveLocation(location: string) {
+    const supabase = createClient();
+    await supabase
+      .from("events")
+      .update({ location: location || null })
+      .eq("id", event.id);
+    setLocationSheetOpen(false);
+    onChanged();
+  }
+
   return (
     <div className="flex gap-3 rounded-2xl border border-border/60 bg-white p-4 shadow-sm">
       <div className="flex h-14 w-14 shrink-0 flex-col items-center justify-center rounded-xl bg-teal/10 text-teal shadow-sm">
@@ -93,6 +105,9 @@ export function EventListItem({
             <MapPin size={14} className="shrink-0" />
             {event.location}
           </p>
+        )}
+        {event.description && (
+          <p className="mt-1.5 whitespace-pre-wrap text-sm text-secondary">{event.description}</p>
         )}
         {relatedTopics.length > 0 && (
           <div className="mt-2 flex flex-wrap gap-2">
@@ -124,8 +139,10 @@ export function EventListItem({
         open={actionsOpen}
         onClose={() => setActionsOpen(false)}
         editHref={isRecurring ? "/calendar/schedule/edit" : `/calendar/${event.id}/edit`}
+        editLabel={isRecurring ? "Edit series" : "Edit"}
         onDelete={() => setConfirmOpen(true)}
         onSkip={isRecurring ? () => setSkipConfirmOpen(true) : undefined}
+        onEditLocation={isRecurring ? () => setLocationSheetOpen(true) : undefined}
       />
       <ConfirmSheet
         open={confirmOpen}
@@ -146,6 +163,12 @@ export function EventListItem({
         confirmLabel="Skip"
         onConfirm={handleSkip}
         onCancel={() => setSkipConfirmOpen(false)}
+      />
+      <EditLocationSheet
+        open={locationSheetOpen}
+        currentLocation={event.location ?? ""}
+        onSave={handleSaveLocation}
+        onCancel={() => setLocationSheetOpen(false)}
       />
     </div>
   );

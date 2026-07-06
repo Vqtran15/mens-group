@@ -87,6 +87,7 @@ export function CalendarView() {
           const endsAt = new Date(date.getTime() + schedule.duration_minutes * 60_000);
           return {
             title: schedule.label,
+            description: schedule.notes,
             starts_at: date.toISOString(),
             ends_at: endsAt.toISOString(),
             location: schedule.location,

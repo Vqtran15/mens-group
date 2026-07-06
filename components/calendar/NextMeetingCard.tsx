@@ -10,6 +10,7 @@ import { RSVPButtons } from "@/components/calendar/RSVPButtons";
 import { AttendeeList } from "@/components/calendar/AttendeeList";
 import { ConfirmSheet } from "@/components/ui/ConfirmSheet";
 import { EditDeleteActionSheet } from "@/components/ui/EditDeleteActionSheet";
+import { EditLocationSheet } from "@/components/ui/EditLocationSheet";
 import type { CalendarEvent, RelatedTopic, Rsvp, RsvpStatus } from "@/lib/types";
 
 export function NextMeetingCard({
@@ -27,6 +28,7 @@ export function NextMeetingCard({
 }) {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [skipConfirmOpen, setSkipConfirmOpen] = useState(false);
+  const [locationSheetOpen, setLocationSheetOpen] = useState(false);
   const [actionsOpen, setActionsOpen] = useState(false);
   const currentStatus: RsvpStatus | null =
     rsvps.find((r) => r.user_id === userId)?.status ?? null;
@@ -65,6 +67,16 @@ export function NextMeetingCard({
       .update({ skipped_dates: skippedDates })
       .eq("id", event.schedule_id);
     setSkipConfirmOpen(false);
+    onChanged();
+  }
+
+  async function handleSaveLocation(location: string) {
+    const supabase = createClient();
+    await supabase
+      .from("events")
+      .update({ location: location || null })
+      .eq("id", event.id);
+    setLocationSheetOpen(false);
     onChanged();
   }
 
@@ -108,6 +120,10 @@ export function NextMeetingCard({
         </div>
       </div>
 
+      {event.description && (
+        <p className="mt-3 whitespace-pre-wrap text-sm text-highlight-light">{event.description}</p>
+      )}
+
       {relatedTopics.length > 0 && (
         <div className="mt-3 flex flex-wrap gap-2">
           {relatedTopics.map((topic) => (
@@ -138,8 +154,10 @@ export function NextMeetingCard({
         open={actionsOpen}
         onClose={() => setActionsOpen(false)}
         editHref={isRecurring ? "/calendar/schedule/edit" : `/calendar/${event.id}/edit`}
+        editLabel={isRecurring ? "Edit series" : "Edit"}
         onDelete={() => setConfirmOpen(true)}
         onSkip={isRecurring ? () => setSkipConfirmOpen(true) : undefined}
+        onEditLocation={isRecurring ? () => setLocationSheetOpen(true) : undefined}
       />
       <ConfirmSheet
         open={confirmOpen}
@@ -160,6 +178,12 @@ export function NextMeetingCard({
         confirmLabel="Skip"
         onConfirm={handleSkip}
         onCancel={() => setSkipConfirmOpen(false)}
+      />
+      <EditLocationSheet
+        open={locationSheetOpen}
+        currentLocation={event.location ?? ""}
+        onSave={handleSaveLocation}
+        onCancel={() => setLocationSheetOpen(false)}
       />
     </motion.div>
   );
