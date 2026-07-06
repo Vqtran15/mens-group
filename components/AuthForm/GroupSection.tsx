@@ -65,8 +65,8 @@ export function GroupSection({
         value={value.mode}
         onChange={setMode}
         options={[
-          { value: "create", label: "Create a Group" },
           { value: "join", label: "Join a Group" },
+          { value: "create", label: "Create a Group" },
         ]}
       />
 
