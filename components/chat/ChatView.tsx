@@ -37,6 +37,7 @@ export function ChatView() {
   const groupIdRef = useRef<string | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const composerInputRef = useRef<HTMLInputElement>(null);
   const isNearBottomRef = useRef(true);
   const { markChatSeen } = useUnreadIndicator();
 
@@ -423,6 +424,7 @@ export function ChatView() {
               icon={HandWaving}
               title="Say hello!"
               subtitle="This is the start of your group chat. Send the first message."
+              onClick={() => composerInputRef.current?.focus()}
             />
           )}
           {messages.map((message) => (
@@ -462,7 +464,12 @@ export function ChatView() {
         </AnimatePresence>
       </div>
 
-      <MessageComposer onSend={handleSend} replyingTo={replyingTo} onCancelReply={() => setReplyingTo(null)} />
+      <MessageComposer
+        ref={composerInputRef}
+        onSend={handleSend}
+        replyingTo={replyingTo}
+        onCancelReply={() => setReplyingTo(null)}
+      />
 
       <MessageActionSheet
         open={actionSheetMessageId !== null}

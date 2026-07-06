@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import { ChatText, MagnifyingGlass, X } from "@phosphor-icons/react";
 import { createClient } from "@/lib/supabase/client";
@@ -22,6 +23,7 @@ function monthLabel(dateStr: string): string {
 }
 
 export function TopicsView() {
+  const router = useRouter();
   const [topics, setTopics] = useState<Topic[]>([]);
   const [loading, setLoading] = useState(true);
   const { query, setQuery, open: searchOpen, setOpen: setSearchOpen } = useTopicsSearch();
@@ -133,6 +135,7 @@ export function TopicsView() {
           icon={ChatText}
           title="Nothing to talk about yet"
           subtitle="Start a topic and get the conversation going!"
+          onClick={() => router.push("/topics/new")}
         />
       ) : filteredTopics.length === 0 ? (
         <EmptyState icon={MagnifyingGlass} title="No topics found" subtitle={`Nothing matches "${query}"`} />

@@ -1,4 +1,4 @@
-import { HandsClapping } from "@phosphor-icons/react";
+import { UsersThree } from "@phosphor-icons/react";
 import { AvatarStack } from "@/components/ui/AvatarStack";
 import { cn } from "@/lib/utils";
 import type { Rsvp } from "@/lib/types";
@@ -25,7 +25,7 @@ export function AttendeeList({
   if (rsvps.length === 0) {
     return (
       <p className={cn("flex items-center gap-1.5 text-sm", textClassName)}>
-        <HandsClapping size={16} className="shrink-0" />
+        <UsersThree size={16} className="shrink-0" />
         No RSVPs yet
       </p>
     );

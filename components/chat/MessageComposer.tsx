@@ -1,23 +1,21 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { forwardRef, useImperativeHandle, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import { Image as ImageIcon, PaperPlaneTilt, X } from "@phosphor-icons/react";
 import { EmojiPickerPopover } from "@/components/chat/EmojiPickerPopover";
 import type { ChatMessage } from "@/lib/types";
 
-export function MessageComposer({
-  onSend,
-  replyingTo,
-  onCancelReply,
-}: {
+export const MessageComposer = forwardRef<HTMLInputElement, {
   onSend: (input: { body: string; imageFile: File | null }) => void;
   replyingTo: ChatMessage | null;
   onCancelReply: () => void;
-}) {
+}>(function MessageComposer({ onSend, replyingTo, onCancelReply }, forwardedRef) {
   const [body, setBody] = useState("");
   const [imageFile, setImageFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const bodyInputRef = useRef<HTMLInputElement>(null);
+  useImperativeHandle(forwardedRef, () => bodyInputRef.current as HTMLInputElement);
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -81,6 +79,7 @@ export function MessageComposer({
         </button>
         <EmojiPickerPopover onSelect={(emoji) => setBody((b) => b + emoji)} />
         <input
+          ref={bodyInputRef}
           value={body}
           onChange={(e) => setBody(e.target.value)}
           placeholder="Message..."
@@ -98,4 +97,4 @@ export function MessageComposer({
       </form>
     </motion.div>
   );
-}
+});
