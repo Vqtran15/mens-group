@@ -78,6 +78,26 @@ export function TopicForm() {
     }, 500);
   }
 
+  if (loadingDates) {
+    return (
+      <div className="space-y-4 p-4">
+        <div>
+          <Skeleton className="mb-1.5 h-[17px] w-10" />
+          <Skeleton className="h-[46px] w-full" />
+        </div>
+        <div>
+          <Skeleton className="mb-1.5 h-[17px] w-24" />
+          <Skeleton className="h-[46px] w-full" />
+        </div>
+        <div>
+          <Skeleton className="mb-1.5 h-[17px] w-20" />
+          <Skeleton className="h-40 w-full" />
+        </div>
+        <Skeleton className="h-11 w-full rounded-xl" />
+      </div>
+    );
+  }
+
   return (
     <form onSubmit={handleSubmit} className="space-y-4 p-4">
       <div>
@@ -96,9 +116,7 @@ export function TopicForm() {
         <label htmlFor="topicDate" className="mb-1.5 block text-sm font-medium text-secondary">
           Meeting date
         </label>
-        {loadingDates ? (
-          <Skeleton className="h-[46px] w-full" />
-        ) : meetingDates.length > 0 ? (
+        {meetingDates.length > 0 ? (
           <select
             id="topicDate"
             required
@@ -123,7 +141,7 @@ export function TopicForm() {
           />
         )}
         <p className="mt-1.5 text-xs text-muted">
-          {!loadingDates && meetingDates.length === 0
+          {meetingDates.length === 0
             ? "No meetings scheduled yet - pick any date."
             : "Which meeting is this topic about?"}
         </p>
