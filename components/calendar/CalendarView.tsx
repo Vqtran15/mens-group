@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { motion } from "framer-motion";
 import { CalendarBlank } from "@phosphor-icons/react";
 import { createClient } from "@/lib/supabase/client";
 import { getCurrentMembership } from "@/lib/supabase/current-membership";
@@ -193,15 +194,21 @@ export function CalendarView() {
           <h2 className="px-1 text-sm font-semibold uppercase tracking-wide text-primary">
             Upcoming
           </h2>
-          {rest.map((event) => (
-            <EventListItem
+          {rest.map((event, i) => (
+            <motion.div
               key={event.id}
-              event={event}
-              rsvps={rsvpsByEvent[event.id] ?? []}
-              userId={userId}
-              onChanged={() => loadEvents(userId, groupId)}
-              relatedTopics={topicsByDate[toDateOnlyString(new Date(event.starts_at))] ?? []}
-            />
+              initial={{ x: -40, opacity: 0 }}
+              animate={{ x: 0, opacity: 1 }}
+              transition={{ type: "spring", stiffness: 260, damping: 24, delay: 0.08 * (i + 1) }}
+            >
+              <EventListItem
+                event={event}
+                rsvps={rsvpsByEvent[event.id] ?? []}
+                userId={userId}
+                onChanged={() => loadEvents(userId, groupId)}
+                relatedTopics={topicsByDate[toDateOnlyString(new Date(event.starts_at))] ?? []}
+              />
+            </motion.div>
           ))}
         </div>
       )}

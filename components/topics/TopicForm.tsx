@@ -8,10 +8,11 @@ import { getCurrentMembership } from "@/lib/supabase/current-membership";
 import { getUpcomingMeetingDates } from "@/lib/supabase/getUpcomingMeetingDates";
 import { RichTextEditor } from "@/components/topics/RichTextEditor";
 import { SuccessButton, type SubmitStatus } from "@/components/ui/SuccessButton";
+import { Skeleton } from "@/components/ui/Skeleton";
 import { formatDate, parseDateOnly, toDateOnlyString } from "@/lib/utils";
 
 const fieldClass =
-  "w-full rounded-xl border border-border bg-white shadow-sm px-3 py-2.5 outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20";
+  "h-[46px] w-full rounded-xl border border-border bg-white shadow-sm px-3 py-2.5 outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20";
 
 export function TopicForm() {
   const router = useRouter();
@@ -95,7 +96,9 @@ export function TopicForm() {
         <label htmlFor="topicDate" className="mb-1.5 block text-sm font-medium text-secondary">
           Meeting date
         </label>
-        {!loadingDates && meetingDates.length > 0 ? (
+        {loadingDates ? (
+          <Skeleton className="h-[46px] w-full" />
+        ) : meetingDates.length > 0 ? (
           <select
             id="topicDate"
             required
