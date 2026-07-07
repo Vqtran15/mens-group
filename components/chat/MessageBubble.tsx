@@ -66,8 +66,8 @@ export function MessageBubble({
 
   return (
     <motion.div
-      initial={{ x: isOwn ? 40 : -40, opacity: 0 }}
-      animate={{ x: 0, opacity: 1 }}
+      initial={{ y: 12, opacity: 0 }}
+      animate={{ y: 0, opacity: 1 }}
       transition={{ duration: 0.25, ease: "easeOut" }}
       className={cn("flex gap-2", isOwn && "flex-row-reverse")}
     >
