@@ -19,7 +19,7 @@ const NEAR_BOTTOM_THRESHOLD_PX = 120;
 
 const DEFAULT_REACTION = "❤️";
 
-type PendingChatMessage = ChatMessage & { pending?: boolean };
+type PendingChatMessage = ChatMessage & { pending?: boolean; uploadingImages?: boolean };
 
 export function ChatView() {
   const [userId, setUserId] = useState<string | null>(null);
@@ -270,12 +270,17 @@ export function ChatView() {
     const tempId = crypto.randomUUID();
     const replyToId = replyingTo?.id ?? null;
 
+    // Local object URLs give an instant preview of the exact photos being
+    // sent (rather than a blank bubble) while the real upload is still in
+    // flight - uploadingImages drives a spinner overlay on top of them.
+    const previewUrls = imageFiles.map((file) => URL.createObjectURL(file));
+
     const optimisticMessage: PendingChatMessage = {
       id: tempId,
       body,
       created_by: userId,
       group_id: groupIdRef.current,
-      image_urls: [],
+      image_urls: previewUrls,
       reply_to_id: replyToId,
       edited_at: null,
       created_at: new Date().toISOString(),
@@ -284,6 +289,7 @@ export function ChatView() {
         avatar_color: profilesRef.current[userId]?.avatar_color ?? null,
       },
       pending: true,
+      uploadingImages: imageFiles.length > 0,
     };
     // Sending is an explicit action - always jump to the new message even if
     // the user had scrolled up to read history.
@@ -299,6 +305,9 @@ export function ChatView() {
           imageFiles.map((file) => uploadChatPhoto(supabase, groupIdRef.current!, file))
         );
       } catch {
+        // The bubble is being removed entirely here, so the preview blobs it
+        // was showing are no longer needed - safe to release right away.
+        previewUrls.forEach((url) => URL.revokeObjectURL(url));
         setMessages((prev) => prev.filter((m) => m.id !== tempId));
         return;
       }
@@ -317,6 +326,7 @@ export function ChatView() {
       .single();
 
     if (error || !data) {
+      previewUrls.forEach((url) => URL.revokeObjectURL(url));
       setMessages((prev) => prev.filter((m) => m.id !== tempId));
       return;
     }
@@ -330,10 +340,14 @@ export function ChatView() {
               image_urls: data.image_urls,
               created_at: data.created_at,
               pending: false,
+              uploadingImages: false,
             }
           : m
       )
     );
+    // Now that the bubble has switched over to the real hosted URLs, the
+    // local preview blobs are safe to release.
+    previewUrls.forEach((url) => URL.revokeObjectURL(url));
   }
 
   async function handleToggleReaction(messageId: string, emoji: string) {
@@ -451,6 +465,7 @@ export function ChatView() {
               message={message}
               isOwn={message.created_by === userId}
               pending={message.pending}
+              uploadingImages={message.uploadingImages}
               reactions={reactionsByMessage[message.id] ?? []}
               currentUserId={userId}
               replyToMessage={message.reply_to_id ? messagesById.get(message.reply_to_id) : null}

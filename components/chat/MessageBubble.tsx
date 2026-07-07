@@ -3,7 +3,7 @@
 import { useRef, useState } from "react";
 import Image from "next/image";
 import { motion } from "framer-motion";
-import { ArrowBendUpLeft } from "@phosphor-icons/react";
+import { ArrowBendUpLeft, CircleNotch } from "@phosphor-icons/react";
 import { Avatar } from "@/components/Avatar";
 import { Button } from "@/components/ui/Button";
 import { formatTime, cn } from "@/lib/utils";
@@ -18,6 +18,7 @@ export function MessageBubble({
   message,
   isOwn,
   pending,
+  uploadingImages,
   reactions,
   currentUserId,
   replyToMessage,
@@ -31,6 +32,7 @@ export function MessageBubble({
   message: ChatMessage;
   isOwn: boolean;
   pending?: boolean;
+  uploadingImages?: boolean;
   reactions: Reaction[];
   currentUserId: string;
   replyToMessage?: ChatMessage | null;
@@ -67,7 +69,7 @@ export function MessageBubble({
   const imageGestureHandlers = useMessageGestures({
     onDoubleTap: pending ? () => {} : onDoubleTapReact,
     onLongPress: pending ? () => {} : onOpenActions,
-    onSingleTap: pending ? () => {} : () => setLightboxIndex(pendingImageIndexRef.current),
+    onSingleTap: pending || uploadingImages ? () => {} : () => setLightboxIndex(pendingImageIndexRef.current),
   });
 
   const images = message.image_urls;
@@ -129,23 +131,37 @@ export function MessageBubble({
                 style={{ width: 240, aspectRatio: imageAspectRatio ?? 1 }}
               >
                 {!imageLoaded && <div className="absolute inset-0 animate-pulse" />}
-                <Image
-                  src={images[0]}
-                  alt="Shared photo"
-                  fill
-                  sizes="240px"
-                  className={cn(
-                    "object-cover transition-opacity duration-200",
-                    imageLoaded ? "opacity-100" : "opacity-0"
-                  )}
-                  onLoad={(e) => {
-                    const img = e.currentTarget;
-                    if (img.naturalWidth && img.naturalHeight) {
-                      setImageAspectRatio(img.naturalWidth / img.naturalHeight);
-                    }
-                    setImageLoaded(true);
-                  }}
-                />
+                {uploadingImages ? (
+                  // A blob: preview URL isn't fetchable by Next/Image's
+                  // server-side optimizer, so it needs a plain <img> during
+                  // the upload window - swapped for next/image's <Image>
+                  // once the real hosted URL replaces it.
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={images[0]} alt="Shared photo" className="h-full w-full object-cover" />
+                ) : (
+                  <Image
+                    src={images[0]}
+                    alt="Shared photo"
+                    fill
+                    sizes="240px"
+                    className={cn(
+                      "object-cover transition-opacity duration-200",
+                      imageLoaded ? "opacity-100" : "opacity-0"
+                    )}
+                    onLoad={(e) => {
+                      const img = e.currentTarget;
+                      if (img.naturalWidth && img.naturalHeight) {
+                        setImageAspectRatio(img.naturalWidth / img.naturalHeight);
+                      }
+                      setImageLoaded(true);
+                    }}
+                  />
+                )}
+                {uploadingImages && (
+                  <div className="absolute inset-0 flex items-center justify-center bg-black/30">
+                    <CircleNotch size={28} className="animate-spin text-white" />
+                  </div>
+                )}
               </div>
             )}
             {images.length > 1 && (
@@ -164,8 +180,18 @@ export function MessageBubble({
                       }}
                       className="relative aspect-square select-none overflow-hidden bg-surface-muted"
                     >
-                      <Image src={url} alt="Shared photo" fill sizes="122px" className="object-cover" />
-                      {showOverlay && (
+                      {uploadingImages ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={url} alt="Shared photo" className="h-full w-full object-cover" />
+                      ) : (
+                        <Image src={url} alt="Shared photo" fill sizes="122px" className="object-cover" />
+                      )}
+                      {uploadingImages && (
+                        <div className="absolute inset-0 flex items-center justify-center bg-black/30">
+                          <CircleNotch size={22} className="animate-spin text-white" />
+                        </div>
+                      )}
+                      {showOverlay && !uploadingImages && (
                         <div className="absolute inset-0 flex items-center justify-center bg-black/50 text-lg font-semibold text-white">
                           +{hiddenCount}
                         </div>
@@ -194,9 +220,10 @@ export function MessageBubble({
         <ReactionPills reactions={reactions} currentUserId={currentUserId} onToggle={onToggleReaction} />
       </div>
 
-      {lightboxIndex !== null && images[lightboxIndex] && (
+      {lightboxIndex !== null && images.length > 0 && (
         <ImageLightbox
-          src={images[lightboxIndex]}
+          images={images}
+          initialIndex={lightboxIndex}
           open={lightboxIndex !== null}
           onClose={() => setLightboxIndex(null)}
         />
