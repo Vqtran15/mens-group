@@ -29,8 +29,8 @@ export const MessageComposer = forwardRef<HTMLInputElement, {
 
   return (
     <motion.div
-      initial={{ y: 12, opacity: 0 }}
-      animate={{ y: 0, opacity: 1 }}
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
       transition={{ duration: 0.3, ease: "easeOut" }}
       className="border-t border-border/60 bg-white/90 backdrop-blur-sm"
     >
