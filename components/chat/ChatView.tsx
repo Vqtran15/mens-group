@@ -264,7 +264,7 @@ export function ChatView() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [messages.length]);
 
-  async function handleSend({ body, imageFile }: { body: string; imageFile: File | null }) {
+  async function handleSend({ body, imageFiles }: { body: string; imageFiles: File[] }) {
     if (!userId || !groupIdRef.current) return;
     const supabase = createClient();
     const tempId = crypto.randomUUID();
@@ -275,7 +275,7 @@ export function ChatView() {
       body,
       created_by: userId,
       group_id: groupIdRef.current,
-      image_url: null,
+      image_urls: [],
       reply_to_id: replyToId,
       edited_at: null,
       created_at: new Date().toISOString(),
@@ -292,10 +292,12 @@ export function ChatView() {
     setMessages((prev) => [...prev, optimisticMessage]);
     setReplyingTo(null);
 
-    let imageUrl: string | null = null;
-    if (imageFile) {
+    let imageUrls: string[] = [];
+    if (imageFiles.length > 0) {
       try {
-        imageUrl = await uploadChatPhoto(supabase, groupIdRef.current, imageFile);
+        imageUrls = await Promise.all(
+          imageFiles.map((file) => uploadChatPhoto(supabase, groupIdRef.current!, file))
+        );
       } catch {
         setMessages((prev) => prev.filter((m) => m.id !== tempId));
         return;
@@ -308,7 +310,7 @@ export function ChatView() {
         body,
         created_by: userId,
         group_id: groupIdRef.current,
-        image_url: imageUrl,
+        image_urls: imageUrls,
         reply_to_id: replyToId,
       })
       .select()
@@ -325,7 +327,7 @@ export function ChatView() {
           ? {
               ...optimisticMessage,
               id: data.id,
-              image_url: data.image_url,
+              image_urls: data.image_urls,
               created_at: data.created_at,
               pending: false,
             }

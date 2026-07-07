@@ -89,7 +89,7 @@ export interface ChatMessage {
   body: string;
   created_by: string;
   group_id: string;
-  image_url: string | null;
+  image_urls: string[];
   reply_to_id: string | null;
   edited_at: string | null;
   created_at: string;

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import Image from "next/image";
 import { motion } from "framer-motion";
 import { ArrowBendUpLeft } from "@phosphor-icons/react";
@@ -11,6 +11,8 @@ import { useMessageGestures } from "@/lib/hooks/useMessageGestures";
 import { ReactionPills } from "@/components/chat/ReactionPills";
 import { ImageLightbox } from "@/components/chat/ImageLightbox";
 import type { ChatMessage, Reaction } from "@/lib/types";
+
+const MAX_THUMBNAILS = 4;
 
 export function MessageBubble({
   message,
@@ -44,7 +46,11 @@ export function MessageBubble({
   const [editValue, setEditValue] = useState(message.body);
   const [imageLoaded, setImageLoaded] = useState(false);
   const [imageAspectRatio, setImageAspectRatio] = useState<number | null>(null);
-  const [lightboxOpen, setLightboxOpen] = useState(false);
+  const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
+  // A tap needs to know which specific thumbnail the pointer went down on,
+  // but the gesture hook's timers (and its double-tap/long-press state) are
+  // shared across every image in the grid - one instance, not one per image.
+  const pendingImageIndexRef = useRef(0);
 
   // While a message is still pending (optimistic, awaiting server confirmation
   // of its real id), skip gesture handling entirely - a long-press/double-tap
@@ -55,14 +61,18 @@ export function MessageBubble({
     onLongPress: pending ? () => {} : onOpenActions,
   });
 
-  // The image gets its own gesture instance (rather than sharing the text
+  // The images get their own gesture instance (rather than sharing the text
   // bubble's) so a plain tap can open the lightbox without interfering with
-  // double-tap-to-react or long-press-for-actions, which still work on it too.
+  // double-tap-to-react or long-press-for-actions, which still work on them too.
   const imageGestureHandlers = useMessageGestures({
     onDoubleTap: pending ? () => {} : onDoubleTapReact,
     onLongPress: pending ? () => {} : onOpenActions,
-    onSingleTap: pending ? () => {} : () => setLightboxOpen(true),
+    onSingleTap: pending ? () => {} : () => setLightboxIndex(pendingImageIndexRef.current),
   });
+
+  const images = message.image_urls;
+  const visibleImages = images.slice(0, MAX_THUMBNAILS);
+  const hiddenCount = images.length - visibleImages.length;
 
   return (
     <motion.div
@@ -104,19 +114,23 @@ export function MessageBubble({
                 <ArrowBendUpLeft size={12} className="shrink-0" />
                 <span className="truncate">
                   {replyToMessage.profiles?.display_name ?? "Someone"}:{" "}
-                  {replyToMessage.body || (replyToMessage.image_url ? "Photo" : "")}
+                  {replyToMessage.body || (replyToMessage.image_urls.length > 0 ? "Photo" : "")}
                 </span>
               </div>
             )}
-            {message.image_url && (
+            {images.length === 1 && (
               <div
                 {...imageGestureHandlers}
+                onPointerDown={() => {
+                  pendingImageIndexRef.current = 0;
+                  imageGestureHandlers.onPointerDown();
+                }}
                 className={cn("relative select-none overflow-hidden rounded-2xl bg-surface-muted", message.body && "mb-1")}
                 style={{ width: 240, aspectRatio: imageAspectRatio ?? 1 }}
               >
                 {!imageLoaded && <div className="absolute inset-0 animate-pulse" />}
                 <Image
-                  src={message.image_url}
+                  src={images[0]}
                   alt="Shared photo"
                   fill
                   sizes="240px"
@@ -132,6 +146,33 @@ export function MessageBubble({
                     setImageLoaded(true);
                   }}
                 />
+              </div>
+            )}
+            {images.length > 1 && (
+              <div
+                className={cn("grid w-[244px] grid-cols-2 gap-1 overflow-hidden rounded-2xl", message.body && "mb-1")}
+              >
+                {visibleImages.map((url, i) => {
+                  const showOverlay = hiddenCount > 0 && i === visibleImages.length - 1;
+                  return (
+                    <div
+                      key={url}
+                      {...imageGestureHandlers}
+                      onPointerDown={() => {
+                        pendingImageIndexRef.current = i;
+                        imageGestureHandlers.onPointerDown();
+                      }}
+                      className="relative aspect-square select-none overflow-hidden bg-surface-muted"
+                    >
+                      <Image src={url} alt="Shared photo" fill sizes="122px" className="object-cover" />
+                      {showOverlay && (
+                        <div className="absolute inset-0 flex items-center justify-center bg-black/50 text-lg font-semibold text-white">
+                          +{hiddenCount}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             )}
             {message.body && (
@@ -153,8 +194,12 @@ export function MessageBubble({
         <ReactionPills reactions={reactions} currentUserId={currentUserId} onToggle={onToggleReaction} />
       </div>
 
-      {message.image_url && (
-        <ImageLightbox src={message.image_url} open={lightboxOpen} onClose={() => setLightboxOpen(false)} />
+      {lightboxIndex !== null && images[lightboxIndex] && (
+        <ImageLightbox
+          src={images[lightboxIndex]}
+          open={lightboxIndex !== null}
+          onClose={() => setLightboxIndex(null)}
+        />
       )}
     </motion.div>
   );
