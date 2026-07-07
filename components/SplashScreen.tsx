@@ -43,7 +43,7 @@ export function SplashScreen() {
         <motion.div
           exit={{ opacity: 0 }}
           transition={{ duration: 0.4 }}
-          className="fixed inset-0 z-50 flex flex-col items-center justify-center gap-4 bg-primary"
+          className="fixed inset-0 z-50 flex flex-col items-center justify-center gap-4 bg-background"
         >
           <motion.div
             initial={{ scale: 0.7, opacity: 0 }}
@@ -63,7 +63,7 @@ export function SplashScreen() {
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.15, duration: 0.3 }}
-            className="text-xl font-extrabold tracking-tight text-white"
+            className="text-xl font-extrabold tracking-tight text-primary"
           >
             Men&apos;s Group
           </motion.p>
