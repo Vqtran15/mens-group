@@ -6,6 +6,7 @@ import { Envelope, LockKey, WarningCircle } from "@phosphor-icons/react";
 import { createClient } from "@/lib/supabase/client";
 import { AuthTextField } from "@/components/AuthForm/AuthTextField";
 import { Button } from "@/components/ui/Button";
+import { trackEvent } from "@/lib/analytics";
 
 export function SignInForm({ onSwitchToSignUp }: { onSwitchToSignUp: () => void }) {
   const router = useRouter();
@@ -32,6 +33,7 @@ export function SignInForm({ onSwitchToSignUp }: { onSwitchToSignUp: () => void 
     // of resetting it here - router.push/refresh aren't instant, and
     // flipping back to "Sign in" while that's still in flight is what
     // caused the button to visibly revert right before the page changed.
+    trackEvent('login')
     router.push("/calendar");
     router.refresh();
   }

@@ -6,6 +6,7 @@ import { motion } from "framer-motion";
 import { CalendarBlank, Notebook, ChatCircle } from "@phosphor-icons/react";
 import { cn } from "@/lib/utils";
 import { useUnreadIndicator } from "@/components/UnreadIndicatorContext";
+import { trackEvent } from "@/lib/analytics";
 
 const TABS = [
   { href: "/calendar", label: "Calendar", icon: CalendarBlank },
@@ -31,6 +32,7 @@ export function BottomNav() {
             <li key={href} className="flex-1">
               <Link
                 href={href}
+                onClick={() => { if (!active) trackEvent('tab_view', { tab_name: label.toLowerCase() }) }}
                 className="relative flex flex-col items-center gap-1 py-2.5 text-xs font-medium"
               >
                 {active && (

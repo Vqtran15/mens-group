@@ -13,6 +13,7 @@ import { Skeleton } from "@/components/ui/Skeleton";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { ConfirmSheet } from "@/components/ui/ConfirmSheet";
 import { useUnreadIndicator } from "@/components/UnreadIndicatorContext";
+import { trackEvent } from "@/lib/analytics";
 import type { ChatMessage, Reaction } from "@/lib/types";
 
 const NEAR_BOTTOM_THRESHOLD_PX = 120;
@@ -330,6 +331,8 @@ export function ChatView() {
       setMessages((prev) => prev.filter((m) => m.id !== tempId));
       return;
     }
+
+    trackEvent('chat_message_sent')
 
     setMessages((prev) =>
       prev.map((m) =>

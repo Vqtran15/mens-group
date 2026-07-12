@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { Bell, X } from "@phosphor-icons/react";
 import { registerServiceWorker } from "@/lib/push/register-sw";
 import { subscribeToPush } from "@/lib/push/subscribe";
+import { trackEvent } from "@/lib/analytics";
 
 const DISMISSED_KEY = "push-prompt-dismissed";
 
@@ -29,6 +30,7 @@ export function PushPermissionPrompt() {
 
   async function handleEnable() {
     await subscribeToPush();
+    trackEvent('push_notifications_enabled')
     setVisible(false);
   }
 

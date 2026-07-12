@@ -7,6 +7,7 @@ import { createClient } from "@/lib/supabase/client";
 import { GroupSection, type GroupSelection } from "@/components/AuthForm/GroupSection";
 import { AuthTextField } from "@/components/AuthForm/AuthTextField";
 import { Button } from "@/components/ui/Button";
+import { trackEvent } from "@/lib/analytics";
 
 export function SignUpForm({ onSwitchToSignIn }: { onSwitchToSignIn: () => void }) {
   const router = useRouter();
@@ -112,6 +113,7 @@ export function SignUpForm({ onSwitchToSignIn }: { onSwitchToSignIn: () => void 
         setSubmitted(true);
         return;
       }
+      trackEvent('sign_up')
       router.push("/calendar");
       router.refresh();
       return;

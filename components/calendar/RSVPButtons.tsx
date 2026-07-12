@@ -6,6 +6,7 @@ import { Check, Question, X, type Icon } from "@phosphor-icons/react";
 import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 import type { RsvpStatus } from "@/lib/types";
+import { trackEvent } from "@/lib/analytics";
 
 const OPTIONS: { status: RsvpStatus; label: string; icon: Icon; selectedClass: string }[] = [
   { status: "yes", label: "Yes", icon: Check, selectedClass: "border-teal bg-teal text-white shadow-sm shadow-teal/30" },
@@ -38,6 +39,7 @@ export function RSVPButtons({
           { event_id: eventId, user_id: userId, status, updated_at: new Date().toISOString() },
           { onConflict: "event_id,user_id" }
         );
+      trackEvent('event_rsvp', { status })
     }
     setSubmitting(null);
     onChanged();
