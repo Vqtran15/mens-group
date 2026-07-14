@@ -1,16 +1,9 @@
 "use client";
 
-// ⚠️ STAGING ONLY — DO NOT ENABLE IN PRODUCTION.
-// This banner lets testers manually apply service-worker updates without
-// waiting for the auto-reload cycle. Gate is process.env.NEXT_PUBLIC_APP_ENV === 'staging'.
-// In Vercel: set NEXT_PUBLIC_APP_ENV=staging on the staging branch env only.
-// Production must NOT have this variable set (or set it to anything other than 'staging').
-
 import { useEffect, useState } from "react";
 import { ArrowClockwise } from "@phosphor-icons/react";
 import { registerServiceWorker } from "@/lib/push/register-sw";
 
-const IS_STAGING = process.env.NEXT_PUBLIC_APP_ENV === "staging";
 const CHECK_INTERVAL_MS = 60_000;
 
 export function UpdatePrompt() {
@@ -68,7 +61,7 @@ export function UpdatePrompt() {
       navigator.serviceWorker.removeEventListener("controllerchange", handleControllerChange);
   }, [reloadRequested]);
 
-  if (!waitingWorker || !IS_STAGING) return null;
+  if (!waitingWorker) return null;
 
   function handleReload() {
     setReloadRequested(true);
@@ -78,13 +71,13 @@ export function UpdatePrompt() {
   return (
     <div className="flex items-center gap-3 border-b border-primary/20 bg-primary/10 px-4 py-3">
       <ArrowClockwise size={20} weight="fill" className="shrink-0 text-primary" />
-      <p className="flex-1 text-sm text-secondary">New version available.</p>
+      <p className="flex-1 text-sm text-secondary">A new version of the app is available.</p>
       <button
         type="button"
         onClick={handleReload}
         className="shrink-0 rounded-full bg-primary px-3 py-1.5 text-sm font-medium text-white shadow-md shadow-primary/30 transition-transform active:scale-95"
       >
-        Update
+        Reload
       </button>
     </div>
   );

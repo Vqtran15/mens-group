@@ -116,7 +116,6 @@ export default function AppLayout({
         <div className="flex h-dvh flex-col bg-background">
           <AppHeader />
           <OfflineBanner />
-          {/* STAGING ONLY — guarded inside UpdatePrompt by NEXT_PUBLIC_APP_ENV === 'staging' */}
           <UpdatePrompt />
           <PushPermissionPrompt />
           <main className="min-h-0 flex-1 overflow-y-auto">{children}</main>
