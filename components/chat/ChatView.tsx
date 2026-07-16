@@ -33,7 +33,9 @@ export function ChatView() {
   const [deleteConfirmMessage, setDeleteConfirmMessage] = useState<ChatMessage | null>(null);
   const [showJumpToLatest, setShowJumpToLatest] = useState(false);
 
-  const profilesRef = useRef<Record<string, { display_name: string; avatar_color: string | null }>>({});
+  const profilesRef = useRef<
+    Record<string, { display_name: string; avatar_color: string | null; avatar_url: string | null }>
+  >({});
   const userIdRef = useRef<string | null>(null);
   const groupIdRef = useRef<string | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -68,16 +70,23 @@ export function ChatView() {
       // group past its first 100 messages on permanently stale history from
       // here on, since a fresh load would never reach anything recent.
       const [{ data: profiles }, { data: initialMessages }] = await Promise.all([
-        supabase.from("profiles").select("id, display_name, avatar_color").eq("group_id", membership.groupId),
+        supabase
+          .from("profiles")
+          .select("id, display_name, avatar_color, avatar_url")
+          .eq("group_id", membership.groupId),
         supabase
           .from("chat_messages")
-          .select("*, profiles(display_name, avatar_color), message_reactions(*)")
+          .select("*, profiles(display_name, avatar_color, avatar_url), message_reactions(*)")
           .order("created_at", { ascending: false })
           .limit(100),
       ]);
 
       for (const p of profiles ?? []) {
-        profilesRef.current[p.id] = { display_name: p.display_name, avatar_color: p.avatar_color };
+        profilesRef.current[p.id] = {
+          display_name: p.display_name,
+          avatar_color: p.avatar_color,
+          avatar_url: p.avatar_url,
+        };
       }
 
       const grouped: Record<string, Reaction[]> = {};
@@ -114,6 +123,7 @@ export function ChatView() {
                   profiles: {
                     display_name: profilesRef.current[row.created_by]?.display_name ?? "Someone",
                     avatar_color: profilesRef.current[row.created_by]?.avatar_color ?? null,
+                    avatar_url: profilesRef.current[row.created_by]?.avatar_url ?? null,
                   },
                 },
               ];
@@ -288,6 +298,7 @@ export function ChatView() {
       profiles: {
         display_name: profilesRef.current[userId]?.display_name ?? "You",
         avatar_color: profilesRef.current[userId]?.avatar_color ?? null,
+        avatar_url: profilesRef.current[userId]?.avatar_url ?? null,
       },
       pending: true,
       uploadingImages: imageFiles.length > 0,

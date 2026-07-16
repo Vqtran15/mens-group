@@ -1,16 +1,18 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import { CaretRight, CheckCircle, Copy, Trash, UsersThree, WarningCircle } from "@phosphor-icons/react";
+import { Camera, CaretRight, CheckCircle, Copy, ShareNetwork, Trash, UsersThree, WarningCircle } from "@phosphor-icons/react";
 import { createClient } from "@/lib/supabase/client";
 import { Avatar, AVATAR_COLORS } from "@/components/Avatar";
+import { AvatarCropModal } from "@/components/settings/AvatarCropModal";
 import { Button } from "@/components/ui/Button";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { ConfirmSheet } from "@/components/ui/ConfirmSheet";
 import { SignOutButton } from "@/components/SignOutButton";
+import { uploadAvatar } from "@/lib/supabase/uploadAvatar";
 import { cn } from "@/lib/utils";
 
 const fieldClass =
@@ -26,6 +28,7 @@ export function SettingsView() {
   const [inviteCode, setInviteCode] = useState("");
   const [isGroupCreator, setIsGroupCreator] = useState(false);
   const [codeCopied, setCodeCopied] = useState(false);
+  const [linkShared, setLinkShared] = useState(false);
   const [nameStatus, setNameStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const [nameError, setNameError] = useState<string | null>(null);
 
@@ -40,6 +43,12 @@ export function SettingsView() {
   const [avatarColor, setAvatarColor] = useState<string | null>(null);
   const [colorStatus, setColorStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
 
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [cropSrc, setCropSrc] = useState<string | null>(null);
+  const [avatarSaving, setAvatarSaving] = useState(false);
+  const [avatarError, setAvatarError] = useState<string | null>(null);
+  const avatarFileInputRef = useRef<HTMLInputElement>(null);
+
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [passwordStatus, setPasswordStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
@@ -52,11 +61,12 @@ export function SettingsView() {
       setEmail(data.user.email ?? "");
       const { data: profile } = await supabase
         .from("profiles")
-        .select("display_name, group_id, avatar_color, groups(name, invite_code, created_by)")
+        .select("display_name, group_id, avatar_color, avatar_url, groups(name, invite_code, created_by)")
         .eq("id", data.user.id)
         .single();
       setDisplayName(profile?.display_name ?? "");
       setAvatarColor(profile?.avatar_color ?? null);
+      setAvatarUrl(profile?.avatar_url ?? null);
       setGroupId(profile?.group_id ?? null);
       const group = profile?.groups as unknown as {
         name: string;
@@ -114,6 +124,59 @@ export function SettingsView() {
 
     setColorStatus("saved");
     setTimeout(() => setColorStatus("idle"), 1500);
+  }
+
+  function handleAvatarFileSelected(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    setAvatarError(null);
+    setCropSrc(URL.createObjectURL(file));
+  }
+
+  async function handleSaveAvatar(blob: Blob) {
+    setAvatarSaving(true);
+    setAvatarError(null);
+
+    const supabase = createClient();
+    const { data } = await supabase.auth.getUser();
+    if (!data.user) return;
+
+    try {
+      const url = await uploadAvatar(supabase, data.user.id, blob);
+      const { error } = await supabase.from("profiles").update({ avatar_url: url }).eq("id", data.user.id);
+      if (error) throw error;
+      setAvatarUrl(url);
+      if (cropSrc) URL.revokeObjectURL(cropSrc);
+      setCropSrc(null);
+    } catch {
+      setAvatarError("Couldn't save that photo. Try again.");
+    } finally {
+      setAvatarSaving(false);
+    }
+  }
+
+  function handleCancelCrop() {
+    if (cropSrc) URL.revokeObjectURL(cropSrc);
+    setCropSrc(null);
+  }
+
+  async function handleShareInviteLink() {
+    // ?group=&code= is read by SignUpForm/OnboardingView to pre-fill "Join
+    // a Group" - the invite code alone isn't enough to identify which group,
+    // since verify_group_invite needs both.
+    const url = `${window.location.origin}/sign-up?group=${groupId}&code=${encodeURIComponent(inviteCode)}`;
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: `Join ${groupName} on Men's Group`, url });
+      } catch {
+        // User cancelled the share sheet - not an error.
+      }
+      return;
+    }
+    await navigator.clipboard.writeText(url);
+    setLinkShared(true);
+    setTimeout(() => setLinkShared(false), 1500);
   }
 
   async function handleChangePassword(e: React.FormEvent) {
@@ -210,6 +273,34 @@ export function SettingsView() {
       >
         <h2 className="font-semibold text-primary">Profile</h2>
         <p className="text-sm text-muted">{email}</p>
+
+        <div className="flex items-center gap-3">
+          <div className="relative">
+            <Avatar name={displayName || email} color={avatarColor} imageUrl={avatarUrl} size={64} />
+            <button
+              type="button"
+              onClick={() => avatarFileInputRef.current?.click()}
+              aria-label="Change photo"
+              className="absolute -bottom-1 -right-1 flex h-7 w-7 items-center justify-center rounded-full bg-primary text-white shadow-sm ring-2 ring-white transition-transform active:scale-90"
+            >
+              <Camera size={14} weight="fill" />
+            </button>
+            <input
+              ref={avatarFileInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={handleAvatarFileSelected}
+            />
+          </div>
+          {avatarError && (
+            <p className="flex items-center gap-1.5 text-sm text-accent">
+              <WarningCircle size={16} className="shrink-0" />
+              {avatarError}
+            </p>
+          )}
+        </div>
+
         <form onSubmit={handleSaveName} className="space-y-3">
           <div>
             <label htmlFor="displayName" className="mb-1.5 block text-sm font-medium text-secondary">
@@ -302,6 +393,10 @@ export function SettingsView() {
               {codeCopied ? "Copied" : "Copy"}
             </Button>
           </div>
+          <Button type="button" variant="secondary" onClick={handleShareInviteLink} className="w-full">
+            {linkShared ? <CheckCircle size={16} /> : <ShareNetwork size={16} />}
+            {linkShared ? "Link copied" : "Share invite link"}
+          </Button>
           <Link
             href="/settings/members"
             className="flex items-center gap-2 rounded-xl border border-border/60 px-3 py-2.5 text-secondary transition-colors hover:bg-surface-muted"
@@ -439,6 +534,15 @@ export function SettingsView() {
         onConfirm={handleDeleteAccount}
         onCancel={() => setDeleteAccountConfirmOpen(false)}
       />
+
+      {cropSrc && (
+        <AvatarCropModal
+          imageSrc={cropSrc}
+          saving={avatarSaving}
+          onCancel={handleCancelCrop}
+          onSave={handleSaveAvatar}
+        />
+      )}
     </div>
   );
 }

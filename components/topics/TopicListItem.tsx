@@ -58,7 +58,7 @@ export function TopicListItem({ topic, onChanged }: { topic: Topic; onChanged: (
         </div>
         {preview && <p className="mt-1 line-clamp-2 text-sm text-secondary">{preview}</p>}
         <div className="mt-2 flex items-center gap-1.5">
-          <Avatar name={authorName} color={topic.profiles?.avatar_color} size={18} />
+          <Avatar name={authorName} color={topic.profiles?.avatar_color} imageUrl={topic.profiles?.avatar_url} size={18} />
           <span className="text-xs text-muted">{authorName}</span>
         </div>
       </MotionLink>

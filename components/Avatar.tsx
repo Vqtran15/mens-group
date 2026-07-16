@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { cn, getInitials, hashToColor } from "@/lib/utils";
 
 // A friendly, varied palette (not just the brand teal) so people are visually
@@ -19,14 +20,27 @@ export const AVATAR_COLORS = [
 export function Avatar({
   name,
   color,
+  imageUrl,
   size = 32,
   ringed = false,
 }: {
   name: string;
   color?: string | null;
+  imageUrl?: string | null;
   size?: number;
   ringed?: boolean;
 }) {
+  if (imageUrl) {
+    return (
+      <div
+        style={{ width: size, height: size }}
+        className={cn("relative shrink-0 overflow-hidden rounded-full", ringed && "ring-2 ring-background")}
+      >
+        <Image src={imageUrl} alt="" fill sizes={`${size}px`} className="object-cover" />
+      </div>
+    );
+  }
+
   return (
     <div
       style={{

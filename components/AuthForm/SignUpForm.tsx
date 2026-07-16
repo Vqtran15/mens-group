@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { CheckCircle, Copy, Envelope, LockKey, UserCircle, WarningCircle } from "@phosphor-icons/react";
 import { createClient } from "@/lib/supabase/client";
 import { GroupSection, type GroupSelection } from "@/components/AuthForm/GroupSection";
@@ -11,15 +11,21 @@ import { trackEvent } from "@/lib/analytics";
 
 export function SignUpForm({ onSwitchToSignIn }: { onSwitchToSignIn: () => void }) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [displayName, setDisplayName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [group, setGroup] = useState<GroupSelection>({
-    mode: "join",
-    groupName: "",
-    inviteCode: "",
-    selectedGroupId: "",
+  // A shared invite link (built in Settings) carries ?group=<id>&code=<code>
+  // so a new member lands here with "Join a Group" already filled in
+  // instead of having to copy-paste the code by hand.
+  const [group, setGroup] = useState<GroupSelection>(() => {
+    const groupId = searchParams.get("group");
+    const inviteCode = searchParams.get("code");
+    if (groupId && inviteCode) {
+      return { mode: "join", groupName: "", inviteCode, selectedGroupId: groupId };
+    }
+    return { mode: "join", groupName: "", inviteCode: "", selectedGroupId: "" };
   });
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);

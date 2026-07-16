@@ -12,6 +12,7 @@ interface Member {
   id: string;
   display_name: string;
   avatar_color: string | null;
+  avatar_url: string | null;
 }
 
 export function MembersView() {
@@ -31,7 +32,7 @@ export function MembersView() {
       const [{ data: profiles }, { data: group }] = await Promise.all([
         supabase
           .from("profiles")
-          .select("id, display_name, avatar_color")
+          .select("id, display_name, avatar_color, avatar_url")
           .eq("group_id", membership.groupId)
           .order("created_at", { ascending: true }),
         supabase.from("groups").select("created_by").eq("id", membership.groupId).single(),
@@ -67,7 +68,7 @@ export function MembersView() {
           transition={{ duration: 0.25, delay: Math.min(i, 8) * 0.05, ease: "easeOut" }}
           className="flex items-center gap-3 rounded-2xl border border-border/60 bg-white p-3 shadow-sm"
         >
-          <Avatar name={member.display_name} color={member.avatar_color} size={40} />
+          <Avatar name={member.display_name} color={member.avatar_color} imageUrl={member.avatar_url} size={40} />
           <p className="flex-1 font-medium text-primary">{member.display_name}</p>
           {member.id === creatorId && (
             <span className="flex items-center gap-1 rounded-full bg-primary/10 px-2 py-1 text-xs font-medium text-primary">

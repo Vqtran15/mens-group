@@ -14,7 +14,11 @@ export function AuthCard({ initialMode }: { initialMode: AuthMode }) {
 
   function switchMode(next: AuthMode) {
     setMode(next);
-    window.history.replaceState(null, "", next === "signin" ? "/sign-in" : "/sign-up");
+    // Preserve the query string (e.g. ?group=&code= from a shared invite
+    // link) across the Sign In/Sign Up toggle - hardcoding a bare path here
+    // would silently drop it the moment someone switches tabs.
+    const search = window.location.search;
+    window.history.replaceState(null, "", (next === "signin" ? "/sign-in" : "/sign-up") + search);
   }
 
   return (

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Sparkle, WarningCircle } from "@phosphor-icons/react";
 import { createClient } from "@/lib/supabase/client";
 import { getCurrentMembership } from "@/lib/supabase/current-membership";
@@ -11,11 +11,17 @@ import { SignOutButton } from "@/components/SignOutButton";
 
 export function OnboardingView() {
   const router = useRouter();
-  const [group, setGroup] = useState<GroupSelection>({
-    mode: "join",
-    groupName: "",
-    inviteCode: "",
-    selectedGroupId: "",
+  const searchParams = useSearchParams();
+  // Same shared-invite-link support as the sign-up form, for the rarer case
+  // of an already-signed-in user with no group (e.g. removed from one)
+  // landing here via a link instead of through fresh sign-up.
+  const [group, setGroup] = useState<GroupSelection>(() => {
+    const groupId = searchParams.get("group");
+    const inviteCode = searchParams.get("code");
+    if (groupId && inviteCode) {
+      return { mode: "join", groupName: "", inviteCode, selectedGroupId: groupId };
+    }
+    return { mode: "join", groupName: "", inviteCode: "", selectedGroupId: "" };
   });
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);

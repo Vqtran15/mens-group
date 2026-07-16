@@ -45,6 +45,7 @@ export function MessageBubble({
 }) {
   const name = message.profiles?.display_name ?? "Someone";
   const avatarColor = message.profiles?.avatar_color;
+  const avatarUrl = message.profiles?.avatar_url;
   const [editValue, setEditValue] = useState(message.body);
   const [imageLoaded, setImageLoaded] = useState(false);
   const [imageAspectRatio, setImageAspectRatio] = useState<number | null>(null);
@@ -83,7 +84,7 @@ export function MessageBubble({
       transition={{ duration: 0.25, ease: "easeOut" }}
       className={cn("flex gap-2", isOwn && "flex-row-reverse")}
     >
-      <Avatar name={name} color={avatarColor} />
+      <Avatar name={name} color={avatarColor} imageUrl={avatarUrl} />
       <div className={cn("flex max-w-[75%] flex-col", isOwn ? "items-end" : "items-start")}>
         <div className={cn("flex items-baseline gap-2", isOwn && "flex-row-reverse")}>
           <p className="text-xs font-medium text-secondary">{name}</p>

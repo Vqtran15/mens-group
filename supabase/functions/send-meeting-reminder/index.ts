@@ -72,8 +72,13 @@ Deno.serve(async () => {
   }
 
   const now = new Date();
-  const tomorrow = new Date(now);
-  tomorrow.setDate(tomorrow.getDate() + 1);
+  // This function is invoked hourly (see the 'meeting-reminder-hourly' pg_cron
+  // job). A meeting's next occurrence only ever falls inside this rolling
+  // [11h, 12h) window during a single one of those hourly ticks, so each
+  // occurrence gets exactly one reminder, roughly 12 hours out, without
+  // needing to track "already notified" state anywhere.
+  const windowStart = new Date(now.getTime() + 11 * 60 * 60 * 1000);
+  const windowEnd = new Date(now.getTime() + 12 * 60 * 60 * 1000);
 
   const results = [];
 
@@ -88,8 +93,8 @@ Deno.serve(async () => {
       new Set<string>(schedule.skipped_dates ?? [])
     );
 
-    if (!isSameCalendarDay(next, tomorrow)) {
-      results.push({ group_id: schedule.group_id, skipped: "next meeting is not tomorrow", next });
+    if (next.getTime() < windowStart.getTime() || next.getTime() >= windowEnd.getTime()) {
+      results.push({ group_id: schedule.group_id, skipped: "next meeting not ~12h out", next });
       continue;
     }
 
@@ -98,9 +103,14 @@ Deno.serve(async () => {
       .select("id, endpoint, p256dh, auth")
       .eq("group_id", schedule.group_id);
 
+    // A 12h-out window can land on the same calendar day as "now" (e.g. a
+    // meeting at 11pm has its reminder fire at 11am the same day), so the
+    // label can't just always say "Tomorrow" the way the old 24h-ahead
+    // daily check safely could.
+    const dayLabel = isSameCalendarDay(next, now) ? "Today" : "Tomorrow";
     const notification = JSON.stringify({
       title: schedule.label,
-      body: `Tomorrow at ${schedule.time_of_day.slice(0, 5)}${schedule.location ? " — " + schedule.location : ""}`,
+      body: `${dayLabel} at ${schedule.time_of_day.slice(0, 5)}${schedule.location ? " — " + schedule.location : ""}`,
       url: "/calendar",
     });
 

@@ -30,7 +30,7 @@ export function CalendarView() {
   const loadEvents = useCallback(async (currentUserId: string, groupId: string) => {
     const supabase = createClient();
     const eventsSelect =
-      "*, rsvps(id, event_id, user_id, status, created_at, updated_at, profiles(display_name, avatar_color))";
+      "*, rsvps(id, event_id, user_id, status, created_at, updated_at, profiles(display_name, avatar_color, avatar_url))";
 
     // These three are independent of each other, so fetch them together -
     // the schedule/topics round trips no longer sit in front of the events

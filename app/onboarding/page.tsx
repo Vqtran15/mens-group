@@ -1,5 +1,10 @@
+import { Suspense } from "react";
 import { OnboardingView } from "@/components/onboarding/OnboardingView";
 
 export default function OnboardingPage() {
-  return <OnboardingView />;
+  return (
+    <Suspense>
+      <OnboardingView />
+    </Suspense>
+  );
 }

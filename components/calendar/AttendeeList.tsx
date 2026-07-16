@@ -40,6 +40,7 @@ export function AttendeeList({
               people={grouped[status].map((r) => ({
                 name: r.profiles?.display_name ?? "Someone",
                 color: r.profiles?.avatar_color,
+                imageUrl: r.profiles?.avatar_url,
               }))}
             />
             <p className={cn("text-sm", textClassName)}>

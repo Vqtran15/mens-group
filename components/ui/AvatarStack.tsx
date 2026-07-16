@@ -3,6 +3,7 @@ import { Avatar } from "@/components/Avatar";
 export interface AvatarStackPerson {
   name: string;
   color?: string | null;
+  imageUrl?: string | null;
 }
 
 export function AvatarStack({ people, max = 4 }: { people: AvatarStackPerson[]; max?: number }) {
@@ -13,7 +14,7 @@ export function AvatarStack({ people, max = 4 }: { people: AvatarStackPerson[]; 
     <div className="flex items-center">
       {shown.map((person, i) => (
         <div key={i} style={{ marginLeft: i === 0 ? 0 : -8 }}>
-          <Avatar name={person.name} color={person.color} size={24} ringed />
+          <Avatar name={person.name} color={person.color} imageUrl={person.imageUrl} size={24} ringed />
         </div>
       ))}
       {overflow > 0 && (

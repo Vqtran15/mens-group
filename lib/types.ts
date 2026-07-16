@@ -4,6 +4,7 @@ export interface Profile {
   email: string;
   group_id: string | null;
   avatar_color: string | null;
+  avatar_url: string | null;
   created_at: string;
 }
 
@@ -22,7 +23,7 @@ export interface Topic {
   created_by: string;
   group_id: string;
   created_at: string;
-  profiles?: Pick<Profile, "display_name" | "avatar_color">;
+  profiles?: Pick<Profile, "display_name" | "avatar_color" | "avatar_url">;
 }
 
 export interface TopicDraft {
@@ -81,7 +82,7 @@ export interface Rsvp {
   status: RsvpStatus;
   created_at: string;
   updated_at: string;
-  profiles?: Pick<Profile, "display_name" | "avatar_color">;
+  profiles?: Pick<Profile, "display_name" | "avatar_color" | "avatar_url">;
 }
 
 export interface ChatMessage {
@@ -93,7 +94,7 @@ export interface ChatMessage {
   reply_to_id: string | null;
   edited_at: string | null;
   created_at: string;
-  profiles?: Pick<Profile, "display_name" | "avatar_color">;
+  profiles?: Pick<Profile, "display_name" | "avatar_color" | "avatar_url">;
 }
 
 export interface Reaction {
