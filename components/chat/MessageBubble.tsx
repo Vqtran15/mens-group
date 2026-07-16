@@ -94,13 +94,14 @@ export function MessageBubble({
         groupStart ? "mt-4 first:mt-0" : "mt-0.5"
       )}
     >
-      {groupStart ? (
-        <Avatar name={name} color={avatarColor} imageUrl={avatarUrl} />
-      ) : (
-        // Keeps continuation bubbles aligned under the group's avatar
-        // instead of sliding over to fill the gap it would have occupied.
-        <div className="w-8 shrink-0" />
-      )}
+      {!isOwn &&
+        (groupStart ? (
+          <Avatar name={name} color={avatarColor} imageUrl={avatarUrl} />
+        ) : (
+          // Keeps continuation bubbles aligned under the group's avatar
+          // instead of sliding over to fill the gap it would have occupied.
+          <div className="w-8 shrink-0" />
+        ))}
       <div className={cn("flex max-w-[75%] flex-col", isOwn ? "items-end" : "items-start")}>
         {groupStart && (
           <div className={cn("flex items-baseline gap-2", isOwn && "flex-row-reverse")}>
