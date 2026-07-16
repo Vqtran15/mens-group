@@ -19,6 +19,7 @@ export function MessageBubble({
   isOwn,
   pending,
   uploadingImages,
+  groupStart = true,
   reactions,
   currentUserId,
   replyToMessage,
@@ -33,6 +34,11 @@ export function MessageBubble({
   isOwn: boolean;
   pending?: boolean;
   uploadingImages?: boolean;
+  // Whether this is the first message in a run of consecutive messages from
+  // the same sender - only group starts get their own avatar/name/time
+  // header, so a back-and-forth burst of short messages doesn't repeat it
+  // on every single bubble.
+  groupStart?: boolean;
   reactions: Reaction[];
   currentUserId: string;
   replyToMessage?: ChatMessage | null;
@@ -82,18 +88,30 @@ export function MessageBubble({
       initial={{ y: 12, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
       transition={{ duration: 0.25, ease: "easeOut" }}
-      className={cn("flex gap-2", isOwn && "flex-row-reverse")}
+      className={cn(
+        "flex gap-2",
+        isOwn && "flex-row-reverse",
+        groupStart ? "mt-4 first:mt-0" : "mt-0.5"
+      )}
     >
-      <Avatar name={name} color={avatarColor} imageUrl={avatarUrl} />
+      {groupStart ? (
+        <Avatar name={name} color={avatarColor} imageUrl={avatarUrl} />
+      ) : (
+        // Keeps continuation bubbles aligned under the group's avatar
+        // instead of sliding over to fill the gap it would have occupied.
+        <div className="w-8 shrink-0" />
+      )}
       <div className={cn("flex max-w-[75%] flex-col", isOwn ? "items-end" : "items-start")}>
-        <div className={cn("flex items-baseline gap-2", isOwn && "flex-row-reverse")}>
-          <p className="text-xs font-medium text-secondary">{name}</p>
-          <p className="text-xs text-muted">{formatTime(new Date(message.created_at))}</p>
-          {message.edited_at && <p className="text-xs text-muted">(edited)</p>}
-        </div>
+        {groupStart && (
+          <div className={cn("flex items-baseline gap-2", isOwn && "flex-row-reverse")}>
+            <p className="text-xs font-medium text-secondary">{name}</p>
+            <p className="text-xs text-muted">{formatTime(new Date(message.created_at))}</p>
+            {message.edited_at && <p className="text-xs text-muted">(edited)</p>}
+          </div>
+        )}
 
         {isEditing ? (
-          <div className="mt-1 w-full space-y-2">
+          <div className={cn("w-full space-y-2", groupStart && "mt-1")}>
             <textarea
               value={editValue}
               onChange={(e) => setEditValue(e.target.value)}
@@ -108,7 +126,14 @@ export function MessageBubble({
             </div>
           </div>
         ) : (
-          <div className={cn("mt-1 flex w-fit max-w-full flex-col", isOwn ? "items-end" : "items-start", pending && "opacity-60")}>
+          <div
+            className={cn(
+              "flex w-fit max-w-full flex-col",
+              groupStart && "mt-1",
+              isOwn ? "items-end" : "items-start",
+              pending && "opacity-60"
+            )}
+          >
             {replyToMessage && (
               <div
                 {...gestureHandlers}

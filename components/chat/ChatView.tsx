@@ -17,6 +17,18 @@ import { trackEvent } from "@/lib/analytics";
 import type { ChatMessage, Reaction } from "@/lib/types";
 
 const NEAR_BOTTOM_THRESHOLD_PX = 120;
+const GROUP_GAP_MS = 5 * 60 * 1000;
+
+// Consecutive messages from the same sender, sent close together, are
+// visually grouped under a single avatar/name/time header instead of
+// repeating it on every bubble - a reply always starts a fresh group since
+// its quoted preview needs its own clearly-attributed context.
+function isGroupStart(message: ChatMessage, previous: ChatMessage | undefined): boolean {
+  if (!previous) return true;
+  if (message.reply_to_id) return true;
+  if (message.created_by !== previous.created_by) return true;
+  return new Date(message.created_at).getTime() - new Date(previous.created_at).getTime() > GROUP_GAP_MS;
+}
 
 const DEFAULT_REACTION = "❤️";
 
@@ -463,7 +475,7 @@ export function ChatView() {
         <div
           ref={containerRef}
           data-chat-scroll-container
-          className="h-full space-y-4 overflow-y-auto p-4"
+          className="h-full overflow-y-auto p-4"
         >
           {messages.length === 0 && (
             <EmptyState
@@ -473,13 +485,14 @@ export function ChatView() {
               onClick={() => composerInputRef.current?.focus()}
             />
           )}
-          {messages.map((message) => (
+          {messages.map((message, index) => (
             <MessageBubble
               key={message.id}
               message={message}
               isOwn={message.created_by === userId}
               pending={message.pending}
               uploadingImages={message.uploadingImages}
+              groupStart={isGroupStart(message, messages[index - 1])}
               reactions={reactionsByMessage[message.id] ?? []}
               currentUserId={userId}
               replyToMessage={message.reply_to_id ? messagesById.get(message.reply_to_id) : null}
