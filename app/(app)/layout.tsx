@@ -20,6 +20,7 @@ const SECTION_TITLES: { prefix: string; title: string }[] = [
   { prefix: "/calendar", title: "Calendar" },
   { prefix: "/topics", title: "Topics" },
   { prefix: "/chat", title: "Chat" },
+  { prefix: "/tools", title: "Tools" },
   { prefix: "/settings", title: "Settings" },
 ];
 
@@ -29,6 +30,8 @@ const SECTION_TITLES: { prefix: string; title: string }[] = [
 // via TopicsAddMenu instead of a single direct link.
 const ADD_ACTIONS: { path: string; href: string; label: string }[] = [
   { path: "/calendar", href: "/calendar/new", label: "Add event" },
+  { path: "/tools/resources", href: "/tools/resources/new", label: "Add resource" },
+  { path: "/tools/polls", href: "/tools/polls/new", label: "New poll" },
 ];
 
 const MotionLink = motion.create(Link);

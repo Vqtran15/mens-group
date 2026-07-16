@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion } from "framer-motion";
-import { CalendarBlank, Notebook, ChatCircle } from "@phosphor-icons/react";
+import { CalendarBlank, Notebook, ChatCircle, Wrench } from "@phosphor-icons/react";
 import { cn } from "@/lib/utils";
 import { useUnreadIndicator } from "@/components/UnreadIndicatorContext";
 import { trackEvent } from "@/lib/analytics";
@@ -12,6 +12,7 @@ const TABS = [
   { href: "/calendar", label: "Calendar", icon: CalendarBlank },
   { href: "/topics", label: "Topics", icon: Notebook },
   { href: "/chat", label: "Chat", icon: ChatCircle },
+  { href: "/tools", label: "Tools", icon: Wrench },
 ] as const;
 
 export function BottomNav() {

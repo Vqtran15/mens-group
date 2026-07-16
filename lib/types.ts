@@ -102,3 +102,52 @@ export interface RelatedTopic {
   id: string;
   title: string;
 }
+
+export interface Resource {
+  id: string;
+  group_id: string;
+  title: string;
+  url: string | null;
+  description: string | null;
+  created_by: string | null;
+  created_at: string;
+  profiles?: Pick<Profile, "display_name" | "avatar_color" | "avatar_url">;
+}
+
+export interface PotluckItem {
+  id: string;
+  group_id: string;
+  item_name: string;
+  category: string | null;
+  claimed_by: string | null;
+  created_by: string | null;
+  created_at: string;
+  claimed_by_profile?: Pick<Profile, "display_name" | "avatar_color" | "avatar_url"> | null;
+}
+
+export interface Poll {
+  id: string;
+  group_id: string;
+  question: string;
+  closed: boolean;
+  created_by: string | null;
+  created_at: string;
+  poll_options?: PollOption[];
+}
+
+export interface PollOption {
+  id: string;
+  poll_id: string;
+  option_text: string;
+  created_by: string | null;
+  created_at: string;
+  poll_votes?: PollVote[];
+}
+
+export interface PollVote {
+  id: string;
+  poll_id: string;
+  option_id: string;
+  user_id: string;
+  created_at: string;
+}
