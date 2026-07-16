@@ -2,13 +2,14 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { ForkKnife, Plus, Trash, X } from "@phosphor-icons/react";
+import { Broom, ForkKnife, Plus, Trash, X } from "@phosphor-icons/react";
 import { createClient } from "@/lib/supabase/client";
 import { getCurrentMembership } from "@/lib/supabase/current-membership";
 import { Avatar } from "@/components/Avatar";
 import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Skeleton } from "@/components/ui/Skeleton";
+import { ConfirmSheet } from "@/components/ui/ConfirmSheet";
 import { cn } from "@/lib/utils";
 import type { PotluckItem } from "@/lib/types";
 
@@ -23,6 +24,8 @@ export function PotluckView() {
   const [adding, setAdding] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editValue, setEditValue] = useState("");
+  const [confirmClearAll, setConfirmClearAll] = useState(false);
+  const [clearing, setClearing] = useState(false);
 
   const load = useCallback(async () => {
     const supabase = createClient();
@@ -76,6 +79,19 @@ export function PotluckView() {
   async function handleDelete(item: PotluckItem) {
     const supabase = createClient();
     await supabase.from("potluck_items").delete().eq("id", item.id);
+    load();
+  }
+
+  // Clears the whole shared list at once, e.g. between potluck occasions -
+  // this is the one bulk/irreversible action here, so it's the only thing
+  // in this tool that gets a confirmation step.
+  async function handleClearAll() {
+    if (!groupId) return;
+    setClearing(true);
+    const supabase = createClient();
+    await supabase.from("potluck_items").delete().eq("group_id", groupId);
+    setClearing(false);
+    setConfirmClearAll(false);
     load();
   }
 
@@ -136,6 +152,21 @@ export function PotluckView() {
           <Plus size={16} /> {adding ? "Adding..." : "Add to the list"}
         </Button>
       </form>
+
+      {items.length > 0 && (
+        <div className="flex items-center justify-between">
+          <p className="text-sm text-secondary">
+            {items.length} {items.length === 1 ? "item" : "items"}
+          </p>
+          <button
+            type="button"
+            onClick={() => setConfirmClearAll(true)}
+            className="flex items-center gap-1.5 rounded-full px-2.5 py-1 text-sm text-accent transition-colors hover:bg-accent/10"
+          >
+            <Broom size={16} /> Clear all
+          </button>
+        </div>
+      )}
 
       {items.length === 0 ? (
         <EmptyState
@@ -232,6 +263,15 @@ export function PotluckView() {
           })}
         </div>
       )}
+
+      <ConfirmSheet
+        open={confirmClearAll}
+        title="Clear the whole list?"
+        description="Removes every item, including what people have claimed. Good for starting fresh before the next potluck - this can't be undone."
+        confirmLabel={clearing ? "Clearing..." : "Clear all"}
+        onConfirm={handleClearAll}
+        onCancel={() => setConfirmClearAll(false)}
+      />
     </div>
   );
 }
