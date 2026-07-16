@@ -50,9 +50,9 @@ export function TopicListItem({ topic, onChanged }: { topic: Topic; onChanged: (
         transition={{ duration: 0.15 }}
         className="block rounded-xl pr-7"
       >
-        <div className="flex items-baseline gap-2">
-          <p className="truncate font-medium text-primary">{topic.title}</p>
-          <p className="shrink-0 text-xs font-medium text-secondary">
+        <div>
+          <p className="line-clamp-2 font-medium text-primary">{topic.title}</p>
+          <p className="mt-0.5 text-xs font-medium text-secondary">
             {formatDate(parseDateOnly(topic.topic_date))}
           </p>
         </div>

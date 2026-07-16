@@ -52,10 +52,6 @@ export function formatTime(date: Date): string {
   });
 }
 
-export function formatDateTime(date: Date): string {
-  return `${formatDate(date)} at ${formatTime(date)}`;
-}
-
 // Excludes visually ambiguous characters (0/O, 1/I/L).
 const INVITE_CODE_CHARS = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
 

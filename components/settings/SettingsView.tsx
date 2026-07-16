@@ -301,6 +301,35 @@ export function SettingsView() {
           )}
         </div>
 
+        <div>
+          <div className="mb-1.5 flex items-center gap-2">
+            <p className="text-sm font-medium text-secondary">Fallback color</p>
+            {colorStatus === "saved" && (
+              <p className="flex items-center gap-1 text-xs text-teal">
+                <CheckCircle size={14} /> Saved
+              </p>
+            )}
+          </div>
+          <p className="mb-2 text-xs text-muted">Shown when you don&apos;t have a photo set.</p>
+          <div className="flex flex-wrap gap-2">
+            {AVATAR_COLORS.map((color) => (
+              <button
+                key={color}
+                type="button"
+                aria-label={`Use color ${color}`}
+                onClick={() => handleSaveAvatarColor(color)}
+                style={{ backgroundColor: color }}
+                className={cn(
+                  "flex h-9 w-9 items-center justify-center rounded-full ring-2 ring-offset-2 ring-offset-white transition-transform active:scale-90",
+                  avatarColor === color ? "ring-primary" : "ring-transparent"
+                )}
+              >
+                {avatarColor === color && <CheckCircle size={18} weight="fill" className="text-white" />}
+              </button>
+            ))}
+          </div>
+        </div>
+
         <form onSubmit={handleSaveName} className="space-y-3">
           <div>
             <label htmlFor="displayName" className="mb-1.5 block text-sm font-medium text-secondary">
@@ -333,45 +362,11 @@ export function SettingsView() {
         </form>
       </motion.section>
 
-      <motion.section
-        initial={{ opacity: 0, y: 12 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.25, delay: 0.06, ease: "easeOut" }}
-        className="space-y-3 rounded-2xl border border-border/60 bg-white p-4 shadow-sm"
-      >
-        <h2 className="font-semibold text-primary">Avatar color</h2>
-        <div className="flex items-center gap-3">
-          <Avatar name={displayName || "?"} color={avatarColor} size={40} />
-          {colorStatus === "saved" && (
-            <p className="flex items-center gap-1.5 text-sm text-teal">
-              <CheckCircle size={16} /> Saved
-            </p>
-          )}
-        </div>
-        <div className="flex flex-wrap gap-2">
-          {AVATAR_COLORS.map((color) => (
-            <button
-              key={color}
-              type="button"
-              aria-label={`Use color ${color}`}
-              onClick={() => handleSaveAvatarColor(color)}
-              style={{ backgroundColor: color }}
-              className={cn(
-                "flex h-9 w-9 items-center justify-center rounded-full ring-2 ring-offset-2 ring-offset-white transition-transform active:scale-90",
-                avatarColor === color ? "ring-primary" : "ring-transparent"
-              )}
-            >
-              {avatarColor === color && <CheckCircle size={18} weight="fill" className="text-white" />}
-            </button>
-          ))}
-        </div>
-      </motion.section>
-
       {inviteCode && (
         <motion.section
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.25, delay: 0.12, ease: "easeOut" }}
+          transition={{ duration: 0.25, delay: 0.06, ease: "easeOut" }}
           className="space-y-3 rounded-2xl border border-border/60 bg-white p-4 shadow-sm"
         >
           <h2 className="font-semibold text-primary">{groupName}</h2>
@@ -411,7 +406,7 @@ export function SettingsView() {
       <motion.section
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.25, delay: 0.18, ease: "easeOut" }}
+        transition={{ duration: 0.25, delay: 0.12, ease: "easeOut" }}
         className="space-y-3 rounded-2xl border border-border/60 bg-white p-4 shadow-sm"
       >
         <h2 className="font-semibold text-primary">Change password</h2>
@@ -463,7 +458,7 @@ export function SettingsView() {
       <motion.section
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.25, delay: 0.24, ease: "easeOut" }}
+        transition={{ duration: 0.25, delay: 0.18, ease: "easeOut" }}
         className="space-y-4 rounded-2xl border border-accent/30 bg-accent/5 p-4 shadow-sm"
       >
         <h2 className="font-semibold text-accent">Danger zone</h2>
@@ -513,7 +508,7 @@ export function SettingsView() {
       <motion.div
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.25, delay: 0.3, ease: "easeOut" }}
+        transition={{ duration: 0.25, delay: 0.24, ease: "easeOut" }}
       >
         <SignOutButton />
       </motion.div>

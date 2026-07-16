@@ -3,11 +3,11 @@
 @theme {
   --color-primary: #264653;       /* deep teal-navy — headers, primary buttons, active nav */
   --color-secondary: #5c6b6a;     /* warm slate — secondary text/icons */
-  --color-accent: #e76f51;        /* coral — CTAs, errors, badges */
+  --color-accent: #bd3b1a;        /* terracotta — CTAs, errors, badges (darkened from #e76f51 for WCAG AA text contrast) */
   --color-background: #ede7e3;    /* warm cream — app background */
   --color-surface-muted: #dfe6e4; /* pale teal-gray — chips, selected states, nav pill */
   --color-border: #d8d0c7;        /* warm neutral — borders/dividers */
-  --color-muted: #a89f95;         /* warm neutral — timestamps, tertiary text */
+  --color-muted: #70675c;         /* warm neutral — timestamps, tertiary text (darkened from #a89f95 for WCAG AA text contrast) */
   --color-highlight: #e9c46a;     /* gold — next-meeting glow, badges */
   --color-highlight-light: #f2d795; /* lighter gold — next-meeting card accents on the navy card */
   --color-teal: #2a9d8f;          /* teal — positive/success states (e.g. RSVP "Yes") */

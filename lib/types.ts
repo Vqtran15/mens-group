@@ -36,15 +36,6 @@ export interface TopicDraft {
   updated_at: string;
 }
 
-export interface TopicNote {
-  id: string;
-  topic_id: string;
-  body: string;
-  created_by: string;
-  created_at: string;
-  profiles?: Pick<Profile, "display_name">;
-}
-
 export interface MeetingSchedule {
   id: string;
   label: string;

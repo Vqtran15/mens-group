@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { CheckCircle, Copy, Envelope, LockKey, UserCircle, WarningCircle } from "@phosphor-icons/react";
+import { CheckCircle, Copy, Envelope, LockKey, ShareNetwork, UserCircle, WarningCircle } from "@phosphor-icons/react";
 import { createClient } from "@/lib/supabase/client";
 import { GroupSection, type GroupSelection } from "@/components/AuthForm/GroupSection";
 import { AuthTextField } from "@/components/AuthForm/AuthTextField";
@@ -31,9 +31,11 @@ export function SignUpForm({ onSwitchToSignIn }: { onSwitchToSignIn: () => void 
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [hasSession, setHasSession] = useState(false);
+  const [createdGroupId, setCreatedGroupId] = useState<string | null>(null);
   const [createdGroupName, setCreatedGroupName] = useState<string | null>(null);
   const [createdInviteCode, setCreatedInviteCode] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [linkShared, setLinkShared] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -105,6 +107,7 @@ export function SignUpForm({ onSwitchToSignIn }: { onSwitchToSignIn: () => void 
     }
 
     if (group.mode === "create") {
+      setCreatedGroupId(groupId);
       setCreatedGroupName(group.groupName);
       setCreatedInviteCode(group.inviteCode);
     }
@@ -126,6 +129,22 @@ export function SignUpForm({ onSwitchToSignIn }: { onSwitchToSignIn: () => void 
     }
 
     setSubmitted(true);
+  }
+
+  async function handleShareInviteLink() {
+    if (!createdGroupId || !createdInviteCode) return;
+    const url = `${window.location.origin}/sign-up?group=${createdGroupId}&code=${encodeURIComponent(createdInviteCode)}`;
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: `Join ${createdGroupName} on Men's Group`, url });
+      } catch {
+        // User cancelled the share sheet - not an error.
+      }
+      return;
+    }
+    await navigator.clipboard.writeText(url);
+    setLinkShared(true);
+    setTimeout(() => setLinkShared(false), 1500);
   }
 
   if (submitted) {
@@ -154,6 +173,10 @@ export function SignUpForm({ onSwitchToSignIn }: { onSwitchToSignIn: () => void 
                 {copied ? "Copied" : "Copy"}
               </Button>
             </div>
+            <Button type="button" variant="secondary" onClick={handleShareInviteLink} className="mt-2 w-full">
+              {linkShared ? <CheckCircle size={16} /> : <ShareNetwork size={16} />}
+              {linkShared ? "Link copied" : "Share invite link"}
+            </Button>
           </div>
         )}
         {hasSession ? (
@@ -181,7 +204,6 @@ export function SignUpForm({ onSwitchToSignIn }: { onSwitchToSignIn: () => void 
 
   return (
     <form onSubmit={handleSubmit} className="w-full space-y-4">
-      <GroupSection value={group} onChange={setGroup} />
       <AuthTextField
         label="Name"
         icon={UserCircle}
@@ -216,6 +238,7 @@ export function SignUpForm({ onSwitchToSignIn }: { onSwitchToSignIn: () => void 
         value={confirmPassword}
         onChange={setConfirmPassword}
       />
+      <GroupSection value={group} onChange={setGroup} />
       {error && (
         <p className="flex items-center gap-1.5 rounded-lg bg-accent/10 px-3 py-2 text-sm text-accent">
           <WarningCircle size={16} className="shrink-0" />
