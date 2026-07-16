@@ -48,6 +48,18 @@ const OCCURRENCE_OPTIONS = [
   { value: 5, label: "5th" },
 ];
 
+// Common US zones only - this app assumes a group's members share one
+// local time, not a full IANA picker.
+const TIMEZONE_OPTIONS = [
+  { value: "America/New_York", label: "Eastern" },
+  { value: "America/Chicago", label: "Central" },
+  { value: "America/Denver", label: "Mountain" },
+  { value: "America/Phoenix", label: "Arizona (no DST)" },
+  { value: "America/Los_Angeles", label: "Pacific" },
+  { value: "America/Anchorage", label: "Alaska" },
+  { value: "Pacific/Honolulu", label: "Hawaii" },
+];
+
 export function MeetingScheduleForm() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
@@ -59,6 +71,7 @@ export function MeetingScheduleForm() {
   const [occurrences, setOccurrences] = useState<number[]>([]);
   const [time, setTime] = useState("");
   const [endTime, setEndTime] = useState("");
+  const [timezone, setTimezone] = useState("America/Los_Angeles");
   const [location, setLocation] = useState("");
   const [skippedDates, setSkippedDates] = useState<string[]>([]);
   const [unskipping, setUnskipping] = useState<string | null>(null);
@@ -92,6 +105,7 @@ export function MeetingScheduleForm() {
         const startTime = data.time_of_day.slice(0, 5);
         setTime(startTime);
         setEndTime(addMinutesToTime(startTime, data.duration_minutes));
+        setTimezone(data.timezone ?? "America/Los_Angeles");
         setLocation(data.location ?? "");
         // Past skipped dates will never be materialized again anyway - only
         // upcoming ones are worth showing, so the list doesn't grow stale
@@ -156,6 +170,7 @@ export function MeetingScheduleForm() {
           occurrences_in_month: occurrences,
           time_of_day: time,
           duration_minutes: durationMinutes,
+          timezone,
           location: location || null,
         })
         .eq("id", scheduleId);
@@ -182,6 +197,7 @@ export function MeetingScheduleForm() {
         occurrences_in_month: occurrences,
         time_of_day: time,
         duration_minutes: durationMinutes,
+        timezone,
         location: location || null,
         created_by: userId,
         group_id: groupId,
@@ -313,6 +329,31 @@ export function MeetingScheduleForm() {
           </div>
         </motion.div>
       )}
+
+      <motion.div
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.25, delay: 0.22, ease: "easeOut" }}
+      >
+        <label htmlFor="timezone" className="mb-1.5 block text-sm font-medium text-secondary">
+          Time zone
+        </label>
+        <select
+          id="timezone"
+          value={timezone}
+          onChange={(e) => setTimezone(e.target.value)}
+          className={fieldClass}
+        >
+          {TIMEZONE_OPTIONS.map((tz) => (
+            <option key={tz.value} value={tz.value}>
+              {tz.label}
+            </option>
+          ))}
+        </select>
+        <p className="mt-1.5 text-xs text-muted">
+          Used to send the meeting reminder at the right local time.
+        </p>
+      </motion.div>
 
       <motion.div
         initial={{ opacity: 0, y: 12 }}

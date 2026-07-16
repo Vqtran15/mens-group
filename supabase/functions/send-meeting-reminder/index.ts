@@ -16,30 +16,75 @@ interface RecurrenceConfig {
   dayOfWeek: number;
   occurrencesInMonth: number[];
   timeOfDay: string;
+  timezone: string;
 }
 
-function toDateOnlyString(date: Date): string {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
+// Deno Deploy runs in UTC, so plain Date getters/setters can't represent
+// "6pm in the group's own timezone" - every date computation below has to
+// go through these two helpers instead of touching local Date fields
+// directly.
+
+// What year/month/day/hour/minute does `instant` read as, in `timeZone`?
+function readInZone(instant: Date, timeZone: string) {
+  const fmt = new Intl.DateTimeFormat("en-US", {
+    timeZone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hourCycle: "h23",
+  });
+  const parts = Object.fromEntries(fmt.formatToParts(instant).map((p) => [p.type, p.value]));
+  return {
+    year: Number(parts.year),
+    month: Number(parts.month),
+    day: Number(parts.day),
+    hour: Number(parts.hour),
+    minute: Number(parts.minute),
+  };
+}
+
+// The inverse: what UTC instant corresponds to this wall-clock date/time in
+// `timeZone`? Standard "round-trip through Intl" technique - guess the
+// instant by treating the wall-clock values as UTC, see what that guess
+// actually reads as in the target zone, then shift by the difference. One
+// pass is enough outside the handful of minutes spanning a DST transition,
+// which a fixed evening meeting time is never going to land in.
+function zonedTimeToUtc(year: number, month: number, day: number, hour: number, minute: number, timeZone: string): Date {
+  const guess = new Date(Date.UTC(year, month - 1, day, hour, minute));
+  const asRead = readInZone(guess, timeZone);
+  const asIfUtc = Date.UTC(asRead.year, asRead.month - 1, asRead.day, asRead.hour, asRead.minute);
+  const offset = guess.getTime() - asIfUtc;
+  return new Date(guess.getTime() + offset);
+}
+
+function toDateOnlyString(year: number, month: number, day: number): string {
+  return `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
 }
 
 function getNextOccurrence(config: RecurrenceConfig, from: Date, skipDates: Set<string>): Date {
-  let year = from.getFullYear();
-  let month = from.getMonth();
+  // Anchor the month/day search to the group's own current calendar date,
+  // not the server's UTC one - matters right around midnight in either
+  // direction near a month boundary.
+  const nowInZone = readInZone(from, config.timezone);
+  let year = nowInZone.year;
+  let month = nowInZone.month - 1;
 
   for (let monthsAhead = 0; monthsAhead < 3; monthsAhead++) {
-    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const daysInMonth = new Date(Date.UTC(year, month + 1, 0)).getUTCDate();
     let matchIndex = 0;
     for (let day = 1; day <= daysInMonth; day++) {
-      const date = new Date(year, month, day);
-      if (date.getDay() === config.dayOfWeek) {
+      // A calendar date's weekday is a pure calendar fact, independent of
+      // timezone - noon UTC keeps it well clear of any date-line edge case.
+      const dayOfWeek = new Date(Date.UTC(year, month, day, 12)).getUTCDay();
+      if (dayOfWeek === config.dayOfWeek) {
         matchIndex++;
-        if (config.occurrencesInMonth.includes(matchIndex) && !skipDates.has(toDateOnlyString(date))) {
+        if (config.occurrencesInMonth.includes(matchIndex) && !skipDates.has(toDateOnlyString(year, month + 1, day))) {
           const [hours, minutes] = config.timeOfDay.split(":").map(Number);
-          date.setHours(hours, minutes, 0, 0);
-          if (date.getTime() >= from.getTime()) return date;
+          const candidate = zonedTimeToUtc(year, month + 1, day, hours, minutes, config.timezone);
+          if (candidate.getTime() >= from.getTime()) return candidate;
         }
       }
     }
@@ -53,12 +98,10 @@ function getNextOccurrence(config: RecurrenceConfig, from: Date, skipDates: Set<
   throw new Error("No upcoming occurrence found within 3 months");
 }
 
-function isSameCalendarDay(a: Date, b: Date): boolean {
-  return (
-    a.getFullYear() === b.getFullYear() &&
-    a.getMonth() === b.getMonth() &&
-    a.getDate() === b.getDate()
-  );
+function isSameCalendarDay(a: Date, b: Date, timeZone: string): boolean {
+  const aInZone = readInZone(a, timeZone);
+  const bInZone = readInZone(b, timeZone);
+  return aInZone.year === bInZone.year && aInZone.month === bInZone.month && aInZone.day === bInZone.day;
 }
 
 Deno.serve(async () => {
@@ -88,6 +131,7 @@ Deno.serve(async () => {
         dayOfWeek: schedule.day_of_week,
         occurrencesInMonth: schedule.occurrences_in_month,
         timeOfDay: schedule.time_of_day,
+        timezone: schedule.timezone,
       },
       now,
       new Set<string>(schedule.skipped_dates ?? [])
@@ -106,8 +150,9 @@ Deno.serve(async () => {
     // A 12h-out window can land on the same calendar day as "now" (e.g. a
     // meeting at 11pm has its reminder fire at 11am the same day), so the
     // label can't just always say "Tomorrow" the way the old 24h-ahead
-    // daily check safely could.
-    const dayLabel = isSameCalendarDay(next, now) ? "Today" : "Tomorrow";
+    // daily check safely could. Compared in the group's own timezone, not
+    // the server's, so the label matches what the group would call "today".
+    const dayLabel = isSameCalendarDay(next, now, schedule.timezone) ? "Today" : "Tomorrow";
     const notification = JSON.stringify({
       title: schedule.label,
       body: `${dayLabel} at ${schedule.time_of_day.slice(0, 5)}${schedule.location ? " — " + schedule.location : ""}`,

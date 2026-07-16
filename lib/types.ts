@@ -48,6 +48,7 @@ export interface MeetingSchedule {
   active: boolean;
   group_id: string;
   skipped_dates: string[];
+  timezone: string;
 }
 
 export interface CalendarEvent {
