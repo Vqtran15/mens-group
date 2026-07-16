@@ -471,8 +471,9 @@ export function SettingsView() {
         {isGroupCreator && (
           <div className="space-y-3 border-b border-accent/20 pb-4">
             <p className="text-sm text-secondary">
-              Permanently delete {groupName} and everything in it - the calendar, topics, and
-              chat. Other members will be removed from the group too. This can&apos;t be undone.
+              Permanently delete {groupName}{" "}
+              and everything in it - the calendar, topics, and chat. Other members will be removed
+              from the group too. This can&apos;t be undone.
             </p>
             {deleteGroupError && (
               <p className="flex items-center gap-1.5 rounded-lg bg-accent/10 px-3 py-2 text-sm text-accent">
