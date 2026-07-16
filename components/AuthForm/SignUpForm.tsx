@@ -123,7 +123,7 @@ export function SignUpForm({ onSwitchToSignIn }: { onSwitchToSignIn: () => void 
         return;
       }
       trackEvent('sign_up')
-      router.push("/calendar");
+      router.push("/welcome");
       router.refresh();
       return;
     }
@@ -184,11 +184,11 @@ export function SignUpForm({ onSwitchToSignIn }: { onSwitchToSignIn: () => void 
             type="button"
             className="w-full"
             onClick={() => {
-              router.push("/calendar");
+              router.push("/welcome");
               router.refresh();
             }}
           >
-            Continue to Calendar
+            Continue
           </Button>
         ) : (
           <>

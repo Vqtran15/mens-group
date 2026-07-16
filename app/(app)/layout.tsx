@@ -100,6 +100,22 @@ export default function AppLayout({
         router.replace("/onboarding");
         return;
       }
+
+      // Sign-up redirects straight to /welcome when it already has a
+      // session, but there's no client-side code driving that for the
+      // email-confirmation path - this catches it the first time that
+      // account lands anywhere in the app instead. Only ever true once;
+      // /welcome marks it done before sending them back here.
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("has_completed_welcome")
+        .eq("id", membership.userId)
+        .single();
+      if (profile && !profile.has_completed_welcome) {
+        router.replace("/welcome");
+        return;
+      }
+
       setHasGroup(true);
     }
     checkMembership();

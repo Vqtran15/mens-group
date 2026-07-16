@@ -5,6 +5,7 @@ export interface Profile {
   group_id: string | null;
   avatar_color: string | null;
   avatar_url: string | null;
+  has_completed_welcome: boolean;
   created_at: string;
 }
 
