@@ -12,7 +12,7 @@ import { MessageActionSheet } from "@/components/chat/MessageActionSheet";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { ConfirmSheet } from "@/components/ui/ConfirmSheet";
-import { useUnreadIndicator } from "@/components/UnreadIndicatorContext";
+import { chatSeenKey, useUnreadIndicator } from "@/components/UnreadIndicatorContext";
 import { trackEvent } from "@/lib/analytics";
 import type { ChatMessage, Reaction } from "@/lib/types";
 
@@ -54,6 +54,10 @@ export function ChatView() {
   const containerRef = useRef<HTMLDivElement>(null);
   const composerInputRef = useRef<HTMLInputElement>(null);
   const isNearBottomRef = useRef(true);
+  // Captured once at mount, before markChatSeen() (fired from a later effect)
+  // overwrites it - this is what "unread" is measured against for the
+  // initial scroll target, so it has to reflect the value as of walking in.
+  const lastSeenAtMountRef = useRef<string | null>(null);
   const { markChatSeen } = useUnreadIndicator();
 
   useEffect(() => {
@@ -71,6 +75,7 @@ export function ChatView() {
       if (!membership || cancelled) return;
       setUserId(membership.userId);
       userIdRef.current = membership.userId;
+      lastSeenAtMountRef.current = localStorage.getItem(chatSeenKey(membership.groupId));
       groupIdRef.current = membership.groupId;
 
       // Profiles and messages are independent of each other - fetch together
@@ -215,11 +220,33 @@ export function ChatView() {
   // group's been chatting. Only scroll *changes* after that (a new message
   // arriving) should animate.
   const hasScrolledInitialLoadRef = useRef(false);
+  // A photo's aspect ratio is only a guess (square) until it actually loads,
+  // so the initial scroll can land short of its real target once a late
+  // image correction grows the content underneath it - re-snapping via
+  // ResizeObserver below, for a brief window after the initial scroll,
+  // keeps that from stranding the view above where it meant to land.
+  const initialScrollTargetRef = useRef<{ el: HTMLElement; block: ScrollLogicalPosition } | null>(null);
+  const settlingRef = useRef(false);
+  const resizeObserverRef = useRef<ResizeObserver | null>(null);
+
+  useEffect(() => {
+    resizeObserverRef.current = new ResizeObserver(() => {
+      if (settlingRef.current && initialScrollTargetRef.current) {
+        const { el, block } = initialScrollTargetRef.current;
+        el.scrollIntoView({ behavior: "auto", block });
+      }
+    });
+    return () => resizeObserverRef.current?.disconnect();
+  }, []);
+
+  function observeMessageEl(el: HTMLDivElement | null) {
+    if (el) resizeObserverRef.current?.observe(el);
+  }
 
   function scrollToBottomSmooth() {
     const container = containerRef.current;
     suppressScrollDetectionRef.current = true;
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+    bottomRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
 
     function settle() {
       suppressScrollDetectionRef.current = false;
@@ -247,7 +274,33 @@ export function ChatView() {
 
     if (!hasScrolledInitialLoadRef.current) {
       hasScrolledInitialLoadRef.current = true;
-      bottomRef.current?.scrollIntoView({ behavior: "auto" });
+
+      // Land on the oldest message from someone else sent since this device
+      // last looked at Chat, so there's something to read up from - not
+      // just "unread exists" but the actual start of it. No stored
+      // last-seen value, or nothing unread, falls through to the bottom.
+      const lastSeen = lastSeenAtMountRef.current;
+      const firstUnread = lastSeen
+        ? messages.find(
+            (m) => m.created_by !== userIdRef.current && new Date(m.created_at).getTime() > new Date(lastSeen).getTime()
+          )
+        : undefined;
+      const targetEl = firstUnread
+        ? containerRef.current?.querySelector<HTMLElement>(`[data-message-id="${firstUnread.id}"]`)
+        : null;
+
+      if (targetEl) {
+        initialScrollTargetRef.current = { el: targetEl, block: "start" };
+        targetEl.scrollIntoView({ behavior: "auto", block: "start" });
+      } else if (bottomRef.current) {
+        initialScrollTargetRef.current = { el: bottomRef.current, block: "end" };
+        bottomRef.current.scrollIntoView({ behavior: "auto", block: "end" });
+      }
+
+      settlingRef.current = true;
+      window.setTimeout(() => {
+        settlingRef.current = false;
+      }, 1500);
       return;
     }
 
@@ -486,23 +539,25 @@ export function ChatView() {
             />
           )}
           {messages.map((message, index) => (
-            <MessageBubble
-              key={message.id}
-              message={message}
-              isOwn={message.created_by === userId}
-              pending={message.pending}
-              uploadingImages={message.uploadingImages}
-              groupStart={isGroupStart(message, messages[index - 1])}
-              reactions={reactionsByMessage[message.id] ?? []}
-              currentUserId={userId}
-              replyToMessage={message.reply_to_id ? messagesById.get(message.reply_to_id) : null}
-              isEditing={editingMessageId === message.id}
-              onDoubleTapReact={() => handleToggleReaction(message.id, DEFAULT_REACTION)}
-              onOpenActions={() => setActionSheetMessageId(message.id)}
-              onToggleReaction={(emoji) => handleToggleReaction(message.id, emoji)}
-              onSaveEdit={(body) => handleSaveEdit(message.id, body)}
-              onCancelEdit={() => setEditingMessageId(null)}
-            />
+            <div key={message.id} data-message-id={message.id} ref={observeMessageEl}>
+              <MessageBubble
+                message={message}
+                isOwn={message.created_by === userId}
+                pending={message.pending}
+                uploadingImages={message.uploadingImages}
+                groupStart={isGroupStart(message, messages[index - 1])}
+                isFirstMessage={index === 0}
+                reactions={reactionsByMessage[message.id] ?? []}
+                currentUserId={userId}
+                replyToMessage={message.reply_to_id ? messagesById.get(message.reply_to_id) : null}
+                isEditing={editingMessageId === message.id}
+                onDoubleTapReact={() => handleToggleReaction(message.id, DEFAULT_REACTION)}
+                onOpenActions={() => setActionSheetMessageId(message.id)}
+                onToggleReaction={(emoji) => handleToggleReaction(message.id, emoji)}
+                onSaveEdit={(body) => handleSaveEdit(message.id, body)}
+                onCancelEdit={() => setEditingMessageId(null)}
+              />
+            </div>
           ))}
           <div ref={bottomRef} />
         </div>

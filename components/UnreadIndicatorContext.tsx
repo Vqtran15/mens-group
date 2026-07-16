@@ -11,7 +11,9 @@ interface UnreadState {
 
 const UnreadContext = createContext<UnreadState | null>(null);
 
-function chatSeenKey(groupId: string) {
+// Exported so ChatView can read the pre-visit value itself (to find the
+// first unread message) before markChatSeen() below overwrites it.
+export function chatSeenKey(groupId: string) {
   return `chat-last-seen-${groupId}`;
 }
 

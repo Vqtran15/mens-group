@@ -20,6 +20,7 @@ export function MessageBubble({
   pending,
   uploadingImages,
   groupStart = true,
+  isFirstMessage = false,
   reactions,
   currentUserId,
   replyToMessage,
@@ -39,6 +40,10 @@ export function MessageBubble({
   // header, so a back-and-forth burst of short messages doesn't repeat it
   // on every single bubble.
   groupStart?: boolean;
+  // ChatView now wraps each bubble in its own div (for a stable per-message
+  // DOM handle), so ":first-child" no longer reaches this component's own
+  // root element - passed explicitly instead.
+  isFirstMessage?: boolean;
   reactions: Reaction[];
   currentUserId: string;
   replyToMessage?: ChatMessage | null;
@@ -91,7 +96,7 @@ export function MessageBubble({
       className={cn(
         "flex gap-2",
         isOwn && "flex-row-reverse",
-        groupStart ? "mt-4 first:mt-0" : "mt-0.5"
+        groupStart ? (isFirstMessage ? "mt-0" : "mt-4") : "mt-0.5"
       )}
     >
       {!isOwn &&
