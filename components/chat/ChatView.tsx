@@ -360,6 +360,10 @@ export function ChatView() {
       reply_to_id: replyToId,
       edited_at: null,
       created_at: new Date().toISOString(),
+      shared_kind: null,
+      shared_ref_id: null,
+      shared_title: null,
+      shared_subtitle: null,
       profiles: {
         display_name: profilesRef.current[userId]?.display_name ?? "You",
         avatar_color: profilesRef.current[userId]?.avatar_color ?? null,

@@ -78,6 +78,8 @@ export interface Rsvp {
   profiles?: Pick<Profile, "display_name" | "avatar_color" | "avatar_url">;
 }
 
+export type SharedKind = "resource" | "potluck" | "poll";
+
 export interface ChatMessage {
   id: string;
   body: string;
@@ -87,6 +89,10 @@ export interface ChatMessage {
   reply_to_id: string | null;
   edited_at: string | null;
   created_at: string;
+  shared_kind: SharedKind | null;
+  shared_ref_id: string | null;
+  shared_title: string | null;
+  shared_subtitle: string | null;
   profiles?: Pick<Profile, "display_name" | "avatar_color" | "avatar_url">;
 }
 

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { AnimatePresence, motion } from "framer-motion";
-import { MapPin, PencilSimple, SkipForward, Trash } from "@phosphor-icons/react";
+import { MapPin, PaperPlaneTilt, PencilSimple, SkipForward, Trash } from "@phosphor-icons/react";
 
 export function EditDeleteActionSheet({
   open,
@@ -12,6 +12,7 @@ export function EditDeleteActionSheet({
   onDelete,
   onSkip,
   onEditLocation,
+  onShare,
 }: {
   open: boolean;
   onClose: () => void;
@@ -20,6 +21,7 @@ export function EditDeleteActionSheet({
   onDelete: () => void;
   onSkip?: () => void;
   onEditLocation?: () => void;
+  onShare?: () => void;
 }) {
   return (
     <AnimatePresence>
@@ -69,6 +71,18 @@ export function EditDeleteActionSheet({
                   className="flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-left text-secondary transition-colors hover:bg-surface-muted"
                 >
                   <SkipForward size={18} /> Skip Meeting
+                </button>
+              )}
+              {onShare && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    onShare();
+                    onClose();
+                  }}
+                  className="flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-left text-secondary transition-colors hover:bg-surface-muted"
+                >
+                  <PaperPlaneTilt size={18} /> Share to chat
                 </button>
               )}
               <button

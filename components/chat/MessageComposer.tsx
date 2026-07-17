@@ -46,7 +46,7 @@ export const MessageComposer = forwardRef<HTMLInputElement, {
         <div className="flex items-center justify-between gap-2 border-b border-border/60 px-3 py-2 text-sm">
           <p className="truncate text-secondary">
             Replying to <span className="font-medium">{replyingTo.profiles?.display_name ?? "Someone"}</span>:{" "}
-            {replyingTo.body || (replyingTo.image_urls.length > 0 ? "Photo" : "")}
+            {replyingTo.body || (replyingTo.image_urls.length > 0 ? "Photo" : replyingTo.shared_title ?? "")}
           </p>
           <button type="button" onClick={onCancelReply} aria-label="Cancel reply" className="shrink-0 text-muted">
             <X size={16} />

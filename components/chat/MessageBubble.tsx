@@ -2,8 +2,9 @@
 
 import { useRef, useState } from "react";
 import Image from "next/image";
+import Link from "next/link";
 import { motion } from "framer-motion";
-import { ArrowBendUpLeft, CircleNotch } from "@phosphor-icons/react";
+import { ArrowBendUpLeft, BookOpen, CaretRight, ChartBar, CircleNotch, ForkKnife } from "@phosphor-icons/react";
 import { Avatar } from "@/components/Avatar";
 import { Button } from "@/components/ui/Button";
 import { formatTime, cn } from "@/lib/utils";
@@ -11,9 +12,28 @@ import { linkifyText } from "@/lib/linkifyText";
 import { useMessageGestures } from "@/lib/hooks/useMessageGestures";
 import { ReactionPills } from "@/components/chat/ReactionPills";
 import { ImageLightbox } from "@/components/chat/ImageLightbox";
-import type { ChatMessage, Reaction } from "@/lib/types";
+import type { ChatMessage, Reaction, SharedKind } from "@/lib/types";
 
 const MAX_THUMBNAILS = 4;
+
+const SHARED_ICON: Record<SharedKind, typeof BookOpen> = {
+  resource: BookOpen,
+  potluck: ForkKnife,
+  poll: ChartBar,
+};
+
+function sharedHref(kind: SharedKind, refId: string | null): string {
+  if (kind === "poll") return refId ? `/tools/polls/${refId}` : "/tools/polls";
+  if (kind === "potluck") return "/tools/potluck";
+  return "/tools/resources";
+}
+
+function messagePreviewText(message: ChatMessage): string {
+  if (message.body) return message.body;
+  if (message.image_urls.length > 0) return "Photo";
+  if (message.shared_title) return message.shared_title;
+  return "";
+}
 
 export function MessageBubble({
   message,
@@ -148,8 +168,7 @@ export function MessageBubble({
               >
                 <ArrowBendUpLeft size={12} className="shrink-0" />
                 <span className="truncate">
-                  {replyToMessage.profiles?.display_name ?? "Someone"}:{" "}
-                  {replyToMessage.body || (replyToMessage.image_urls.length > 0 ? "Photo" : "")}
+                  {replyToMessage.profiles?.display_name ?? "Someone"}: {messagePreviewText(replyToMessage)}
                 </span>
               </div>
             )}
@@ -234,6 +253,43 @@ export function MessageBubble({
                 })}
               </div>
             )}
+            {message.shared_kind && (() => {
+              const SharedIcon = SHARED_ICON[message.shared_kind];
+              return (
+                <div {...gestureHandlers} className={cn("w-[240px] max-w-full select-none", message.body && "mb-1")}>
+                  <Link
+                    href={sharedHref(message.shared_kind, message.shared_ref_id)}
+                    onClick={(e) => e.stopPropagation()}
+                    className={cn(
+                      "flex items-center gap-2.5 rounded-2xl px-3 py-2.5 shadow-sm transition-opacity active:opacity-80",
+                      isOwn
+                        ? "rounded-br-md bg-primary text-white shadow-primary/20"
+                        : "rounded-bl-md bg-white text-secondary"
+                    )}
+                  >
+                    <span
+                      className={cn(
+                        "flex h-9 w-9 shrink-0 items-center justify-center rounded-xl",
+                        isOwn ? "bg-white/15" : "bg-primary/10 text-primary"
+                      )}
+                    >
+                      <SharedIcon size={18} weight="duotone" />
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className={cn("block truncate font-medium", isOwn ? "text-white" : "text-primary")}>
+                        {message.shared_title}
+                      </span>
+                      {message.shared_subtitle && (
+                        <span className={cn("block truncate text-xs", isOwn ? "text-white/80" : "text-muted")}>
+                          {message.shared_subtitle}
+                        </span>
+                      )}
+                    </span>
+                    <CaretRight size={16} className={cn("shrink-0", isOwn ? "text-white/80" : "text-muted")} />
+                  </Link>
+                </div>
+              );
+            })()}
             {message.body && (
               <div
                 {...gestureHandlers}

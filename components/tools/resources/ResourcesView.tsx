@@ -1,10 +1,12 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { BookOpen, DotsThreeVertical, LinkSimple } from "@phosphor-icons/react";
 import { createClient } from "@/lib/supabase/client";
 import { getCurrentMembership } from "@/lib/supabase/current-membership";
+import { shareToChat } from "@/lib/supabase/shareToChat";
 import { Avatar } from "@/components/Avatar";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Skeleton } from "@/components/ui/Skeleton";
@@ -13,14 +15,19 @@ import { ConfirmSheet } from "@/components/ui/ConfirmSheet";
 import type { Resource } from "@/lib/types";
 
 export function ResourcesView() {
+  const router = useRouter();
   const [resources, setResources] = useState<Resource[] | null>(null);
   const [actionSheetId, setActionSheetId] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<Resource | null>(null);
+  const [userId, setUserId] = useState<string | null>(null);
+  const [groupId, setGroupId] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     const supabase = createClient();
     const membership = await getCurrentMembership(supabase);
     if (!membership) return;
+    setUserId(membership.userId);
+    setGroupId(membership.groupId);
     const { data } = await supabase
       .from("resources")
       .select("*, profiles(display_name, avatar_color, avatar_url)")
@@ -41,6 +48,20 @@ export function ResourcesView() {
     await supabase.from("resources").delete().eq("id", confirmDelete.id);
     setConfirmDelete(null);
     load();
+  }
+
+  async function handleShare(resource: Resource) {
+    if (!userId || !groupId) return;
+    const supabase = createClient();
+    await shareToChat(supabase, {
+      groupId,
+      userId,
+      kind: "resource",
+      refId: resource.id,
+      title: resource.title,
+      subtitle: resource.description ?? resource.url,
+    });
+    router.push("/chat");
   }
 
   if (resources === null) {
@@ -116,6 +137,7 @@ export function ResourcesView() {
         onClose={() => setActionSheetId(null)}
         editHref={actionSheetResource ? `/tools/resources/${actionSheetResource.id}/edit` : "#"}
         onDelete={() => actionSheetResource && setConfirmDelete(actionSheetResource)}
+        onShare={actionSheetResource ? () => handleShare(actionSheetResource) : undefined}
       />
 
       <ConfirmSheet

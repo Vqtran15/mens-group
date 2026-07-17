@@ -1,10 +1,12 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import { Broom, ForkKnife, Plus, Trash, X } from "@phosphor-icons/react";
+import { Broom, ForkKnife, PaperPlaneTilt, Plus, Trash, X } from "@phosphor-icons/react";
 import { createClient } from "@/lib/supabase/client";
 import { getCurrentMembership } from "@/lib/supabase/current-membership";
+import { shareToChat } from "@/lib/supabase/shareToChat";
 import { Avatar } from "@/components/Avatar";
 import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -16,6 +18,7 @@ import type { PotluckItem } from "@/lib/types";
 const CATEGORIES = ["Main", "Side", "Dessert", "Drink", "Other"];
 
 export function PotluckView() {
+  const router = useRouter();
   const [items, setItems] = useState<PotluckItem[] | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
   const [groupId, setGroupId] = useState<string | null>(null);
@@ -80,6 +83,20 @@ export function PotluckView() {
     const supabase = createClient();
     await supabase.from("potluck_items").delete().eq("id", item.id);
     load();
+  }
+
+  async function handleShare(item: PotluckItem) {
+    if (!userId || !groupId) return;
+    const supabase = createClient();
+    await shareToChat(supabase, {
+      groupId,
+      userId,
+      kind: "potluck",
+      refId: item.id,
+      title: item.item_name,
+      subtitle: item.category,
+    });
+    router.push("/chat");
   }
 
   // Clears the whole shared list at once, e.g. between potluck occasions -
@@ -250,6 +267,14 @@ export function PotluckView() {
                     Claim
                   </button>
                 )}
+                <button
+                  type="button"
+                  onClick={() => handleShare(item)}
+                  aria-label={`Share ${item.item_name} to chat`}
+                  className="shrink-0 rounded-full p-1.5 text-muted transition-colors hover:bg-surface-muted hover:text-secondary"
+                >
+                  <PaperPlaneTilt size={16} />
+                </button>
                 <button
                   type="button"
                   onClick={() => handleDelete(item)}
