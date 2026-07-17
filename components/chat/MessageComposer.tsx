@@ -1,12 +1,17 @@
 "use client";
 
-import { forwardRef, useImperativeHandle, useRef, useState } from "react";
+import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import { Image as ImageIcon, PaperPlaneTilt, X } from "@phosphor-icons/react";
 import { EmojiPickerPopover } from "@/components/chat/EmojiPickerPopover";
 import type { ChatMessage } from "@/lib/types";
 
-export const MessageComposer = forwardRef<HTMLInputElement, {
+// Caps how tall the composer can grow before it scrolls internally instead -
+// about 6 lines, so a long message never pushes the message list and send
+// button off the top of a short phone screen.
+const MAX_TEXTAREA_HEIGHT_PX = 144;
+
+export const MessageComposer = forwardRef<HTMLTextAreaElement, {
   onSend: (input: { body: string; imageFiles: File[] }) => void;
   replyingTo: ChatMessage | null;
   onCancelReply: () => void;
@@ -14,8 +19,18 @@ export const MessageComposer = forwardRef<HTMLInputElement, {
   const [body, setBody] = useState("");
   const [imageFiles, setImageFiles] = useState<File[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const bodyInputRef = useRef<HTMLInputElement>(null);
-  useImperativeHandle(forwardedRef, () => bodyInputRef.current as HTMLInputElement);
+  const bodyInputRef = useRef<HTMLTextAreaElement>(null);
+  useImperativeHandle(forwardedRef, () => bodyInputRef.current as HTMLTextAreaElement);
+
+  // Re-measures on every change to body, not just keystrokes in this field -
+  // the emoji picker and "replying to" state both set body programmatically,
+  // which wouldn't otherwise fire a native input event to trigger a resize.
+  useEffect(() => {
+    const el = bodyInputRef.current;
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = `${Math.min(el.scrollHeight, MAX_TEXTAREA_HEIGHT_PX)}px`;
+  }, [body]);
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -25,6 +40,15 @@ export const MessageComposer = forwardRef<HTMLInputElement, {
     setBody("");
     setImageFiles([]);
     if (fileInputRef.current) fileInputRef.current.value = "";
+  }
+
+  // Enter sends, Shift+Enter inserts a newline - matches the convention
+  // every other modern chat app uses once the input can hold multiple lines.
+  function handleKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      e.currentTarget.form?.requestSubmit();
+    }
   }
 
   function removeImageAt(index: number) {
@@ -73,7 +97,7 @@ export const MessageComposer = forwardRef<HTMLInputElement, {
           ))}
         </div>
       )}
-      <form onSubmit={handleSubmit} className="flex items-center gap-2 p-3">
+      <form onSubmit={handleSubmit} className="flex items-end gap-2 p-3">
         <input
           ref={fileInputRef}
           type="file"
@@ -86,24 +110,28 @@ export const MessageComposer = forwardRef<HTMLInputElement, {
           type="button"
           onClick={() => fileInputRef.current?.click()}
           aria-label="Attach photos"
-          className="rounded-full p-2 text-secondary transition-colors hover:bg-surface-muted"
+          className="mb-1 rounded-full p-2 text-secondary transition-colors hover:bg-surface-muted"
         >
           <ImageIcon size={20} />
         </button>
-        <EmojiPickerPopover onSelect={(emoji) => setBody((b) => b + emoji)} />
-        <input
+        <div className="mb-1">
+          <EmojiPickerPopover onSelect={(emoji) => setBody((b) => b + emoji)} />
+        </div>
+        <textarea
           ref={bodyInputRef}
           value={body}
           onChange={(e) => setBody(e.target.value)}
+          onKeyDown={handleKeyDown}
           placeholder="Message..."
-          className="flex-1 rounded-full border border-border bg-white px-4 py-2 shadow-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
+          rows={1}
+          className="max-h-36 flex-1 resize-none overflow-y-auto rounded-2xl border border-border bg-white px-4 py-2 shadow-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
         />
         <motion.button
           whileTap={{ scale: 0.85, rotate: -15 }}
           type="submit"
           disabled={!body.trim() && imageFiles.length === 0}
           aria-label="Send message"
-          className="rounded-full bg-primary p-3 text-white shadow-md shadow-primary/30 disabled:opacity-60"
+          className="mb-1 shrink-0 rounded-full bg-primary p-3 text-white shadow-md shadow-primary/30 disabled:opacity-60"
         >
           <PaperPlaneTilt size={18} weight="fill" />
         </motion.button>

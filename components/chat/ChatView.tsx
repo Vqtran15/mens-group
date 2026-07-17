@@ -52,7 +52,7 @@ export function ChatView() {
   const groupIdRef = useRef<string | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
-  const composerInputRef = useRef<HTMLInputElement>(null);
+  const composerInputRef = useRef<HTMLTextAreaElement>(null);
   const isNearBottomRef = useRef(true);
   // Captured once at mount, before markChatSeen() (fired from a later effect)
   // overwrites it - this is what "unread" is measured against for the
