@@ -44,7 +44,7 @@ export function ToolsView() {
             </span>
             <span className="min-w-0 flex-1">
               <span className="block font-semibold text-primary">{tool.title}</span>
-              <span className="block truncate text-sm text-secondary">{tool.description}</span>
+              <span className="block text-sm text-secondary">{tool.description}</span>
             </span>
             <CaretRight size={18} className="shrink-0 text-muted" />
           </Link>

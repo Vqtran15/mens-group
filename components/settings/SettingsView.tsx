@@ -8,6 +8,7 @@ import { Camera, CaretRight, CheckCircle, Copy, ShareNetwork, Trash, UsersThree,
 import { createClient } from "@/lib/supabase/client";
 import { Avatar, AVATAR_COLORS } from "@/components/Avatar";
 import { AvatarCropModal } from "@/components/settings/AvatarCropModal";
+import { NotificationSettings } from "@/components/settings/NotificationSettings";
 import { Button } from "@/components/ui/Button";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { ConfirmSheet } from "@/components/ui/ConfirmSheet";
@@ -362,11 +363,13 @@ export function SettingsView() {
         </form>
       </motion.section>
 
+      <NotificationSettings />
+
       {inviteCode && (
         <motion.section
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.25, delay: 0.06, ease: "easeOut" }}
+          transition={{ duration: 0.25, delay: 0.12, ease: "easeOut" }}
           className="space-y-3 rounded-2xl border border-border/60 bg-white p-4 shadow-sm"
         >
           <h2 className="font-semibold text-primary">{groupName}</h2>
@@ -406,7 +409,7 @@ export function SettingsView() {
       <motion.section
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.25, delay: 0.12, ease: "easeOut" }}
+        transition={{ duration: 0.25, delay: 0.18, ease: "easeOut" }}
         className="space-y-3 rounded-2xl border border-border/60 bg-white p-4 shadow-sm"
       >
         <h2 className="font-semibold text-primary">Change password</h2>
@@ -458,7 +461,7 @@ export function SettingsView() {
       <motion.section
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.25, delay: 0.18, ease: "easeOut" }}
+        transition={{ duration: 0.25, delay: 0.24, ease: "easeOut" }}
         className="space-y-4 rounded-2xl border border-accent/30 bg-accent/5 p-4 shadow-sm"
       >
         <h2 className="font-semibold text-accent">Danger zone</h2>
@@ -508,7 +511,7 @@ export function SettingsView() {
       <motion.div
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.25, delay: 0.24, ease: "easeOut" }}
+        transition={{ duration: 0.25, delay: 0.3, ease: "easeOut" }}
       >
         <SignOutButton />
       </motion.div>

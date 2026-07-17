@@ -7,6 +7,7 @@ import { ArrowBendUpLeft, CircleNotch } from "@phosphor-icons/react";
 import { Avatar } from "@/components/Avatar";
 import { Button } from "@/components/ui/Button";
 import { formatTime, cn } from "@/lib/utils";
+import { linkifyText } from "@/lib/linkifyText";
 import { useMessageGestures } from "@/lib/hooks/useMessageGestures";
 import { ReactionPills } from "@/components/chat/ReactionPills";
 import { ImageLightbox } from "@/components/chat/ImageLightbox";
@@ -243,7 +244,9 @@ export function MessageBubble({
                     : "rounded-bl-md bg-white text-secondary"
                 )}
               >
-                <p className="whitespace-pre-wrap">{message.body}</p>
+                <p className="whitespace-pre-wrap">
+                  {linkifyText(message.body, isOwn ? "text-white" : "text-primary")}
+                </p>
               </div>
             )}
           </div>
