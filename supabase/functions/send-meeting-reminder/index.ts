@@ -98,6 +98,17 @@ function getNextOccurrence(config: RecurrenceConfig, from: Date, skipDates: Set<
   throw new Error("No upcoming occurrence found within 3 months");
 }
 
+// Matches the 12-hour "2:00 PM" style used everywhere else time is shown in
+// the app (see formatTime() in lib/utils.ts) - the DB stores time_of_day as
+// 24-hour "HH:MM:SS", which isn't what a reminder notification should read.
+function formatTimeOfDay(timeOfDay: string): string {
+  const [hourStr, minute] = timeOfDay.split(":");
+  const hour = Number(hourStr);
+  const period = hour >= 12 ? "PM" : "AM";
+  const hour12 = hour % 12 === 0 ? 12 : hour % 12;
+  return `${hour12}:${minute} ${period}`;
+}
+
 function isSameCalendarDay(a: Date, b: Date, timeZone: string): boolean {
   const aInZone = readInZone(a, timeZone);
   const bInZone = readInZone(b, timeZone);
@@ -156,7 +167,7 @@ Deno.serve(async () => {
     const dayLabel = isSameCalendarDay(next, now, schedule.timezone) ? "Today" : "Tomorrow";
     const notification = JSON.stringify({
       title: schedule.label,
-      body: `${dayLabel} at ${schedule.time_of_day.slice(0, 5)}${schedule.location ? " — " + schedule.location : ""}`,
+      body: `${dayLabel} at ${formatTimeOfDay(schedule.time_of_day)}${schedule.location ? " — " + schedule.location : ""}`,
       url: "/calendar",
     });
 
