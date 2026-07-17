@@ -7,7 +7,7 @@ export async function shareToChat(
     groupId: string;
     userId: string;
     kind: SharedKind;
-    refId: string;
+    refId: string | null;
     title: string;
     subtitle?: string | null;
   }

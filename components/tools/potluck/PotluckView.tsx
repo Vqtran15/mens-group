@@ -85,16 +85,22 @@ export function PotluckView() {
     load();
   }
 
-  async function handleShare(item: PotluckItem) {
-    if (!userId || !groupId) return;
+  // Shares the whole list as one card rather than a single item - a potluck
+  // is inherently a group thing, so "who's bringing what" is what's useful
+  // in chat, not one dish in isolation.
+  async function handleShareList() {
+    if (!userId || !groupId || items === null || items.length === 0) return;
     const supabase = createClient();
+    const names = items.map((i) => i.item_name);
+    const preview = names.slice(0, 3).join(", ");
+    const subtitle = names.length > 3 ? `${preview} +${names.length - 3} more` : preview;
     await shareToChat(supabase, {
       groupId,
       userId,
       kind: "potluck",
-      refId: item.id,
-      title: item.item_name,
-      subtitle: item.category,
+      refId: null,
+      title: `Potluck list (${items.length})`,
+      subtitle,
     });
     router.push("/chat");
   }
@@ -175,13 +181,22 @@ export function PotluckView() {
           <p className="text-sm text-secondary">
             {items.length} {items.length === 1 ? "item" : "items"}
           </p>
-          <button
-            type="button"
-            onClick={() => setConfirmClearAll(true)}
-            className="flex items-center gap-1.5 rounded-full px-2.5 py-1 text-sm text-accent transition-colors hover:bg-accent/10"
-          >
-            <Broom size={16} /> Clear all
-          </button>
+          <div className="flex items-center gap-1">
+            <button
+              type="button"
+              onClick={handleShareList}
+              className="flex items-center gap-1.5 rounded-full px-2.5 py-1 text-sm text-secondary transition-colors hover:bg-surface-muted"
+            >
+              <PaperPlaneTilt size={16} /> Share to chat
+            </button>
+            <button
+              type="button"
+              onClick={() => setConfirmClearAll(true)}
+              className="flex items-center gap-1.5 rounded-full px-2.5 py-1 text-sm text-accent transition-colors hover:bg-accent/10"
+            >
+              <Broom size={16} /> Clear all
+            </button>
+          </div>
         </div>
       )}
 
@@ -267,14 +282,6 @@ export function PotluckView() {
                     Claim
                   </button>
                 )}
-                <button
-                  type="button"
-                  onClick={() => handleShare(item)}
-                  aria-label={`Share ${item.item_name} to chat`}
-                  className="shrink-0 rounded-full p-1.5 text-muted transition-colors hover:bg-surface-muted hover:text-secondary"
-                >
-                  <PaperPlaneTilt size={16} />
-                </button>
                 <button
                   type="button"
                   onClick={() => handleDelete(item)}

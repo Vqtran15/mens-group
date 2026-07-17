@@ -31,6 +31,8 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
   viewportFit: "cover",
   // Matches manifest.ts's theme_color - a mismatch here previously caused
   // the status bar/chrome tint to briefly disagree with the PWA manifest.
