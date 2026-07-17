@@ -61,7 +61,7 @@ export function ResourcesView() {
         <EmptyState
           icon={BookOpen}
           title="No resources yet"
-          subtitle="Share a book, podcast, or article the group should check out."
+          subtitle="Share an article the group should check out."
         />
       )}
       {resources.map((resource, i) => (

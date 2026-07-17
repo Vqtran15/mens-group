@@ -3,8 +3,8 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { motion } from "framer-motion";
-import { Camera, CaretRight, CheckCircle, Copy, ShareNetwork, Trash, UsersThree, WarningCircle } from "@phosphor-icons/react";
+import { AnimatePresence, motion } from "framer-motion";
+import { Camera, CaretDown, CaretRight, CheckCircle, Copy, ShareNetwork, Trash, UsersThree, WarningCircle } from "@phosphor-icons/react";
 import { createClient } from "@/lib/supabase/client";
 import { Avatar, AVATAR_COLORS } from "@/components/Avatar";
 import { AvatarCropModal } from "@/components/settings/AvatarCropModal";
@@ -39,6 +39,7 @@ export function SettingsView() {
 
   const [deleteAccountConfirmOpen, setDeleteAccountConfirmOpen] = useState(false);
   const [deletingAccount, setDeletingAccount] = useState(false);
+  const [dangerZoneOpen, setDangerZoneOpen] = useState(false);
   const [deleteAccountError, setDeleteAccountError] = useState<string | null>(null);
 
   const [avatarColor, setAvatarColor] = useState<string | null>(null);
@@ -464,48 +465,73 @@ export function SettingsView() {
         transition={{ duration: 0.25, delay: 0.24, ease: "easeOut" }}
         className="space-y-4 rounded-2xl border border-accent/30 bg-accent/5 p-4 shadow-sm"
       >
-        <h2 className="font-semibold text-accent">Danger zone</h2>
+        <button
+          type="button"
+          onClick={() => setDangerZoneOpen((open) => !open)}
+          aria-expanded={dangerZoneOpen}
+          className="flex w-full items-center justify-between"
+        >
+          <h2 className="font-semibold text-accent">Danger zone</h2>
+          <CaretDown
+            size={18}
+            className={cn("text-accent transition-transform", dangerZoneOpen && "rotate-180")}
+          />
+        </button>
 
-        {isGroupCreator && (
-          <div className="space-y-3 border-b border-accent/20 pb-4">
-            <p className="text-sm text-secondary">
-              Permanently delete {groupName}{" "}
-              and everything in it - the calendar, topics, and chat. Other members will be removed
-              from the group too. This can&apos;t be undone.
-            </p>
-            {deleteGroupError && (
-              <p className="flex items-center gap-1.5 rounded-lg bg-accent/10 px-3 py-2 text-sm text-accent">
-                <WarningCircle size={16} className="shrink-0" />
-                {deleteGroupError}
-              </p>
-            )}
-            <Button type="button" variant="danger" onClick={() => setDeleteGroupConfirmOpen(true)}>
-              <Trash size={16} /> Delete group
-            </Button>
-          </div>
-        )}
+        <AnimatePresence initial={false}>
+          {dangerZoneOpen && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: "auto", opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              transition={{ duration: 0.2, ease: "easeOut" }}
+              className="overflow-hidden"
+            >
+              <div className="space-y-4">
+                {isGroupCreator && (
+                  <div className="space-y-3 border-b border-accent/20 pb-4">
+                    <p className="text-sm text-secondary">
+                      Permanently delete {groupName}{" "}
+                      and everything in it - the calendar, topics, and chat. Other members will be removed
+                      from the group too. This can&apos;t be undone.
+                    </p>
+                    {deleteGroupError && (
+                      <p className="flex items-center gap-1.5 rounded-lg bg-accent/10 px-3 py-2 text-sm text-accent">
+                        <WarningCircle size={16} className="shrink-0" />
+                        {deleteGroupError}
+                      </p>
+                    )}
+                    <Button type="button" variant="danger" onClick={() => setDeleteGroupConfirmOpen(true)}>
+                      <Trash size={16} /> Delete group
+                    </Button>
+                  </div>
+                )}
 
-        <div className="space-y-3">
-          <p className="text-sm text-secondary">
-            {isGroupCreator
-              ? "Delete your group above before you can delete your account."
-              : "Permanently delete your account. Topics, events, and messages you've posted will stay, just credited to \"Someone\" instead of your name."}
-          </p>
-          {deleteAccountError && (
-            <p className="flex items-center gap-1.5 rounded-lg bg-accent/10 px-3 py-2 text-sm text-accent">
-              <WarningCircle size={16} className="shrink-0" />
-              {deleteAccountError}
-            </p>
+                <div className="space-y-3">
+                  <p className="text-sm text-secondary">
+                    {isGroupCreator
+                      ? "Delete your group above before you can delete your account."
+                      : "Permanently delete your account. Topics, events, and messages you've posted will stay, just credited to \"Someone\" instead of your name."}
+                  </p>
+                  {deleteAccountError && (
+                    <p className="flex items-center gap-1.5 rounded-lg bg-accent/10 px-3 py-2 text-sm text-accent">
+                      <WarningCircle size={16} className="shrink-0" />
+                      {deleteAccountError}
+                    </p>
+                  )}
+                  <Button
+                    type="button"
+                    variant="danger"
+                    disabled={isGroupCreator}
+                    onClick={() => setDeleteAccountConfirmOpen(true)}
+                  >
+                    <Trash size={16} /> Delete account
+                  </Button>
+                </div>
+              </div>
+            </motion.div>
           )}
-          <Button
-            type="button"
-            variant="danger"
-            disabled={isGroupCreator}
-            onClick={() => setDeleteAccountConfirmOpen(true)}
-          >
-            <Trash size={16} /> Delete account
-          </Button>
-        </div>
+        </AnimatePresence>
       </motion.section>
 
       <motion.div

@@ -8,7 +8,7 @@ const TOOLS: { href: string; title: string; description: string; icon: Icon }[] 
   {
     href: "/tools/resources",
     title: "Resource Library",
-    description: "Books, podcasts, and articles the group recommends",
+    description: "Articles the group recommends",
     icon: BookOpen,
   },
   {
