@@ -112,9 +112,9 @@ export function NextMeetingCard({
           <p className="text-xl font-semibold text-white">{event.title}</p>
           <p className="mt-1 text-white">{formatTime(startsAt)}</p>
           {event.location && (
-            <p className="mt-1 flex items-center gap-1.5 text-sm text-white">
-              <MapPin size={14} className="shrink-0" />
-              {event.location}
+            <p className="mt-1 flex items-start gap-1.5 text-sm text-white">
+              <MapPin size={14} className="mt-0.5 shrink-0" />
+              <span className="min-w-0 break-words">{event.location}</span>
             </p>
           )}
         </div>

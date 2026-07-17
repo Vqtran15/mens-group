@@ -101,9 +101,9 @@ export function EventListItem({
         </div>
         <p className="mt-1 text-sm text-secondary">{formatTime(startsAt)}</p>
         {event.location && (
-          <p className="mt-1 flex items-center gap-1.5 text-sm text-muted">
-            <MapPin size={14} className="shrink-0" />
-            {event.location}
+          <p className="mt-1 flex items-start gap-1.5 text-sm text-muted">
+            <MapPin size={14} className="mt-0.5 shrink-0" />
+            <span className="min-w-0 break-words">{event.location}</span>
           </p>
         )}
         {relatedTopics.length > 0 && (
