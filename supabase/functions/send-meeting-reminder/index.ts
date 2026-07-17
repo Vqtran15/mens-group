@@ -117,11 +117,11 @@ Deno.serve(async () => {
   const now = new Date();
   // This function is invoked hourly (see the 'meeting-reminder-hourly' pg_cron
   // job). A meeting's next occurrence only ever falls inside this rolling
-  // [11h, 12h) window during a single one of those hourly ticks, so each
-  // occurrence gets exactly one reminder, roughly 12 hours out, without
+  // [23h, 24h) window during a single one of those hourly ticks, so each
+  // occurrence gets exactly one reminder, roughly 24 hours out, without
   // needing to track "already notified" state anywhere.
-  const windowStart = new Date(now.getTime() + 11 * 60 * 60 * 1000);
-  const windowEnd = new Date(now.getTime() + 12 * 60 * 60 * 1000);
+  const windowStart = new Date(now.getTime() + 23 * 60 * 60 * 1000);
+  const windowEnd = new Date(now.getTime() + 24 * 60 * 60 * 1000);
 
   const results = [];
 
@@ -138,7 +138,7 @@ Deno.serve(async () => {
     );
 
     if (next.getTime() < windowStart.getTime() || next.getTime() >= windowEnd.getTime()) {
-      results.push({ group_id: schedule.group_id, skipped: "next meeting not ~12h out", next });
+      results.push({ group_id: schedule.group_id, skipped: "next meeting not ~24h out", next });
       continue;
     }
 
@@ -147,11 +147,12 @@ Deno.serve(async () => {
       .select("id, endpoint, p256dh, auth")
       .eq("group_id", schedule.group_id);
 
-    // A 12h-out window can land on the same calendar day as "now" (e.g. a
-    // meeting at 11pm has its reminder fire at 11am the same day), so the
-    // label can't just always say "Tomorrow" the way the old 24h-ahead
-    // daily check safely could. Compared in the group's own timezone, not
-    // the server's, so the label matches what the group would call "today".
+    // A 24h-out window almost always lands on the calendar day before the
+    // meeting, but a group whose timezone offset differs enough from the
+    // server's UTC tick boundaries could still see it land same-day, so the
+    // label is still derived rather than hardcoded to "Tomorrow". Compared
+    // in the group's own timezone, not the server's, so the label matches
+    // what the group would call "today".
     const dayLabel = isSameCalendarDay(next, now, schedule.timezone) ? "Today" : "Tomorrow";
     const notification = JSON.stringify({
       title: schedule.label,
