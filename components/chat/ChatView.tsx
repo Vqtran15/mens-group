@@ -16,7 +16,7 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { ConfirmSheet } from "@/components/ui/ConfirmSheet";
 import { chatSeenKey, useUnreadIndicator } from "@/components/UnreadIndicatorContext";
 import { trackEvent } from "@/lib/analytics";
-import { formatDate } from "@/lib/utils";
+import { cn, formatDate } from "@/lib/utils";
 import type { ChatMessage, Reaction } from "@/lib/types";
 
 const NEAR_BOTTOM_THRESHOLD_PX = 120;
@@ -813,7 +813,13 @@ export function ChatView() {
             return (
             <div key={message.id} data-message-id={message.id} ref={observeMessageEl}>
               {showDaySeparator && (
-                <div className="my-4 flex items-center justify-center first:mt-0">
+                // Each message has its own wrapper div (for a stable
+                // per-message DOM handle - see observeMessageEl), so this
+                // separator is always its wrapper's first child; a
+                // first:mt-0 CSS class would zero the top margin on every
+                // separator, not just the one at the very top of the whole
+                // list, collapsing it flush against the previous bubble.
+                <div className={cn("my-4 flex items-center justify-center", index === 0 && "mt-0")}>
                   <span className="rounded-full bg-surface-muted px-3 py-1 text-xs font-medium text-secondary">
                     {chatDayLabel(new Date(message.created_at))}
                   </span>
