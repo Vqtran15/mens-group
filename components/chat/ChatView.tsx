@@ -300,7 +300,12 @@ export function ChatView() {
 
       setMessages((prev) => {
         const kept = prev.filter((m) => {
-          if (m.pending) return true; // never clobber an in-flight optimistic send
+          // Never clobber an in-flight optimistic send, or a failed one still
+          // waiting on the user to retry/discard it - a resync racing with a
+          // failed send is a realistic combination (both can be triggered by
+          // the same flaky-connection episode), and the whole point of the
+          // failed-send UI is that it doesn't just vanish.
+          if (m.pending || m.failed) return true;
           const withinWindow = new Date(m.created_at).getTime() >= windowStart;
           // Drop anything inside the refetched window that's missing from
           // the fresh result (deleted while disconnected); leave older,

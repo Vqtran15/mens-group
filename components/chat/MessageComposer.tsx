@@ -95,7 +95,14 @@ export const MessageComposer = forwardRef<HTMLTextAreaElement, {
   }
 
   const mentionMatches = mention
-    ? memberNames.filter((n) => n.toLowerCase().startsWith(mention.query.toLowerCase())).slice(0, MAX_MENTION_SUGGESTIONS)
+    ? memberNames
+        // A substring match anywhere in the name, not just a prefix of the
+        // whole string - matching only the literal start ("QaB" but not
+        // "Bob" for "QaBob", or "Baker" for "Bob Baker") missed most
+        // realistic partial typing (a last name, a nickname mid-string).
+        // A handful of group members means over-matching is harmless.
+        .filter((n) => n.toLowerCase().includes(mention.query.toLowerCase()))
+        .slice(0, MAX_MENTION_SUGGESTIONS)
     : [];
 
   function removeImageAt(index: number) {
