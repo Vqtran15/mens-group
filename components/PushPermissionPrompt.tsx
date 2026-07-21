@@ -12,20 +12,33 @@ export function PushPermissionPrompt() {
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
-    function checkShouldPrompt() {
-      registerServiceWorker();
+    async function checkShouldPrompt() {
+      await registerServiceWorker();
 
-      if (
-        typeof Notification === "undefined" ||
-        Notification.permission !== "default" ||
-        localStorage.getItem(DISMISSED_KEY)
-      ) {
+      if (typeof Notification === "undefined") return;
+
+      // Permission is already granted, so there's nothing to prompt for -
+      // instead, silently re-upsert the subscription with the server on
+      // every app open. iOS Safari can invalidate a push subscription on
+      // its own, and the server already deletes the row once a push to it
+      // bounces - without this self-heal, the Settings toggle keeps showing
+      // "on" from local browser state alone while the server has actually
+      // dropped the subscription and nothing is being delivered.
+      if (Notification.permission === "granted") {
+        subscribeToPush();
+        return;
+      }
+
+      if (Notification.permission !== "default" || localStorage.getItem(DISMISSED_KEY)) {
         return;
       }
       setVisible(true);
     }
 
-    checkShouldPrompt();
+    function init() {
+      checkShouldPrompt();
+    }
+    init();
   }, []);
 
   async function handleEnable() {
