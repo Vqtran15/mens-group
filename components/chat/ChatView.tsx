@@ -14,6 +14,7 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { ConfirmSheet } from "@/components/ui/ConfirmSheet";
 import { chatSeenKey, useUnreadIndicator } from "@/components/UnreadIndicatorContext";
 import { trackEvent } from "@/lib/analytics";
+import { formatDate } from "@/lib/utils";
 import type { ChatMessage, Reaction } from "@/lib/types";
 
 const NEAR_BOTTOM_THRESHOLD_PX = 120;
@@ -28,6 +29,22 @@ function isGroupStart(message: ChatMessage, previous: ChatMessage | undefined): 
   if (message.reply_to_id) return true;
   if (message.created_by !== previous.created_by) return true;
   return new Date(message.created_at).getTime() - new Date(previous.created_at).getTime() > GROUP_GAP_MS;
+}
+
+function isSameLocalDay(a: Date, b: Date): boolean {
+  return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+}
+
+// "Today"/"Yesterday" read naturally for the last couple of days - anything
+// older falls back to the same weekday/month/day format used elsewhere in
+// the app (formatDate), rather than reinventing a second date style just
+// for chat.
+function chatDayLabel(date: Date): string {
+  const now = new Date();
+  const yesterday = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1);
+  if (isSameLocalDay(date, now)) return "Today";
+  if (isSameLocalDay(date, yesterday)) return "Yesterday";
+  return formatDate(date);
 }
 
 const DEFAULT_REACTION = "❤️";
@@ -542,8 +559,19 @@ export function ChatView() {
               onClick={() => composerInputRef.current?.focus()}
             />
           )}
-          {messages.map((message, index) => (
+          {messages.map((message, index) => {
+            const previous = messages[index - 1];
+            const showDaySeparator =
+              !previous || !isSameLocalDay(new Date(message.created_at), new Date(previous.created_at));
+            return (
             <div key={message.id} data-message-id={message.id} ref={observeMessageEl}>
+              {showDaySeparator && (
+                <div className="my-4 flex items-center justify-center first:mt-0">
+                  <span className="rounded-full bg-surface-muted px-3 py-1 text-xs font-medium text-secondary">
+                    {chatDayLabel(new Date(message.created_at))}
+                  </span>
+                </div>
+              )}
               <MessageBubble
                 message={message}
                 isOwn={message.created_by === userId}
@@ -562,7 +590,8 @@ export function ChatView() {
                 onCancelEdit={() => setEditingMessageId(null)}
               />
             </div>
-          ))}
+            );
+          })}
           <div ref={bottomRef} />
         </div>
 
