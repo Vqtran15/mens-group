@@ -4,7 +4,17 @@ import { useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { ArrowBendUpLeft, BookOpen, CaretRight, ChartBar, CircleNotch, ForkKnife } from "@phosphor-icons/react";
+import {
+  ArrowBendUpLeft,
+  ArrowClockwise,
+  BookOpen,
+  CaretRight,
+  ChartBar,
+  CircleNotch,
+  ForkKnife,
+  Trash,
+  WarningCircle,
+} from "@phosphor-icons/react";
 import { Avatar } from "@/components/Avatar";
 import { Button } from "@/components/ui/Button";
 import { formatTime, cn } from "@/lib/utils";
@@ -40,22 +50,31 @@ export function MessageBubble({
   isOwn,
   pending,
   uploadingImages,
+  failed,
   groupStart = true,
   isFirstMessage = false,
   reactions,
   currentUserId,
   replyToMessage,
+  replyToDeleted,
   isEditing,
+  resolveImageUrl,
+  memberNames = [],
   onDoubleTapReact,
   onOpenActions,
   onToggleReaction,
   onSaveEdit,
   onCancelEdit,
+  onRetry,
+  onDiscardFailed,
 }: {
   message: ChatMessage;
   isOwn: boolean;
   pending?: boolean;
   uploadingImages?: boolean;
+  // A prior send/upload attempt for this message failed and wasn't retried
+  // yet - shows a retry/discard row instead of silently dropping the draft.
+  failed?: boolean;
   // Whether this is the first message in a run of consecutive messages from
   // the same sender - only group starts get their own avatar/name/time
   // header, so a back-and-forth burst of short messages doesn't repeat it
@@ -68,12 +87,26 @@ export function MessageBubble({
   reactions: Reaction[];
   currentUserId: string;
   replyToMessage?: ChatMessage | null;
+  // True when message.reply_to_id points at a real row that just isn't
+  // loaded locally (deleted, or outside the current pagination window) -
+  // distinguishes that from "this message isn't a reply at all".
+  replyToDeleted?: boolean;
   isEditing: boolean;
+  // chat-photos is a private bucket now - image_urls holds bare storage
+  // paths (or, for older rows, the old public-URL string), neither of which
+  // is directly fetchable. ChatView resolves these to short-lived signed
+  // URLs and hands back a lookup rather than this component reaching into
+  // Supabase itself, since resolution is batched across the whole message
+  // list for efficiency.
+  resolveImageUrl: (raw: string) => string | null;
+  memberNames?: string[];
   onDoubleTapReact: () => void;
   onOpenActions: () => void;
   onToggleReaction: (emoji: string) => void;
   onSaveEdit: (body: string) => void;
   onCancelEdit: () => void;
+  onRetry: () => void;
+  onDiscardFailed: () => void;
 }) {
   const name = message.profiles?.display_name ?? "Someone";
   const avatarColor = message.profiles?.avatar_color;
@@ -172,6 +205,15 @@ export function MessageBubble({
                 </span>
               </div>
             )}
+            {!replyToMessage && replyToDeleted && (
+              <div
+                {...gestureHandlers}
+                className="mb-1.5 flex w-fit max-w-full select-none items-center gap-1 rounded-lg border-l-2 border-border bg-background/60 px-2 py-1 text-xs italic text-muted"
+              >
+                <ArrowBendUpLeft size={12} className="shrink-0" />
+                <span className="truncate">Original message was deleted</span>
+              </div>
+            )}
             {images.length === 1 && (
               <div
                 {...imageGestureHandlers}
@@ -191,23 +233,25 @@ export function MessageBubble({
                   // eslint-disable-next-line @next/next/no-img-element
                   <img src={images[0]} alt="Shared photo" className="h-full w-full object-cover" />
                 ) : (
-                  <Image
-                    src={images[0]}
-                    alt="Shared photo"
-                    fill
-                    sizes="240px"
-                    className={cn(
-                      "object-cover transition-opacity duration-200",
-                      imageLoaded ? "opacity-100" : "opacity-0"
-                    )}
-                    onLoad={(e) => {
-                      const img = e.currentTarget;
-                      if (img.naturalWidth && img.naturalHeight) {
-                        setImageAspectRatio(img.naturalWidth / img.naturalHeight);
-                      }
-                      setImageLoaded(true);
-                    }}
-                  />
+                  resolveImageUrl(images[0]) && (
+                    <Image
+                      src={resolveImageUrl(images[0])!}
+                      alt="Shared photo"
+                      fill
+                      sizes="240px"
+                      className={cn(
+                        "object-cover transition-opacity duration-200",
+                        imageLoaded ? "opacity-100" : "opacity-0"
+                      )}
+                      onLoad={(e) => {
+                        const img = e.currentTarget;
+                        if (img.naturalWidth && img.naturalHeight) {
+                          setImageAspectRatio(img.naturalWidth / img.naturalHeight);
+                        }
+                        setImageLoaded(true);
+                      }}
+                    />
+                  )
                 )}
                 {uploadingImages && (
                   <div className="absolute inset-0 flex items-center justify-center bg-black/30">
@@ -236,7 +280,9 @@ export function MessageBubble({
                         // eslint-disable-next-line @next/next/no-img-element
                         <img src={url} alt="Shared photo" className="h-full w-full object-cover" />
                       ) : (
-                        <Image src={url} alt="Shared photo" fill sizes="122px" className="object-cover" />
+                        resolveImageUrl(url) && (
+                          <Image src={resolveImageUrl(url)!} alt="Shared photo" fill sizes="122px" className="object-cover" />
+                        )
                       )}
                       {uploadingImages && (
                         <div className="absolute inset-0 flex items-center justify-center bg-black/30">
@@ -301,8 +347,24 @@ export function MessageBubble({
                 )}
               >
                 <p className="whitespace-pre-wrap">
-                  {linkifyText(message.body, isOwn ? "text-white" : "text-primary")}
+                  {linkifyText(message.body, isOwn ? "text-white" : "text-primary", memberNames)}
                 </p>
+              </div>
+            )}
+            {failed && (
+              <div className="mt-1 flex items-center gap-2 text-xs text-accent">
+                <WarningCircle size={13} className="shrink-0" />
+                <span>Failed to send</span>
+                <button
+                  type="button"
+                  onClick={onRetry}
+                  className="flex items-center gap-0.5 font-medium underline underline-offset-2"
+                >
+                  <ArrowClockwise size={12} /> Retry
+                </button>
+                <button type="button" onClick={onDiscardFailed} aria-label="Discard failed message" className="text-muted">
+                  <Trash size={12} />
+                </button>
               </div>
             )}
           </div>
@@ -313,7 +375,7 @@ export function MessageBubble({
 
       {lightboxIndex !== null && images.length > 0 && (
         <ImageLightbox
-          images={images}
+          images={images.map((raw) => (uploadingImages ? raw : resolveImageUrl(raw) ?? raw))}
           initialIndex={lightboxIndex}
           open={lightboxIndex !== null}
           onClose={() => setLightboxIndex(null)}

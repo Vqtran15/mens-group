@@ -1,11 +1,13 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { ArrowDown, HandWaving } from "@phosphor-icons/react";
+import { ArrowDown, CircleNotch, HandWaving } from "@phosphor-icons/react";
 import { createClient } from "@/lib/supabase/client";
 import { getCurrentMembership } from "@/lib/supabase/current-membership";
 import { uploadChatPhoto } from "@/lib/supabase/uploadChatPhoto";
+import { resolveChatPhotoUrls } from "@/lib/supabase/resolveChatPhotoUrls";
+import { extractChatPhotoPath } from "@/lib/supabase/chatPhotoPath";
 import { MessageBubble } from "@/components/chat/MessageBubble";
 import { MessageComposer } from "@/components/chat/MessageComposer";
 import { MessageActionSheet } from "@/components/chat/MessageActionSheet";
@@ -49,28 +51,59 @@ function chatDayLabel(date: Date): string {
 
 const DEFAULT_REACTION = "❤️";
 
-type PendingChatMessage = ChatMessage & { pending?: boolean; uploadingImages?: boolean };
+type RetryPayload = {
+  body: string;
+  imageFiles: File[];
+  previewUrls: string[];
+  replyToId: string | null;
+};
+
+type PendingChatMessage = ChatMessage & {
+  pending?: boolean;
+  uploadingImages?: boolean;
+  failed?: boolean;
+  retryPayload?: RetryPayload;
+};
 
 export function ChatView() {
   const [userId, setUserId] = useState<string | null>(null);
   const [messages, setMessages] = useState<PendingChatMessage[]>([]);
   const [reactionsByMessage, setReactionsByMessage] = useState<Record<string, Reaction[]>>({});
+  const [resolvedImageUrls, setResolvedImageUrls] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
   const [replyingTo, setReplyingTo] = useState<ChatMessage | null>(null);
   const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
   const [actionSheetMessageId, setActionSheetMessageId] = useState<string | null>(null);
   const [deleteConfirmMessage, setDeleteConfirmMessage] = useState<ChatMessage | null>(null);
   const [showJumpToLatest, setShowJumpToLatest] = useState(false);
+  const [hasMoreHistory, setHasMoreHistory] = useState(true);
+  const [loadingMoreHistory, setLoadingMoreHistory] = useState(false);
+  const [firstUnreadId, setFirstUnreadId] = useState<string | null>(null);
+  const [liveAnnouncement, setLiveAnnouncement] = useState("");
+  const [memberNames, setMemberNames] = useState<string[]>([]);
 
   const profilesRef = useRef<
     Record<string, { display_name: string; avatar_color: string | null; avatar_url: string | null }>
   >({});
   const userIdRef = useRef<string | null>(null);
   const groupIdRef = useRef<string | null>(null);
+  // handleScroll's listener is attached once (see the effect keyed on
+  // [loading]) and never re-attached on every message, so anything it reads
+  // has to come from a ref kept in sync via effects below - closing over
+  // the state directly would freeze loadMoreMessages's view of these at
+  // whatever they were on that one render.
+  const messagesRef = useRef<PendingChatMessage[]>([]);
+  const hasMoreHistoryRef = useRef(true);
+  const loadingMoreHistoryRef = useRef(false);
   const bottomRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const composerInputRef = useRef<HTMLTextAreaElement>(null);
   const isNearBottomRef = useRef(true);
+  // Captures the container's scrollHeight right before older messages are
+  // prepended, so a layout effect can shift scrollTop by the same delta
+  // once they're in the DOM - otherwise the browser keeps scrollTop fixed
+  // and the whole view visually jumps down by however tall the new content is.
+  const prependAdjustRef = useRef<{ prevScrollHeight: number } | null>(null);
   // Captured once at mount, before markChatSeen() (fired from a later effect)
   // overwrites it - this is what "unread" is measured against for the
   // initial scroll target, so it has to reflect the value as of walking in.
@@ -122,6 +155,7 @@ export function ChatView() {
           avatar_url: p.avatar_url,
         };
       }
+      setMemberNames((profiles ?? []).map((p) => p.display_name));
 
       const grouped: Record<string, Reaction[]> = {};
       const cleanMessages: PendingChatMessage[] = [];
@@ -132,8 +166,18 @@ export function ChatView() {
       }
 
       setMessages(cleanMessages);
+      messagesRef.current = cleanMessages;
       setReactionsByMessage(grouped);
+      hasMoreHistoryRef.current = (initialMessages ?? []).length === 100;
+      setHasMoreHistory(hasMoreHistoryRef.current);
       setLoading(false);
+
+      const allImageRefs = cleanMessages.flatMap((m) => m.image_urls);
+      if (allImageRefs.length > 0) {
+        resolveChatPhotoUrls(supabase, allImageRefs).then((resolved) => {
+          if (!cancelled) setResolvedImageUrls((prev) => ({ ...prev, ...resolved }));
+        });
+      }
 
       if (cancelled) return;
 
@@ -148,6 +192,7 @@ export function ChatView() {
           (payload) => {
             const row = payload.new as ChatMessage;
             if (row.created_by === userIdRef.current) return;
+            const senderName = profilesRef.current[row.created_by]?.display_name ?? "Someone";
             setMessages((prev) => {
               if (prev.some((m) => m.id === row.id)) return prev;
               return [
@@ -155,13 +200,22 @@ export function ChatView() {
                 {
                   ...row,
                   profiles: {
-                    display_name: profilesRef.current[row.created_by]?.display_name ?? "Someone",
+                    display_name: senderName,
                     avatar_color: profilesRef.current[row.created_by]?.avatar_color ?? null,
                     avatar_url: profilesRef.current[row.created_by]?.avatar_url ?? null,
                   },
                 },
               ];
             });
+            // Announced for screen readers - new bubbles otherwise append to
+            // the DOM with no signal that anything changed.
+            const preview = row.body || (row.image_urls.length > 0 ? "sent a photo" : row.shared_title ? `shared ${row.shared_title}` : "sent a message");
+            setLiveAnnouncement(`New message from ${senderName}: ${preview}`);
+            if (row.image_urls.length > 0) {
+              resolveChatPhotoUrls(supabase, row.image_urls).then((resolved) => {
+                setResolvedImageUrls((prev) => ({ ...prev, ...resolved }));
+              });
+            }
           }
         )
         .on(
@@ -218,14 +272,81 @@ export function ChatView() {
         .subscribe();
     }
 
+    // Realtime subscriptions only deliver events while the socket is
+    // actually connected - backgrounding the tab (the classic trigger on
+    // mobile) drops it, and anything that happened while disconnected is
+    // gone for good once it reconnects unless something re-fetches. Re-pulls
+    // the same latest-100 window used at initial load and reconciles it
+    // against local state on reconnect/refocus.
+    async function resyncMessages() {
+      if (!groupIdRef.current || cancelled) return;
+      const { data } = await supabase
+        .from("chat_messages")
+        .select("*, profiles(display_name, avatar_color, avatar_url), message_reactions(*)")
+        .order("created_at", { ascending: false })
+        .limit(100);
+      if (!data || data.length === 0 || cancelled) return;
+
+      const grouped: Record<string, Reaction[]> = {};
+      const fresh: PendingChatMessage[] = [];
+      for (const row of [...data].reverse()) {
+        const { message_reactions, ...message } = row as ChatMessage & { message_reactions: Reaction[] };
+        if (message_reactions?.length) grouped[message.id] = message_reactions;
+        fresh.push(message);
+      }
+
+      const windowStart = new Date(fresh[0].created_at).getTime();
+      const freshById = new Map(fresh.map((m) => [m.id, m]));
+
+      setMessages((prev) => {
+        const kept = prev.filter((m) => {
+          if (m.pending) return true; // never clobber an in-flight optimistic send
+          const withinWindow = new Date(m.created_at).getTime() >= windowStart;
+          // Drop anything inside the refetched window that's missing from
+          // the fresh result (deleted while disconnected); leave older,
+          // paginated-in history untouched.
+          return !withinWindow || freshById.has(m.id);
+        });
+        const merged = kept.map((m) => (!m.pending && freshById.has(m.id) ? { ...freshById.get(m.id)!, pending: false } : m));
+        const existingIds = new Set(merged.map((m) => m.id));
+        const added = fresh.filter((m) => !existingIds.has(m.id));
+        return [...merged, ...added].sort(
+          (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+        );
+      });
+      setReactionsByMessage((prev) => ({ ...prev, ...grouped }));
+
+      const newImageRefs = fresh.flatMap((m) => m.image_urls);
+      if (newImageRefs.length > 0) {
+        resolveChatPhotoUrls(supabase, newImageRefs).then((resolved) => {
+          if (!cancelled) setResolvedImageUrls((prev) => ({ ...prev, ...resolved }));
+        });
+      }
+    }
+
+    function handleVisible() {
+      if (document.visibilityState === "visible") resyncMessages();
+    }
+    function handleOnline() {
+      resyncMessages();
+    }
+
     init();
+    document.addEventListener("visibilitychange", handleVisible);
+    window.addEventListener("online", handleOnline);
 
     return () => {
       cancelled = true;
       if (messagesChannel) supabase.removeChannel(messagesChannel);
       if (reactionsChannel) supabase.removeChannel(reactionsChannel);
+      document.removeEventListener("visibilitychange", handleVisible);
+      window.removeEventListener("online", handleOnline);
     };
   }, []);
+
+  useEffect(() => {
+    messagesRef.current = messages;
+  }, [messages]);
 
   // Guards against the scroll listener seeing the in-flight frames of our
   // own smooth-scroll-to-bottom as "the user scrolled away" and flashing the
@@ -302,6 +423,7 @@ export function ChatView() {
             (m) => m.created_by !== userIdRef.current && new Date(m.created_at).getTime() > new Date(lastSeen).getTime()
           )
         : undefined;
+      setFirstUnreadId(firstUnread?.id ?? null);
       const targetEl = firstUnread
         ? containerRef.current?.querySelector<HTMLElement>(`[data-message-id="${firstUnread.id}"]`)
         : null;
@@ -324,6 +446,58 @@ export function ChatView() {
     scrollToBottomSmooth();
   }, [messages]);
 
+  // Once the DOM reflects a batch of older messages prepended to the top,
+  // scrollTop needs to move by exactly however much taller the content just
+  // got - otherwise the browser holds scrollTop fixed and the view jumps
+  // down to what looks like a random spot mid-conversation.
+  useLayoutEffect(() => {
+    const adjustment = prependAdjustRef.current;
+    const container = containerRef.current;
+    if (adjustment && container) {
+      container.scrollTop += container.scrollHeight - adjustment.prevScrollHeight;
+      prependAdjustRef.current = null;
+    }
+  }, [messages]);
+
+  async function loadMoreMessages() {
+    if (!hasMoreHistoryRef.current || loadingMoreHistoryRef.current || messagesRef.current.length === 0) return;
+    const oldest = messagesRef.current[0];
+    loadingMoreHistoryRef.current = true;
+    setLoadingMoreHistory(true);
+    const supabase = createClient();
+    const { data } = await supabase
+      .from("chat_messages")
+      .select("*, profiles(display_name, avatar_color, avatar_url), message_reactions(*)")
+      .lt("created_at", oldest.created_at)
+      .order("created_at", { ascending: false })
+      .limit(100);
+
+    const older: PendingChatMessage[] = [];
+    const grouped: Record<string, Reaction[]> = {};
+    for (const row of (data ?? []).reverse()) {
+      const { message_reactions, ...message } = row as ChatMessage & { message_reactions: Reaction[] };
+      if (message_reactions?.length) grouped[message.id] = message_reactions;
+      older.push(message);
+    }
+
+    hasMoreHistoryRef.current = older.length === 100;
+    setHasMoreHistory(older.length === 100);
+    if (older.length > 0) {
+      const container = containerRef.current;
+      if (container) prependAdjustRef.current = { prevScrollHeight: container.scrollHeight };
+      setMessages((prev) => [...older, ...prev]);
+      setReactionsByMessage((prev) => ({ ...grouped, ...prev }));
+      const olderImageRefs = older.flatMap((m) => m.image_urls);
+      if (olderImageRefs.length > 0) {
+        resolveChatPhotoUrls(supabase, olderImageRefs).then((resolved) => {
+          setResolvedImageUrls((prev) => ({ ...prev, ...resolved }));
+        });
+      }
+    }
+    loadingMoreHistoryRef.current = false;
+    setLoadingMoreHistory(false);
+  }
+
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
@@ -334,6 +508,7 @@ export function ChatView() {
       const nearBottom = distanceFromBottom < NEAR_BOTTOM_THRESHOLD_PX;
       isNearBottomRef.current = nearBottom;
       setShowJumpToLatest(!nearBottom);
+      if (container.scrollTop < 200) loadMoreMessages();
     }
 
     handleScroll();
@@ -357,9 +532,83 @@ export function ChatView() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [messages.length]);
 
-  async function handleSend({ body, imageFiles }: { body: string; imageFiles: File[] }) {
+  // Shared by both the initial send and a retry tap - a retry reuses the
+  // same bubble (tempId) and the same local preview blobs rather than
+  // starting over, so the user doesn't lose their place or re-pick photos.
+  async function sendMessagePayload(tempId: string, payload: RetryPayload) {
+    const { body, imageFiles, previewUrls, replyToId } = payload;
     if (!userId || !groupIdRef.current) return;
     const supabase = createClient();
+
+    setMessages((prev) =>
+      prev.map((m) => (m.id === tempId ? { ...m, pending: true, failed: false, uploadingImages: imageFiles.length > 0 } : m))
+    );
+
+    let imageUrls: string[] = [];
+    if (imageFiles.length > 0) {
+      try {
+        imageUrls = await Promise.all(
+          imageFiles.map((file) => uploadChatPhoto(supabase, groupIdRef.current!, file))
+        );
+      } catch {
+        // Kept as a failed bubble (not removed) so the typed text and photos
+        // aren't lost - tapping retry re-runs this same function.
+        setMessages((prev) =>
+          prev.map((m) => (m.id === tempId ? { ...m, pending: false, uploadingImages: false, failed: true } : m))
+        );
+        return;
+      }
+    }
+
+    const { data, error } = await supabase
+      .from("chat_messages")
+      .insert({
+        body,
+        created_by: userId,
+        group_id: groupIdRef.current,
+        image_urls: imageUrls,
+        reply_to_id: replyToId,
+      })
+      .select()
+      .single();
+
+    if (error || !data) {
+      setMessages((prev) =>
+        prev.map((m) => (m.id === tempId ? { ...m, pending: false, uploadingImages: false, failed: true } : m))
+      );
+      return;
+    }
+
+    trackEvent('chat_message_sent')
+
+    setMessages((prev) =>
+      prev.map((m) =>
+        m.id === tempId
+          ? {
+              ...m,
+              id: data.id,
+              image_urls: data.image_urls,
+              created_at: data.created_at,
+              pending: false,
+              uploadingImages: false,
+              failed: false,
+            }
+          : m
+      )
+    );
+    // Now that the bubble has switched over to the real hosted URLs, the
+    // local preview blobs are safe to release.
+    previewUrls.forEach((url) => URL.revokeObjectURL(url));
+
+    if (data.image_urls.length > 0) {
+      resolveChatPhotoUrls(supabase, data.image_urls).then((resolved) => {
+        setResolvedImageUrls((prev) => ({ ...prev, ...resolved }));
+      });
+    }
+  }
+
+  async function handleSend({ body, imageFiles }: { body: string; imageFiles: File[] }) {
+    if (!userId || !groupIdRef.current) return;
     const tempId = crypto.randomUUID();
     const replyToId = replyingTo?.id ?? null;
 
@@ -367,6 +616,7 @@ export function ChatView() {
     // sent (rather than a blank bubble) while the real upload is still in
     // flight - uploadingImages drives a spinner overlay on top of them.
     const previewUrls = imageFiles.map((file) => URL.createObjectURL(file));
+    const retryPayload: RetryPayload = { body, imageFiles, previewUrls, replyToId };
 
     const optimisticMessage: PendingChatMessage = {
       id: tempId,
@@ -388,6 +638,8 @@ export function ChatView() {
       },
       pending: true,
       uploadingImages: imageFiles.length > 0,
+      failed: false,
+      retryPayload,
     };
     // Sending is an explicit action - always jump to the new message even if
     // the user had scrolled up to read history.
@@ -396,58 +648,19 @@ export function ChatView() {
     setMessages((prev) => [...prev, optimisticMessage]);
     setReplyingTo(null);
 
-    let imageUrls: string[] = [];
-    if (imageFiles.length > 0) {
-      try {
-        imageUrls = await Promise.all(
-          imageFiles.map((file) => uploadChatPhoto(supabase, groupIdRef.current!, file))
-        );
-      } catch {
-        // The bubble is being removed entirely here, so the preview blobs it
-        // was showing are no longer needed - safe to release right away.
-        previewUrls.forEach((url) => URL.revokeObjectURL(url));
-        setMessages((prev) => prev.filter((m) => m.id !== tempId));
-        return;
-      }
-    }
+    await sendMessagePayload(tempId, retryPayload);
+  }
 
-    const { data, error } = await supabase
-      .from("chat_messages")
-      .insert({
-        body,
-        created_by: userId,
-        group_id: groupIdRef.current,
-        image_urls: imageUrls,
-        reply_to_id: replyToId,
-      })
-      .select()
-      .single();
+  function handleRetrySend(message: PendingChatMessage) {
+    if (!message.retryPayload) return;
+    sendMessagePayload(message.id, message.retryPayload);
+  }
 
-    if (error || !data) {
-      previewUrls.forEach((url) => URL.revokeObjectURL(url));
-      setMessages((prev) => prev.filter((m) => m.id !== tempId));
-      return;
-    }
-
-    trackEvent('chat_message_sent')
-
-    setMessages((prev) =>
-      prev.map((m) =>
-        m.id === tempId
-          ? {
-              ...optimisticMessage,
-              id: data.id,
-              image_urls: data.image_urls,
-              created_at: data.created_at,
-              pending: false,
-              uploadingImages: false,
-            }
-          : m
-      )
-    );
-    // Now that the bubble has switched over to the real hosted URLs, the
-    // local preview blobs are safe to release.
-    previewUrls.forEach((url) => URL.revokeObjectURL(url));
+  function handleDiscardFailed(message: PendingChatMessage) {
+    message.image_urls.forEach((url) => {
+      if (url.startsWith("blob:")) URL.revokeObjectURL(url);
+    });
+    setMessages((prev) => prev.filter((m) => m.id !== message.id));
   }
 
   async function handleToggleReaction(messageId: string, emoji: string) {
@@ -481,10 +694,16 @@ export function ChatView() {
         .select()
         .single();
       if (data) {
-        setReactionsByMessage((prev) => ({
-          ...prev,
-          [messageId]: (prev[messageId] ?? []).map((r) => (r.id === tempReaction.id ? data : r)),
-        }));
+        setReactionsByMessage((prev) => {
+          const current = prev[messageId] ?? [];
+          // The realtime echo of this same insert can land before this
+          // response does, adding the row under its real id while the temp
+          // entry (a different, random id) is still present - drop any
+          // pre-existing copy of the real id before swapping the temp in,
+          // so the two never coexist as a visible duplicate.
+          const deduped = current.filter((r) => r.id !== data.id).map((r) => (r.id === tempReaction.id ? data : r));
+          return { ...prev, [messageId]: deduped };
+        });
       }
     }
   }
@@ -499,7 +718,8 @@ export function ChatView() {
     await supabase.from("chat_messages").update({ body: newBody, edited_at: editedAt }).eq("id", messageId);
   }
 
-  async function handleDeleteMessage(messageId: string) {
+  async function handleDeleteMessage(message: PendingChatMessage) {
+    const messageId = message.id;
     const supabase = createClient();
     setMessages((prev) => prev.filter((m) => m.id !== messageId));
     setReactionsByMessage((prev) => {
@@ -509,6 +729,14 @@ export function ChatView() {
       return rest;
     });
     await supabase.from("chat_messages").delete().eq("id", messageId);
+    // Deleting the row doesn't touch Storage on its own - without this, a
+    // "deleted" photo message's images stay sitting in the bucket and (now
+    // that reads are group-scoped, not just unguessable) remain fetchable
+    // by any other member indefinitely via their old signed-URL path.
+    if (message.image_urls.length > 0) {
+      const paths = message.image_urls.map(extractChatPhotoPath);
+      await supabase.storage.from("chat-photos").remove(paths);
+    }
   }
 
   if (loading || !userId) {
@@ -545,12 +773,25 @@ export function ChatView() {
 
   return (
     <div className="flex h-full flex-col">
+      {/* Visually hidden - announces new messages from other people to screen
+          readers, since they otherwise append to the DOM with no signal. */}
+      <div aria-live="polite" className="sr-only">
+        {liveAnnouncement}
+      </div>
       <div className="relative min-h-0 flex-1">
         <div
           ref={containerRef}
           data-chat-scroll-container
           className="h-full overflow-y-auto p-4"
         >
+          {loadingMoreHistory && (
+            <div className="flex justify-center pb-3">
+              <CircleNotch size={18} className="animate-spin text-muted" />
+            </div>
+          )}
+          {!hasMoreHistory && !loadingMoreHistory && messages.length > 0 && (
+            <p className="pb-3 text-center text-xs text-muted">Beginning of conversation</p>
+          )}
           {messages.length === 0 && (
             <EmptyState
               icon={HandWaving}
@@ -563,6 +804,7 @@ export function ChatView() {
             const previous = messages[index - 1];
             const showDaySeparator =
               !previous || !isSameLocalDay(new Date(message.created_at), new Date(previous.created_at));
+            const showNewDivider = message.id === firstUnreadId;
             return (
             <div key={message.id} data-message-id={message.id} ref={observeMessageEl}>
               {showDaySeparator && (
@@ -572,22 +814,35 @@ export function ChatView() {
                   </span>
                 </div>
               )}
+              {showNewDivider && !showDaySeparator && (
+                <div className="my-4 flex items-center gap-2">
+                  <div className="h-px flex-1 bg-accent/40" />
+                  <span className="text-xs font-medium text-accent">New messages</span>
+                  <div className="h-px flex-1 bg-accent/40" />
+                </div>
+              )}
               <MessageBubble
                 message={message}
                 isOwn={message.created_by === userId}
                 pending={message.pending}
                 uploadingImages={message.uploadingImages}
+                failed={message.failed}
                 groupStart={isGroupStart(message, messages[index - 1])}
                 isFirstMessage={index === 0}
                 reactions={reactionsByMessage[message.id] ?? []}
                 currentUserId={userId}
                 replyToMessage={message.reply_to_id ? messagesById.get(message.reply_to_id) : null}
+                replyToDeleted={Boolean(message.reply_to_id) && !messagesById.has(message.reply_to_id ?? "")}
                 isEditing={editingMessageId === message.id}
+                resolveImageUrl={(raw) => resolvedImageUrls[raw] ?? null}
+                memberNames={memberNames}
                 onDoubleTapReact={() => handleToggleReaction(message.id, DEFAULT_REACTION)}
                 onOpenActions={() => setActionSheetMessageId(message.id)}
                 onToggleReaction={(emoji) => handleToggleReaction(message.id, emoji)}
                 onSaveEdit={(body) => handleSaveEdit(message.id, body)}
                 onCancelEdit={() => setEditingMessageId(null)}
+                onRetry={() => handleRetrySend(message)}
+                onDiscardFailed={() => handleDiscardFailed(message)}
               />
             </div>
             );
@@ -617,6 +872,7 @@ export function ChatView() {
         onSend={handleSend}
         replyingTo={replyingTo}
         onCancelReply={() => setReplyingTo(null)}
+        memberNames={memberNames}
       />
 
       <MessageActionSheet
@@ -644,7 +900,7 @@ export function ChatView() {
         description="This can't be undone."
         confirmLabel="Delete"
         onConfirm={() => {
-          if (deleteConfirmMessage) handleDeleteMessage(deleteConfirmMessage.id);
+          if (deleteConfirmMessage) handleDeleteMessage(deleteConfirmMessage);
           setDeleteConfirmMessage(null);
         }}
         onCancel={() => setDeleteConfirmMessage(null)}
