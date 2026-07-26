@@ -3,21 +3,26 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion } from "framer-motion";
-import { CalendarBlank, Notebook, ChatCircle, Wrench } from "@phosphor-icons/react";
+import { BookOpen, CalendarBlank, ChatCircle, Notebook, Wrench } from "@phosphor-icons/react";
 import { cn } from "@/lib/utils";
 import { useUnreadIndicator } from "@/components/UnreadIndicatorContext";
+import { useGroupFeatures } from "@/components/GroupFeaturesContext";
 import { trackEvent } from "@/lib/analytics";
 
-const TABS = [
-  { href: "/calendar", label: "Calendar", icon: CalendarBlank },
-  { href: "/topics", label: "Topics", icon: Notebook },
-  { href: "/chat", label: "Chat", icon: ChatCircle },
-  { href: "/tools", label: "Tools", icon: Wrench },
+const ALL_TABS = [
+  { href: "/calendar", label: "Calendar", icon: CalendarBlank, feature: null },
+  { href: "/topics", label: "Topics", icon: Notebook, feature: null },
+  { href: "/chat", label: "Chat", icon: ChatCircle, feature: null },
+  { href: "/bible", label: "Bible", icon: BookOpen, feature: "bible" as const },
+  { href: "/tools", label: "Tools", icon: Wrench, feature: null },
 ] as const;
 
 export function BottomNav() {
   const pathname = usePathname();
   const { chatUnread } = useUnreadIndicator();
+  const { bibleEnabled } = useGroupFeatures();
+
+  const tabs = ALL_TABS.filter((t) => t.feature !== "bible" || bibleEnabled);
 
   const unreadByHref: Record<string, boolean> = {
     "/chat": chatUnread,
@@ -26,7 +31,7 @@ export function BottomNav() {
   return (
     <nav className="border-t border-border bg-white/90 pb-[env(safe-area-inset-bottom)] backdrop-blur-sm">
       <ul className="flex">
-        {TABS.map(({ href, label, icon: Icon }) => {
+        {tabs.map(({ href, label, icon: Icon }) => {
           const active = pathname.startsWith(href);
           const unread = unreadByHref[href];
           return (
