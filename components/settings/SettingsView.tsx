@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
-import { BookOpen, Camera, CaretDown, CaretRight, CheckCircle, Copy, ShareNetwork, Trash, UsersThree, WarningCircle } from "@phosphor-icons/react";
+import { Camera, CaretDown, CaretRight, CheckCircle, Copy, ShareNetwork, Trash, UsersThree, WarningCircle } from "@phosphor-icons/react";
 import { createClient } from "@/lib/supabase/client";
 import { Avatar, AVATAR_COLORS } from "@/components/Avatar";
 import { AvatarCropModal } from "@/components/settings/AvatarCropModal";
@@ -13,17 +13,14 @@ import { Button } from "@/components/ui/Button";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { ConfirmSheet } from "@/components/ui/ConfirmSheet";
 import { SignOutButton } from "@/components/SignOutButton";
-import { Switch } from "@/components/ui/Switch";
 import { uploadAvatar } from "@/lib/supabase/uploadAvatar";
 import { cn } from "@/lib/utils";
-import { useGroupFeatures } from "@/components/GroupFeaturesContext";
 
 const fieldClass =
   "w-full rounded-xl border border-border bg-white shadow-sm px-3 py-2.5 outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20";
 
 export function SettingsView() {
   const router = useRouter();
-  const { bibleEnabled, setBibleEnabled } = useGroupFeatures();
   const [loading, setLoading] = useState(true);
   const [displayName, setDisplayName] = useState("");
   const [email, setEmail] = useState("");
@@ -35,9 +32,6 @@ export function SettingsView() {
   const [linkShared, setLinkShared] = useState(false);
   const [nameStatus, setNameStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const [nameError, setNameError] = useState<string | null>(null);
-
-  const [bibleToggling, setBibleToggling] = useState(false);
-  const [bibleToggleError, setBibleToggleError] = useState<string | null>(null);
 
   const [deleteGroupConfirmOpen, setDeleteGroupConfirmOpen] = useState(false);
   const [deletingGroup, setDeletingGroup] = useState(false);
@@ -143,12 +137,12 @@ export function SettingsView() {
   }
 
   async function handleSaveAvatar(blob: Blob) {
+    setAvatarSaving(true);
     setAvatarError(null);
+
     const supabase = createClient();
     const { data } = await supabase.auth.getUser();
     if (!data.user) return;
-
-    setAvatarSaving(true);
 
     try {
       const url = await uploadAvatar(supabase, data.user.id, blob);
@@ -260,23 +254,6 @@ export function SettingsView() {
     await supabase.auth.signOut().catch(() => {});
     router.push("/sign-in");
     router.refresh();
-  }
-
-  async function handleBibleToggle(enabled: boolean) {
-    if (!groupId) return;
-    setBibleToggling(true);
-    setBibleToggleError(null);
-    setBibleEnabled(enabled); // optimistic
-    const supabase = createClient();
-    const { error } = await supabase
-      .from("groups")
-      .update({ bible_enabled: enabled })
-      .eq("id", groupId);
-    if (error) {
-      setBibleEnabled(!enabled); // revert
-      setBibleToggleError("Couldn't save that change. Try again.");
-    }
-    setBibleToggling(false);
   }
 
   if (loading) {
@@ -427,40 +404,6 @@ export function SettingsView() {
             <span className="flex-1 text-sm font-medium">View members</span>
             <CaretRight size={16} className="text-muted" />
           </Link>
-        </motion.section>
-      )}
-
-      {isGroupCreator && (
-        <motion.section
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.25, delay: 0.16, ease: "easeOut" }}
-          className="space-y-3 rounded-2xl border border-border/60 bg-white p-4 shadow-sm"
-        >
-          <h2 className="font-semibold text-primary">Group features</h2>
-          <div className="flex items-center justify-between gap-3">
-            <div className="min-w-0 flex-1">
-              <div className="flex items-center gap-2">
-                <BookOpen size={16} className="shrink-0 text-primary" weight="duotone" />
-                <span className="text-sm font-medium text-secondary">Bible tab</span>
-              </div>
-              <p className="mt-0.5 text-xs text-muted">
-                Adds a Bible tab to the nav so your group can look up and copy verses.
-              </p>
-            </div>
-            <Switch
-              checked={bibleEnabled}
-              onChange={handleBibleToggle}
-              disabled={bibleToggling}
-              ariaLabel="Toggle Bible tab"
-            />
-          </div>
-          {bibleToggleError && (
-            <p className="flex items-center gap-1.5 rounded-lg bg-accent/10 px-3 py-2 text-sm text-accent">
-              <WarningCircle size={16} className="shrink-0" />
-              {bibleToggleError}
-            </p>
-          )}
         </motion.section>
       )}
 

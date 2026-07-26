@@ -15,13 +15,11 @@ import { OfflineBanner } from "@/components/OfflineBanner";
 import { TopicsSearchProvider, useTopicsSearch } from "@/components/topics/TopicsSearchContext";
 import { TopicsAddMenu } from "@/components/topics/TopicsAddMenu";
 import { UnreadIndicatorProvider } from "@/components/UnreadIndicatorContext";
-import { GroupFeaturesContext } from "@/components/GroupFeaturesContext";
 
 const SECTION_TITLES: { prefix: string; title: string }[] = [
   { prefix: "/calendar", title: "Calendar" },
   { prefix: "/topics", title: "Topics" },
   { prefix: "/chat", title: "Chat" },
-  { prefix: "/bible", title: "Bible" },
   { prefix: "/tools", title: "Tools" },
   { prefix: "/settings", title: "Settings" },
 ];
@@ -89,7 +87,6 @@ export default function AppLayout({
   const router = useRouter();
   const pathname = usePathname();
   const [hasGroup, setHasGroup] = useState<boolean | null>(null);
-  const [bibleEnabled, setBibleEnabled] = useState(false);
 
   // Re-checks on every navigation, not just on first mount - Next.js keeps
   // this layout mounted across sibling routes under (app), so a mount-only
@@ -122,13 +119,6 @@ export default function AppLayout({
         return;
       }
 
-      const { data: group } = await supabase
-        .from("groups")
-        .select("bible_enabled")
-        .eq("id", membership.groupId)
-        .single();
-      setBibleEnabled(group?.bible_enabled ?? false);
-
       setHasGroup(true);
     }
     checkMembership();
@@ -140,19 +130,17 @@ export default function AppLayout({
   if (hasGroup === null) return <div className="h-dvh bg-background" />;
 
   return (
-    <GroupFeaturesContext.Provider value={{ bibleEnabled, setBibleEnabled }}>
-      <UnreadIndicatorProvider>
-        <TopicsSearchProvider>
-          <div className="flex h-dvh flex-col bg-background">
-            <AppHeader />
-            <OfflineBanner />
-            <UpdatePrompt />
-            <PushPermissionPrompt />
-            <main className="min-h-0 flex-1 overflow-y-auto">{children}</main>
-            <BottomNav />
-          </div>
-        </TopicsSearchProvider>
-      </UnreadIndicatorProvider>
-    </GroupFeaturesContext.Provider>
+    <UnreadIndicatorProvider>
+      <TopicsSearchProvider>
+        <div className="flex h-dvh flex-col bg-background">
+          <AppHeader />
+          <OfflineBanner />
+          <UpdatePrompt />
+          <PushPermissionPrompt />
+          <main className="min-h-0 flex-1 overflow-y-auto">{children}</main>
+          <BottomNav />
+        </div>
+      </TopicsSearchProvider>
+    </UnreadIndicatorProvider>
   );
 }
