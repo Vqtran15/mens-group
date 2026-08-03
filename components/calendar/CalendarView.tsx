@@ -23,11 +23,11 @@ export function CalendarView() {
   const [groupId, setGroupId] = useState<string | null>(null);
   const [hasSchedule, setHasSchedule] = useState(true);
   const [events, setEvents] = useState<CalendarEvent[]>([]);
-  // The id of whichever fetched event is next up as of load time - kept as
-  // its own piece of state (computed once, at fetch time) rather than
-  // re-derived from Date.now() during render, which React's purity rules
-  // disallow (an impure call whose result could differ render to render).
-  const [nextMeetingId, setNextMeetingId] = useState<string | null>(null);
+  // Whether the featured event (events[0]) falls on today's calendar day -
+  // computed once, at fetch time, rather than re-derived from `new Date()`
+  // during render, which React's purity rules disallow (an impure call
+  // whose result could differ render to render).
+  const [featuredIsToday, setFeaturedIsToday] = useState(false);
   const [rsvpsByEvent, setRsvpsByEvent] = useState<Record<string, Rsvp[]>>({});
   const [topicsByDate, setTopicsByDate] = useState<Record<string, RelatedTopic[]>>({});
   const [loading, setLoading] = useState(true);
@@ -141,13 +141,13 @@ export function CalendarView() {
     // already-soonest-first list down here caps what's actually shown to 3,
     // regardless of how many of those are recurring vs one-off.
     const slicedEvents = cleanEvents.slice(0, OCCURRENCES_TO_MATERIALIZE);
-    // The featured card should always be the next meeting still ahead of
-    // you, not one that's already started - a meeting earlier today that
-    // already began stays in the plain list below (with its RSVPs still
-    // checkable) rather than getting top billing as if it hasn't happened.
-    const nextUpcoming = slicedEvents.find((event) => new Date(event.starts_at).getTime() >= Date.now());
+    // The events query already starts at startOfToday(), so the earliest
+    // item - if any - is either happening today or is the next future day;
+    // either way it's exactly what belongs in the featured slot. The label
+    // just needs to know which of those two cases it is.
+    const featured = slicedEvents[0];
     setEvents(slicedEvents);
-    setNextMeetingId(nextUpcoming?.id ?? null);
+    setFeaturedIsToday(!!featured && toDateOnlyString(new Date(featured.starts_at)) === toDateOnlyString(startOfToday()));
     setRsvpsByEvent(rsvpMap);
     setTopicsByDate(dateMap);
     setLoading(false);
@@ -172,8 +172,7 @@ export function CalendarView() {
     return null;
   }
 
-  const nextMeeting = events.find((event) => event.id === nextMeetingId);
-  const rest = nextMeetingId === null ? events : events.filter((event) => event.id !== nextMeetingId);
+  const [nextMeeting, ...rest] = events;
 
   return (
     <PullToRefresh onRefresh={() => loadEvents(userId, groupId)}>
@@ -185,12 +184,10 @@ export function CalendarView() {
           userId={userId}
           onChanged={() => loadEvents(userId, groupId)}
           relatedTopics={topicsByDate[toDateOnlyString(new Date(nextMeeting.starts_at))] ?? []}
+          isToday={featuredIsToday}
         />
       )}
-      {/* Only truly empty (nothing today, nothing ahead) gets the empty
-          state - a today's-already-started meeting with nothing upcoming
-          after it still has something to show, just in the plain list below. */}
-      {!nextMeeting && rest.length === 0 && (
+      {!nextMeeting && (
         <EmptyState
           icon={CalendarBlank}
           title="Nothing on the calendar"

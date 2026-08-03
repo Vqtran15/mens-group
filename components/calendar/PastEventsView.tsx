@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { motion } from "framer-motion";
 import { ClockCounterClockwise } from "@phosphor-icons/react";
 import { createClient } from "@/lib/supabase/client";
 import { getCurrentMembership } from "@/lib/supabase/current-membership";
@@ -114,13 +115,19 @@ export function PastEventsView() {
         />
       ) : (
         <>
-          {events.map((event) => (
-            <PastEventListItem
+          {events.map((event, i) => (
+            <motion.div
               key={event.id}
-              event={event}
-              rsvps={rsvpsByEvent[event.id] ?? []}
-              relatedTopics={topicsByDate[toDateOnlyString(new Date(event.starts_at))] ?? []}
-            />
+              initial={{ x: -40, opacity: 0 }}
+              animate={{ x: 0, opacity: 1 }}
+              transition={{ type: "spring", stiffness: 260, damping: 24, delay: Math.min(i, 8) * 0.05 }}
+            >
+              <PastEventListItem
+                event={event}
+                rsvps={rsvpsByEvent[event.id] ?? []}
+                relatedTopics={topicsByDate[toDateOnlyString(new Date(event.starts_at))] ?? []}
+              />
+            </motion.div>
           ))}
           {hasMore && (
             <Button variant="secondary" className="w-full" disabled={loadingMore} onClick={loadMore}>

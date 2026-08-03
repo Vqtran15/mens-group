@@ -19,12 +19,14 @@ export function NextMeetingCard({
   userId,
   onChanged,
   relatedTopics = [],
+  isToday = false,
 }: {
   event: CalendarEvent;
   rsvps: Rsvp[];
   userId: string;
   onChanged: () => void;
   relatedTopics?: RelatedTopic[];
+  isToday?: boolean;
 }) {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [skipConfirmOpen, setSkipConfirmOpen] = useState(false);
@@ -89,7 +91,7 @@ export function NextMeetingCard({
     >
       <div className="flex items-center justify-between gap-2">
         <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-highlight-light">
-          <Sparkle size={14} weight="fill" /> Next meeting
+          <Sparkle size={14} weight="fill" /> {isToday ? "Today's meeting" : "Next meeting"}
         </p>
         <button
           type="button"
