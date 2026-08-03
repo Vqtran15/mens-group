@@ -52,6 +52,15 @@ export function formatTime(date: Date): string {
   });
 }
 
+// Local midnight, not UTC, so "today" matches what the viewer would call
+// today - used as the boundary between the Calendar (today onward) and
+// Past Events (before today) views.
+export function startOfToday(): Date {
+  const date = new Date();
+  date.setHours(0, 0, 0, 0);
+  return date;
+}
+
 // Excludes visually ambiguous characters (0/O, 1/I/L).
 const INVITE_CODE_CHARS = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
 

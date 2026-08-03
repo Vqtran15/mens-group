@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { usePathname, useRouter } from "next/navigation";
-import { MagnifyingGlass, Plus } from "@phosphor-icons/react";
+import { ClockCounterClockwise, MagnifyingGlass, Plus } from "@phosphor-icons/react";
 import { createClient } from "@/lib/supabase/client";
 import { getCurrentMembership } from "@/lib/supabase/current-membership";
 import { BottomNav } from "@/components/BottomNav";
@@ -62,6 +62,17 @@ function AppHeader() {
       <div className="flex items-center gap-1">
         {pathname === "/topics" && <TopicsSearchToggle />}
         {pathname === "/topics" && <TopicsAddMenu />}
+        {pathname === "/calendar" && (
+          <MotionLink
+            href="/calendar/past"
+            aria-label="Past events"
+            whileTap={{ scale: 0.85 }}
+            transition={{ duration: 0.15 }}
+            className="rounded-full p-2 text-secondary transition-colors hover:bg-surface-muted hover:text-primary"
+          >
+            <ClockCounterClockwise size={22} />
+          </MotionLink>
+        )}
         {addAction && (
           <MotionLink
             href={addAction.href}

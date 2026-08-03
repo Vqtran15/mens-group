@@ -11,20 +11,10 @@ import { NextMeetingCard } from "@/components/calendar/NextMeetingCard";
 import { EventListItem } from "@/components/calendar/EventListItem";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { PullToRefresh } from "@/components/ui/PullToRefresh";
-import { toDateOnlyString } from "@/lib/utils";
+import { startOfToday, toDateOnlyString } from "@/lib/utils";
 import type { CalendarEvent, MeetingSchedule, RelatedTopic, Rsvp } from "@/lib/types";
 
 const OCCURRENCES_TO_MATERIALIZE = 3;
-
-// A meeting that already started (or already ended) earlier today should
-// stay visible - and its RSVPs checkable - through the rest of that
-// calendar day, not vanish the instant its start time passes. Local
-// midnight, not UTC, so "today" matches what the viewer would call today.
-function startOfToday(): Date {
-  const date = new Date();
-  date.setHours(0, 0, 0, 0);
-  return date;
-}
 
 const MotionLink = motion.create(Link);
 
