@@ -16,6 +16,16 @@ import type { CalendarEvent, MeetingSchedule, RelatedTopic, Rsvp } from "@/lib/t
 
 const OCCURRENCES_TO_MATERIALIZE = 3;
 
+// A meeting that already started (or already ended) earlier today should
+// stay visible - and its RSVPs checkable - through the rest of that
+// calendar day, not vanish the instant its start time passes. Local
+// midnight, not UTC, so "today" matches what the viewer would call today.
+function startOfToday(): Date {
+  const date = new Date();
+  date.setHours(0, 0, 0, 0);
+  return date;
+}
+
 const MotionLink = motion.create(Link);
 
 export function CalendarView() {
@@ -23,6 +33,11 @@ export function CalendarView() {
   const [groupId, setGroupId] = useState<string | null>(null);
   const [hasSchedule, setHasSchedule] = useState(true);
   const [events, setEvents] = useState<CalendarEvent[]>([]);
+  // The id of whichever fetched event is next up as of load time - kept as
+  // its own piece of state (computed once, at fetch time) rather than
+  // re-derived from Date.now() during render, which React's purity rules
+  // disallow (an impure call whose result could differ render to render).
+  const [nextMeetingId, setNextMeetingId] = useState<string | null>(null);
   const [rsvpsByEvent, setRsvpsByEvent] = useState<Record<string, Rsvp[]>>({});
   const [topicsByDate, setTopicsByDate] = useState<Record<string, RelatedTopic[]>>({});
   const [loading, setLoading] = useState(true);
@@ -47,7 +62,7 @@ export function CalendarView() {
         .from("events")
         .select(eventsSelect)
         .eq("group_id", groupId)
-        .gte("starts_at", new Date().toISOString())
+        .gte("starts_at", startOfToday().toISOString())
         .order("starts_at", { ascending: true })
         .limit(20),
       supabase.from("topics").select("id, title, topic_date").eq("group_id", groupId),
@@ -110,7 +125,7 @@ export function CalendarView() {
           .from("events")
           .select(eventsSelect)
           .eq("group_id", groupId)
-          .gte("starts_at", new Date().toISOString())
+          .gte("starts_at", startOfToday().toISOString())
           .order("starts_at", { ascending: true })
           .limit(20);
         finalEventRows = refreshedEventRows;
@@ -135,7 +150,14 @@ export function CalendarView() {
     // that, so the calendar could show more than 3 total. Slicing the
     // already-soonest-first list down here caps what's actually shown to 3,
     // regardless of how many of those are recurring vs one-off.
-    setEvents(cleanEvents.slice(0, OCCURRENCES_TO_MATERIALIZE));
+    const slicedEvents = cleanEvents.slice(0, OCCURRENCES_TO_MATERIALIZE);
+    // The featured card should always be the next meeting still ahead of
+    // you, not one that's already started - a meeting earlier today that
+    // already began stays in the plain list below (with its RSVPs still
+    // checkable) rather than getting top billing as if it hasn't happened.
+    const nextUpcoming = slicedEvents.find((event) => new Date(event.starts_at).getTime() >= Date.now());
+    setEvents(slicedEvents);
+    setNextMeetingId(nextUpcoming?.id ?? null);
     setRsvpsByEvent(rsvpMap);
     setTopicsByDate(dateMap);
     setLoading(false);
@@ -160,12 +182,13 @@ export function CalendarView() {
     return null;
   }
 
-  const [nextMeeting, ...rest] = events;
+  const nextMeeting = events.find((event) => event.id === nextMeetingId);
+  const rest = nextMeetingId === null ? events : events.filter((event) => event.id !== nextMeetingId);
 
   return (
     <PullToRefresh onRefresh={() => loadEvents(userId, groupId)}>
     <div className="space-y-4 p-4">
-      {nextMeeting ? (
+      {nextMeeting && (
         <NextMeetingCard
           event={nextMeeting}
           rsvps={rsvpsByEvent[nextMeeting.id] ?? []}
@@ -173,7 +196,11 @@ export function CalendarView() {
           onChanged={() => loadEvents(userId, groupId)}
           relatedTopics={topicsByDate[toDateOnlyString(new Date(nextMeeting.starts_at))] ?? []}
         />
-      ) : (
+      )}
+      {/* Only truly empty (nothing today, nothing ahead) gets the empty
+          state - a today's-already-started meeting with nothing upcoming
+          after it still has something to show, just in the plain list below. */}
+      {!nextMeeting && rest.length === 0 && (
         <EmptyState
           icon={CalendarBlank}
           title="Nothing on the calendar"
