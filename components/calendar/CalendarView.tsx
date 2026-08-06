@@ -6,15 +6,13 @@ import { motion } from "framer-motion";
 import { CalendarBlank, CaretRight, Repeat } from "@phosphor-icons/react";
 import { createClient } from "@/lib/supabase/client";
 import { getCurrentMembership } from "@/lib/supabase/current-membership";
-import { getUpcomingOccurrences, toRecurrenceConfig } from "@/lib/recurrence";
+import { OCCURRENCES_TO_MATERIALIZE, getUpcomingOccurrences, toRecurrenceConfig } from "@/lib/recurrence";
 import { NextMeetingCard } from "@/components/calendar/NextMeetingCard";
 import { EventListItem } from "@/components/calendar/EventListItem";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { PullToRefresh } from "@/components/ui/PullToRefresh";
 import { startOfToday, toDateOnlyString } from "@/lib/utils";
 import type { CalendarEvent, MeetingSchedule, RelatedTopic, Rsvp } from "@/lib/types";
-
-const OCCURRENCES_TO_MATERIALIZE = 3;
 
 const MotionLink = motion.create(Link);
 
@@ -62,10 +60,18 @@ export function CalendarView() {
     setHasSchedule(!!schedule);
 
     if (schedule) {
+      // startOfToday(), not new Date(): the events query below also starts
+      // at startOfToday() so today's occurrence stays fetched/actionable for
+      // its whole calendar day (see the "meetings disappearing" fix). Using
+      // new Date() here instead would make that same occurrence fall out of
+      // this "upcoming" set the moment its start time passes - even though
+      // it's still today - and the staleness check below would then delete
+      // it (and cascade-delete its RSVPs) while it's still showing on the
+      // Calendar.
       const occurrences = getUpcomingOccurrences(
         toRecurrenceConfig(schedule),
         OCCURRENCES_TO_MATERIALIZE,
-        new Date(),
+        startOfToday(),
         new Set(schedule.skipped_dates)
       );
       const occurrenceTimes = new Set(occurrences.map((d) => d.getTime()));

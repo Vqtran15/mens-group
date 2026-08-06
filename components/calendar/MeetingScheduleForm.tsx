@@ -6,9 +6,10 @@ import { motion } from "framer-motion";
 import { WarningCircle, Clock, ArrowCounterClockwise } from "@phosphor-icons/react";
 import { createClient } from "@/lib/supabase/client";
 import { getCurrentMembership } from "@/lib/supabase/current-membership";
+import { OCCURRENCES_TO_MATERIALIZE, getUpcomingOccurrences, type RecurrenceConfig } from "@/lib/recurrence";
 import { SuccessButton, type SubmitStatus } from "@/components/ui/SuccessButton";
 import { Skeleton } from "@/components/ui/Skeleton";
-import { cn, formatDate, parseDateOnly, toDateOnlyString } from "@/lib/utils";
+import { cn, formatDate, parseDateOnly, startOfToday, toDateOnlyString } from "@/lib/utils";
 
 const fieldClass =
   "w-full min-w-0 max-w-full rounded-xl border border-border bg-white shadow-sm px-3 py-2.5 outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20";
@@ -181,15 +182,54 @@ export function MeetingScheduleForm() {
         return;
       }
 
-      // Already-materialized future occurrences were generated from the old
-      // rule (title, day/time, location) and won't match the new one - clear
-      // them out so Calendar's next load regenerates fresh ones from the
-      // updated schedule instead of showing stale entries alongside new ones.
-      await supabase
+      // Diff against the newly-saved rule instead of wiping every future
+      // occurrence unconditionally: an occurrence whose date/time is
+      // unaffected by this edit (e.g. only the location or label changed)
+      // keeps its existing row - and therefore its RSVPs - via the upsert's
+      // onConflict match below. Only occurrences whose time no longer
+      // matches the new day/time/skip rule get deleted, since those
+      // meetings themselves no longer exist under the new schedule.
+      const newConfig: RecurrenceConfig = {
+        dayOfWeek,
+        occurrencesInMonth: occurrences,
+        timeOfDay: time,
+        durationMinutes,
+      };
+      const newOccurrences = getUpcomingOccurrences(
+        newConfig,
+        OCCURRENCES_TO_MATERIALIZE,
+        startOfToday(),
+        new Set(skippedDates)
+      );
+      const newTimes = new Set(newOccurrences.map((d) => d.getTime()));
+
+      const { data: existingEvents } = await supabase
         .from("events")
-        .delete()
+        .select("id, starts_at")
         .eq("schedule_id", scheduleId)
-        .gte("starts_at", new Date().toISOString());
+        .gte("starts_at", startOfToday().toISOString());
+
+      const staleIds = (existingEvents ?? [])
+        .filter((e) => !newTimes.has(new Date(e.starts_at).getTime()))
+        .map((e) => e.id);
+
+      if (staleIds.length > 0) {
+        await supabase.from("events").delete().in("id", staleIds);
+      }
+
+      await supabase.from("events").upsert(
+        newOccurrences.map((date) => ({
+          title: label,
+          starts_at: date.toISOString(),
+          ends_at: new Date(date.getTime() + durationMinutes * 60_000).toISOString(),
+          location: location || null,
+          created_by: userId,
+          is_recurring: true,
+          schedule_id: scheduleId,
+          group_id: groupId,
+        })),
+        { onConflict: "schedule_id,starts_at" }
+      );
     } else {
       const { error } = await supabase.from("meeting_schedule").insert({
         label,
@@ -419,7 +459,7 @@ export function MeetingScheduleForm() {
 
       <p className="text-xs text-muted">
         {scheduleId
-          ? "Saving refreshes the upcoming meetings this schedule generates - any RSVPs already on them will be cleared."
+          ? "Saving refreshes the upcoming meetings this schedule generates. Changing the day or time replaces affected meetings (clearing their RSVPs) - other edits like location keep existing RSVPs intact."
           : "This generates the next few upcoming meetings on your Calendar automatically."}
       </p>
 

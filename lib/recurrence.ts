@@ -8,6 +8,13 @@ export interface RecurrenceConfig {
   durationMinutes: number;
 }
 
+// How many upcoming occurrences of a recurring schedule stay materialized as
+// `events` rows at once. Shared by CalendarView (which tops this up as
+// occurrences pass) and MeetingScheduleForm (which recomputes this same
+// window against a freshly saved schedule) so the two never disagree about
+// what "the next N occurrences" means.
+export const OCCURRENCES_TO_MATERIALIZE = 3;
+
 export function toRecurrenceConfig(schedule: MeetingSchedule): RecurrenceConfig {
   return {
     dayOfWeek: schedule.day_of_week,
