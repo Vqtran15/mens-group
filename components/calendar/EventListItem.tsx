@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { ChatText, DotsThreeVertical, MapPin } from "@phosphor-icons/react";
 import { createClient } from "@/lib/supabase/client";
-import { formatTime, toDateOnlyString } from "@/lib/utils";
+import { formatTime, startOfToday, toDateOnlyString } from "@/lib/utils";
 import { RSVPButtons } from "@/components/calendar/RSVPButtons";
 import { AttendeeList } from "@/components/calendar/AttendeeList";
 import { ConfirmSheet } from "@/components/ui/ConfirmSheet";
@@ -42,7 +42,21 @@ export function EventListItem({
   async function handleDelete() {
     const supabase = createClient();
     if (isRecurring && event.schedule_id) {
-      await supabase.from("meeting_schedule").delete().eq("id", event.schedule_id);
+      // Only clears future occurrences, then deactivates the schedule so it
+      // stops generating new ones - deleting the meeting_schedule row itself
+      // would cascade through every event ever tied to it (events.schedule_id
+      // has no date filter), wiping RSVP/attendance history for meetings
+      // that already happened, not just the "future occurrences" this
+      // action is meant to affect.
+      await supabase
+        .from("events")
+        .delete()
+        .eq("schedule_id", event.schedule_id)
+        .gte("starts_at", startOfToday().toISOString());
+      await supabase
+        .from("meeting_schedule")
+        .update({ active: false })
+        .eq("id", event.schedule_id);
     } else {
       await supabase.from("events").delete().eq("id", event.id);
     }
@@ -156,7 +170,11 @@ export function EventListItem({
       <ConfirmSheet
         open={skipConfirmOpen}
         title="Skip this meeting?"
-        description="This date won't appear on the calendar, but the rest of the series continues as usual."
+        description={
+          rsvps.length > 0
+            ? "This date won't appear on the calendar, but the rest of the series continues as usual. Existing RSVPs for this date will be cleared."
+            : "This date won't appear on the calendar, but the rest of the series continues as usual."
+        }
         confirmLabel="Skip"
         onConfirm={handleSkip}
         onCancel={() => setSkipConfirmOpen(false)}
