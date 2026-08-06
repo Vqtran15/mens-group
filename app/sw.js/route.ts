@@ -26,6 +26,12 @@ self.addEventListener("push", (event) => {
     badge: "/icons/icon-192.png",
     data: { url: data.url || "/" },
   };
+  // Only chat/reaction pushes (url: "/chat") represent an unread message -
+  // the meeting-reminder push has nothing to do with unread state. The app
+  // itself clears this the next time it's opened and re-evaluates chatUnread.
+  if (data.url === "/chat" && "setAppBadge" in navigator) {
+    navigator.setAppBadge(1);
+  }
   event.waitUntil(self.registration.showNotification(title, options));
 });
 
@@ -33,6 +39,31 @@ self.addEventListener("notificationclick", (event) => {
   event.notification.close();
   const url = event.notification.data?.url || "/";
   event.waitUntil(clients.openWindow(url));
+});
+
+// Cache-first for hashed, immutable static assets only - _next/static
+// chunks and /icons are content-hashed so a cache-first strategy can never
+// serve stale content for them. Everything else (HTML navigations, API/
+// Supabase calls) is left untouched (network-only) since those are
+// auth-gated/dynamic and must never be served from a cache.
+const STATIC_CACHE = "static-assets-v1";
+
+self.addEventListener("fetch", (event) => {
+  const url = new URL(event.request.url);
+  const isStaticAsset =
+    event.request.method === "GET" &&
+    (url.pathname.startsWith("/_next/static/") || url.pathname.startsWith("/icons/"));
+  if (!isStaticAsset) return;
+
+  event.respondWith(
+    caches.open(STATIC_CACHE).then(async (cache) => {
+      const cached = await cache.match(event.request);
+      if (cached) return cached;
+      const response = await fetch(event.request);
+      if (response.ok) cache.put(event.request, response.clone());
+      return response;
+    })
+  );
 });
 `;
 

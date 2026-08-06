@@ -79,6 +79,20 @@ export function UnreadIndicatorProvider({ children }: { children: React.ReactNod
     };
   }, []);
 
+  // Mirrors chatUnread onto the home-screen app icon badge (iOS/Android PWA
+  // installs). Feature-detected - most desktop browsers don't support the
+  // Badging API and this is a no-op there. This also covers clearing the
+  // badge that the service worker's push handler may have set while the app
+  // was closed, since this effect re-evaluates as soon as the app is opened.
+  useEffect(() => {
+    if (!("setAppBadge" in navigator)) return;
+    if (chatUnread) {
+      navigator.setAppBadge(1);
+    } else {
+      navigator.clearAppBadge();
+    }
+  }, [chatUnread]);
+
   function markChatSeen() {
     if (groupIdRef.current) {
       localStorage.setItem(chatSeenKey(groupIdRef.current), new Date().toISOString());
