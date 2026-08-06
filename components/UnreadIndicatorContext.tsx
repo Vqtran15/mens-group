@@ -84,12 +84,14 @@ export function UnreadIndicatorProvider({ children }: { children: React.ReactNod
   // Badging API and this is a no-op there. This also covers clearing the
   // badge that the service worker's push handler may have set while the app
   // was closed, since this effect re-evaluates as soon as the app is opened.
+  // Both calls can reject (e.g. not installed as a home-screen app) - not
+  // fatal, so swallow it instead of an unhandled rejection.
   useEffect(() => {
     if (!("setAppBadge" in navigator)) return;
     if (chatUnread) {
-      navigator.setAppBadge(1);
+      navigator.setAppBadge(1).catch(() => {});
     } else {
-      navigator.clearAppBadge();
+      navigator.clearAppBadge().catch(() => {});
     }
   }, [chatUnread]);
 

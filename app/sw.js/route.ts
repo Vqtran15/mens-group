@@ -29,8 +29,10 @@ self.addEventListener("push", (event) => {
   // Only chat/reaction pushes (url: "/chat") represent an unread message -
   // the meeting-reminder push has nothing to do with unread state. The app
   // itself clears this the next time it's opened and re-evaluates chatUnread.
+  // Rejects (e.g. not installed as a home-screen app) if the badge can't be
+  // set - not fatal, so swallow it instead of an unhandled rejection.
   if (data.url === "/chat" && "setAppBadge" in navigator) {
-    navigator.setAppBadge(1);
+    navigator.setAppBadge(1).catch(() => {});
   }
   event.waitUntil(self.registration.showNotification(title, options));
 });
@@ -42,11 +44,31 @@ self.addEventListener("notificationclick", (event) => {
 });
 
 // Cache-first for hashed, immutable static assets only - _next/static
-// chunks and /icons are content-hashed so a cache-first strategy can never
-// serve stale content for them. Everything else (HTML navigations, API/
-// Supabase calls) is left untouched (network-only) since those are
-// auth-gated/dynamic and must never be served from a cache.
-const STATIC_CACHE = "static-assets-v1";
+// chunks are content-hashed so cache-first can never serve stale content
+// for them. Everything else (HTML navigations, API/Supabase calls) is left
+// untouched (network-only) since those are auth-gated/dynamic and must
+// never be served from a cache.
+//
+// /icons/*.png filenames are NOT content-hashed, so they're cached under
+// this same build-tagged name rather than a fixed one: a stale icon would
+// otherwise be cached forever with no way to invalidate it. Tagging the
+// cache name with BUILD_VERSION (already used above to force the browser's
+// update check on every deploy) means a deploy that changes an icon also
+// gets a fresh cache automatically, and the activate handler below cleans
+// up the previous deploy's cache instead of letting it accumulate forever.
+const STATIC_CACHE = "static-assets-${BUILD_VERSION}";
+
+self.addEventListener("activate", (event) => {
+  event.waitUntil(
+    caches.keys().then((keys) =>
+      Promise.all(
+        keys
+          .filter((key) => key.startsWith("static-assets-") && key !== STATIC_CACHE)
+          .map((key) => caches.delete(key))
+      )
+    )
+  );
+});
 
 self.addEventListener("fetch", (event) => {
   const url = new URL(event.request.url);
