@@ -6,7 +6,7 @@ import { motion } from "framer-motion";
 import { WarningCircle, Clock, ArrowCounterClockwise } from "@phosphor-icons/react";
 import { createClient } from "@/lib/supabase/client";
 import { getCurrentMembership } from "@/lib/supabase/current-membership";
-import { OCCURRENCES_TO_MATERIALIZE, getUpcomingOccurrences, type RecurrenceConfig } from "@/lib/recurrence";
+import { reconcileScheduleEvents } from "@/lib/scheduleMaterialization";
 import { SuccessButton, type SubmitStatus } from "@/components/ui/SuccessButton";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { cn, formatDate, parseDateOnly, startOfToday, toDateOnlyString } from "@/lib/utils";
@@ -182,53 +182,39 @@ export function MeetingScheduleForm() {
         return;
       }
 
-      // Diff against the newly-saved rule instead of wiping every future
-      // occurrence unconditionally: an occurrence whose date/time is
+      // Reconciles against the newly-saved rule instead of wiping every
+      // future occurrence unconditionally: an occurrence whose date/time is
       // unaffected by this edit (e.g. only the location or label changed)
-      // keeps its existing row - and therefore its RSVPs - via the upsert's
-      // onConflict match below. Only occurrences whose time no longer
-      // matches the new day/time/skip rule get deleted, since those
-      // meetings themselves no longer exist under the new schedule.
-      const newConfig: RecurrenceConfig = {
-        dayOfWeek,
-        occurrencesInMonth: occurrences,
-        timeOfDay: time,
-        durationMinutes,
-      };
-      const newOccurrences = getUpcomingOccurrences(
-        newConfig,
-        OCCURRENCES_TO_MATERIALIZE,
-        startOfToday(),
-        new Set(skippedDates)
-      );
-      const newTimes = new Set(newOccurrences.map((d) => d.getTime()));
-
+      // keeps its existing row - and therefore its RSVPs. Only occurrences
+      // whose date no longer matches the new day/time/skip rule get
+      // deleted, since those meetings themselves no longer exist under the
+      // new schedule. Shared with CalendarView's own materialization so the
+      // two never drift into different reconciliation behavior.
       const { data: existingEvents } = await supabase
         .from("events")
-        .select("id, starts_at")
+        .select("id, starts_at, title, location")
         .eq("schedule_id", scheduleId)
         .gte("starts_at", startOfToday().toISOString());
 
-      const staleIds = (existingEvents ?? [])
-        .filter((e) => !newTimes.has(new Date(e.starts_at).getTime()))
-        .map((e) => e.id);
-
-      if (staleIds.length > 0) {
-        await supabase.from("events").delete().in("id", staleIds);
-      }
-
-      await supabase.from("events").upsert(
-        newOccurrences.map((date) => ({
-          title: label,
-          starts_at: date.toISOString(),
-          ends_at: new Date(date.getTime() + durationMinutes * 60_000).toISOString(),
+      await reconcileScheduleEvents(
+        supabase,
+        {
+          id: scheduleId,
+          label,
+          day_of_week: dayOfWeek,
+          occurrences_in_month: occurrences,
+          time_of_day: time,
+          duration_minutes: durationMinutes,
           location: location || null,
-          created_by: userId,
-          is_recurring: true,
-          schedule_id: scheduleId,
+          notes: null,
+          active: true,
           group_id: groupId,
-        })),
-        { onConflict: "schedule_id,starts_at" }
+          skipped_dates: skippedDates,
+          timezone,
+        },
+        existingEvents ?? [],
+        userId!,
+        groupId
       );
     } else {
       const { error } = await supabase.from("meeting_schedule").insert({

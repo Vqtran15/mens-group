@@ -6,7 +6,8 @@ import { motion } from "framer-motion";
 import { CalendarBlank, CaretRight, Repeat } from "@phosphor-icons/react";
 import { createClient } from "@/lib/supabase/client";
 import { getCurrentMembership } from "@/lib/supabase/current-membership";
-import { OCCURRENCES_TO_MATERIALIZE, getUpcomingOccurrences, toRecurrenceConfig } from "@/lib/recurrence";
+import { OCCURRENCES_TO_MATERIALIZE } from "@/lib/recurrence";
+import { reconcileScheduleEvents } from "@/lib/scheduleMaterialization";
 import { NextMeetingCard } from "@/components/calendar/NextMeetingCard";
 import { EventListItem } from "@/components/calendar/EventListItem";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -60,63 +61,10 @@ export function CalendarView() {
     setHasSchedule(!!schedule);
 
     if (schedule) {
-      // startOfToday(), not new Date(): the events query below also starts
-      // at startOfToday() so today's occurrence stays fetched/actionable for
-      // its whole calendar day (see the "meetings disappearing" fix). Using
-      // new Date() here instead would make that same occurrence fall out of
-      // this "upcoming" set the moment its start time passes - even though
-      // it's still today - and the staleness check below would then delete
-      // it (and cascade-delete its RSVPs) while it's still showing on the
-      // Calendar.
-      const occurrences = getUpcomingOccurrences(
-        toRecurrenceConfig(schedule),
-        OCCURRENCES_TO_MATERIALIZE,
-        startOfToday(),
-        new Set(schedule.skipped_dates)
-      );
-      const occurrenceTimes = new Set(occurrences.map((d) => d.getTime()));
       const scheduleEventRows = (eventRows ?? []).filter((e) => e.schedule_id === schedule.id);
+      const changed = await reconcileScheduleEvents(supabase, schedule, scheduleEventRows, currentUserId, groupId);
 
-      // Most loads already have every upcoming occurrence materialized from a
-      // prior visit - only pay for the write (and a re-fetch) when one is
-      // actually missing, instead of upserting identical rows every time.
-      const existingTimes = new Set(scheduleEventRows.map((e) => new Date(e.starts_at).getTime()));
-      const missing = occurrences.filter((date) => !existingTimes.has(date.getTime()));
-
-      // Anything already materialized beyond the current target count (e.g.
-      // left over from before OCCURRENCES_TO_MATERIALIZE was lowered) no
-      // longer belongs in "next N" and gets cleared out too, rather than
-      // lingering just because it was written under an older, higher count.
-      const staleIds = scheduleEventRows
-        .filter((e) => !occurrenceTimes.has(new Date(e.starts_at).getTime()))
-        .map((e) => e.id);
-
-      let needsRefresh = false;
-
-      if (missing.length > 0) {
-        const rows = missing.map((date) => {
-          const endsAt = new Date(date.getTime() + schedule.duration_minutes * 60_000);
-          return {
-            title: schedule.label,
-            starts_at: date.toISOString(),
-            ends_at: endsAt.toISOString(),
-            location: schedule.location,
-            created_by: currentUserId,
-            is_recurring: true,
-            schedule_id: schedule.id,
-            group_id: groupId,
-          };
-        });
-        await supabase.from("events").upsert(rows, { onConflict: "schedule_id,starts_at" });
-        needsRefresh = true;
-      }
-
-      if (staleIds.length > 0) {
-        await supabase.from("events").delete().in("id", staleIds);
-        needsRefresh = true;
-      }
-
-      if (needsRefresh) {
+      if (changed) {
         const { data: refreshedEventRows } = await supabase
           .from("events")
           .select(eventsSelect)

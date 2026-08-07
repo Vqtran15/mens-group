@@ -4,7 +4,8 @@ import { useState } from "react";
 import Link from "next/link";
 import { ChatText, DotsThreeVertical, MapPin } from "@phosphor-icons/react";
 import { createClient } from "@/lib/supabase/client";
-import { formatTime, startOfToday, toDateOnlyString } from "@/lib/utils";
+import { dateKeyInZone } from "@/lib/recurrence";
+import { formatTime, startOfToday } from "@/lib/utils";
 import { RSVPButtons } from "@/components/calendar/RSVPButtons";
 import { AttendeeList } from "@/components/calendar/AttendeeList";
 import { ConfirmSheet } from "@/components/ui/ConfirmSheet";
@@ -69,11 +70,18 @@ export function EventListItem({
     const supabase = createClient();
     const { data } = await supabase
       .from("meeting_schedule")
-      .select("skipped_dates")
+      .select("skipped_dates, timezone")
       .eq("id", event.schedule_id)
       .single();
+    // Keyed by the schedule's own timezone, not the viewer's browser - has
+    // to match how reconcileScheduleEvents reads the schedule's occurrence
+    // dates, or a skip recorded from a differently-clocked device could
+    // silently fail to suppress the occurrence it was meant to.
     const skippedDates = Array.from(
-      new Set([...(data?.skipped_dates ?? []), toDateOnlyString(startsAt)])
+      new Set([
+        ...(data?.skipped_dates ?? []),
+        dateKeyInZone(startsAt, data?.timezone ?? "America/Los_Angeles"),
+      ])
     );
     await supabase
       .from("meeting_schedule")
