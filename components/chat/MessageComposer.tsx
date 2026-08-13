@@ -136,14 +136,18 @@ export const MessageComposer = forwardRef<HTMLTextAreaElement, {
   }
 
   return (
+    // Floating, transparent margin wrapper - same approach as BottomNav -
+    // instead of a flush, opaque bar. Chat hides BottomNav (see AppLayout),
+    // so this is now the bottom-most element on the page and picks up the
+    // safe-area padding it would otherwise have relied on that for.
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.3, ease: "easeOut" }}
-      className="border-t border-border/60 bg-white/90 backdrop-blur-sm"
+      className="px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-2"
     >
       {replyingTo && (
-        <div className="flex items-center justify-between gap-2 border-b border-border/60 px-3 py-2 text-sm">
+        <div className="mb-2 flex items-center justify-between gap-2 rounded-2xl border border-border/60 bg-white/90 px-3 py-2 text-sm shadow-sm backdrop-blur-md">
           <p className="truncate text-secondary">
             Replying to <span className="font-medium">{replyingTo.profiles?.display_name ?? "Someone"}</span>:{" "}
             {replyingTo.body || (replyingTo.image_urls.length > 0 ? "Photo" : replyingTo.shared_title ?? "")}
@@ -154,7 +158,7 @@ export const MessageComposer = forwardRef<HTMLTextAreaElement, {
         </div>
       )}
       {imageFiles.length > 0 && (
-        <div className="flex items-center gap-2 overflow-x-auto px-3 py-2">
+        <div className="mb-2 flex items-center gap-2 overflow-x-auto">
           {imageFiles.map((file, i) => (
             <div
               key={`${file.name}-${i}`}
@@ -173,7 +177,12 @@ export const MessageComposer = forwardRef<HTMLTextAreaElement, {
           ))}
         </div>
       )}
-      <form onSubmit={handleSubmit} className="flex items-end gap-2 p-3">
+      {/* The whole bar - attach, emoji, input, send - is one pill, rather
+          than a plain input pill sitting inside a separate flush bar. */}
+      <form
+        onSubmit={handleSubmit}
+        className="flex items-end gap-1 rounded-full border border-border/60 bg-white/80 p-1.5 shadow-lg shadow-primary/10 backdrop-blur-lg"
+      >
         <input
           ref={fileInputRef}
           type="file"
@@ -186,13 +195,11 @@ export const MessageComposer = forwardRef<HTMLTextAreaElement, {
           type="button"
           onClick={() => fileInputRef.current?.click()}
           aria-label="Attach photos"
-          className="mb-1 rounded-full p-2 text-secondary transition-colors hover:bg-surface-muted"
+          className="shrink-0 rounded-full p-2 text-secondary transition-colors hover:bg-surface-muted"
         >
           <ImageIcon size={20} />
         </button>
-        <div className="mb-1">
-          <EmojiPickerPopover onSelect={(emoji) => setBody((b) => b + emoji)} />
-        </div>
+        <EmojiPickerPopover onSelect={(emoji) => setBody((b) => b + emoji)} />
         <div className="relative min-w-0 flex-1">
           {mentionMatches.length > 0 && (
             <div className="absolute bottom-full left-0 z-20 mb-2 w-56 overflow-hidden rounded-2xl border border-border bg-white shadow-xl">
@@ -216,12 +223,9 @@ export const MessageComposer = forwardRef<HTMLTextAreaElement, {
             onKeyDown={handleKeyDown}
             placeholder="Message..."
             rows={1}
-            // rounded-full rather than a fixed radius - it naturally caps at
-            // whatever the box's current height allows, so it reads as a
-            // true pill on the common single-line case (modern messaging
-            // apps' composer style) and still looks right once it grows to
-            // multiple lines, without needing a separate radius per state.
-            className="max-h-36 w-full resize-none overflow-y-auto rounded-full border border-border bg-white px-5 py-2 shadow-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
+            // No border/background of its own now - the form itself is the
+            // pill, so a nested one here would look like a pill-in-a-pill.
+            className="max-h-36 w-full resize-none overflow-y-auto bg-transparent px-2 py-2 outline-none"
           />
         </div>
         <motion.button
@@ -229,7 +233,7 @@ export const MessageComposer = forwardRef<HTMLTextAreaElement, {
           type="submit"
           disabled={!body.trim() && imageFiles.length === 0}
           aria-label="Send message"
-          className="mb-1 shrink-0 rounded-full bg-primary p-3 text-white shadow-md shadow-primary/30 disabled:opacity-60"
+          className="shrink-0 rounded-full bg-primary p-2.5 text-white shadow-md shadow-primary/30 disabled:opacity-60"
         >
           <PaperPlaneTilt size={18} weight="fill" />
         </motion.button>

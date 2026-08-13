@@ -8,6 +8,7 @@ import { ClockCounterClockwise, MagnifyingGlass, Plus } from "@phosphor-icons/re
 import { createClient } from "@/lib/supabase/client";
 import { getCurrentMembership } from "@/lib/supabase/current-membership";
 import { BottomNav } from "@/components/BottomNav";
+import { BackButton } from "@/components/ui/BackButton";
 import { SettingsLink } from "@/components/SettingsLink";
 import { PushPermissionPrompt } from "@/components/PushPermissionPrompt";
 import { AutoUpdater } from "@/components/AutoUpdater";
@@ -58,7 +59,13 @@ function AppHeader() {
 
   return (
     <header className="flex items-center justify-between bg-background px-4 py-3">
-      <span className="text-2xl font-extrabold tracking-tight text-primary">{title}</span>
+      <div className="flex items-center gap-2">
+        {/* Chat hides BottomNav (see below) to give the pill composer room,
+            so it's the one tab-root screen with no other way back to the
+            rest of the app - needs its own exit. */}
+        {pathname === "/chat" && <BackButton href="/calendar" />}
+        <span className="text-2xl font-extrabold tracking-tight text-primary">{title}</span>
+      </div>
       <div className="flex items-center gap-1">
         {pathname === "/topics" && <TopicsSearchToggle />}
         {pathname === "/topics" && <TopicsAddMenu />}
@@ -149,7 +156,11 @@ export default function AppLayout({
           <AutoUpdater />
           <PushPermissionPrompt />
           <main className="min-h-0 flex-1 overflow-y-auto">{children}</main>
-          <BottomNav />
+          {/* Hidden on Chat - the composer is now a full-width pill itself,
+              and having both it and the nav pill float at the bottom
+              crowded the space this was meant to open up. AppHeader's back
+              button covers getting back out of Chat instead. */}
+          {pathname !== "/chat" && <BottomNav />}
         </div>
       </TopicsSearchProvider>
     </UnreadIndicatorProvider>

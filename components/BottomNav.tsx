@@ -29,7 +29,12 @@ export function BottomNav() {
     // the pill float above the bottom edge; the bg/border/shadow/rounding
     // all live on the <ul> itself, which is the actual pill.
     <nav className="px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-1">
-      <ul className="flex rounded-full border border-border/60 bg-white/90 shadow-lg shadow-primary/10 backdrop-blur-md">
+      {/* More translucent than a typical card (bg-white/60 vs. the usual
+          /90-ish) so content keeps showing through as it scrolls underneath -
+          the frosted-glass look Instagram's floating nav has - with a
+          stronger blur to keep icons/labels legible against whatever's
+          moving behind it. */}
+      <ul className="flex rounded-full border border-border/60 bg-white/60 shadow-lg shadow-primary/10 backdrop-blur-xl">
         {TABS.map(({ href, label, icon: Icon }) => {
           const active = pathname.startsWith(href);
           const unread = unreadByHref[href];
