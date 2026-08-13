@@ -216,7 +216,12 @@ export const MessageComposer = forwardRef<HTMLTextAreaElement, {
             onKeyDown={handleKeyDown}
             placeholder="Message..."
             rows={1}
-            className="max-h-36 w-full resize-none overflow-y-auto rounded-2xl border border-border bg-white px-4 py-2 shadow-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
+            // rounded-full rather than a fixed radius - it naturally caps at
+            // whatever the box's current height allows, so it reads as a
+            // true pill on the common single-line case (modern messaging
+            // apps' composer style) and still looks right once it grows to
+            // multiple lines, without needing a separate radius per state.
+            className="max-h-36 w-full resize-none overflow-y-auto rounded-full border border-border bg-white px-5 py-2 shadow-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
           />
         </div>
         <motion.button

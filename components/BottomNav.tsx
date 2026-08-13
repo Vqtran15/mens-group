@@ -24,8 +24,12 @@ export function BottomNav() {
   };
 
   return (
-    <nav className="border-t border-border bg-white/90 pb-[env(safe-area-inset-bottom)] backdrop-blur-sm">
-      <ul className="flex">
+    // Floating pill instead of a flush full-width bar (Instagram/Facebook/
+    // GroupMe-style) - the outer <nav> only provides the margin that lets
+    // the pill float above the bottom edge; the bg/border/shadow/rounding
+    // all live on the <ul> itself, which is the actual pill.
+    <nav className="px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-1">
+      <ul className="flex rounded-full border border-border/60 bg-white/90 shadow-lg shadow-primary/10 backdrop-blur-md">
         {TABS.map(({ href, label, icon: Icon }) => {
           const active = pathname.startsWith(href);
           const unread = unreadByHref[href];
@@ -39,7 +43,7 @@ export function BottomNav() {
                 {active && (
                   <motion.div
                     layoutId="bottom-nav-pill"
-                    className="absolute inset-x-3 inset-y-1 rounded-xl bg-primary/10"
+                    className="absolute inset-x-2 inset-y-1 rounded-full bg-primary/10"
                     transition={{ type: "spring", stiffness: 500, damping: 35 }}
                   />
                 )}
