@@ -14,6 +14,17 @@
   --color-sand: #f4a261;          /* sandy orange — tertiary accent (e.g. RSVP "Maybe") */
 }
 
+/* html needs its own background, not just body's - iOS Safari can paint the
+   safe-area/chrome region at the very bottom of the screen using html's
+   background instead of body's. This was invisible behind the old,
+   opaque, full-bleed bottom nav bar; the new floating pill leaves a
+   transparent margin around it that exposed the gap - grey (Safari's
+   default) showing through where the app's own cream background should
+   be. */
+html {
+  background: var(--color-background);
+}
+
 body {
   background: var(--color-background);
   color: #2f2b27;
