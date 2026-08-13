@@ -23,9 +23,22 @@ export async function updateSession(request: NextRequest) {
     }
   );
 
+  // getSession() instead of getUser(): getUser() revalidates against
+  // Supabase's Auth server on every single request, which was blocking the
+  // entire HTML response (nothing paints, including the splash screen)
+  // behind a real network round trip on every navigation. getSession()
+  // reads the session from cookies with no network call in the common case
+  // (it still refreshes and rewrites the cookies via the callback above
+  // when a token is actually near expiry, same as before) - Supabase's own
+  // docs warn against trusting it server-side for authorization decisions
+  // since it doesn't cryptographically re-verify the token, but this
+  // middleware only ever makes a redirect/UX decision here - the actual
+  // data layer stays fully protected by RLS regardless of what a forged
+  // cookie could get past this check.
   const {
-    data: { user },
-  } = await supabase.auth.getUser();
+    data: { session },
+  } = await supabase.auth.getSession();
+  const user = session?.user ?? null;
 
   const isPublicPath = PUBLIC_PATHS.some((path) =>
     request.nextUrl.pathname.startsWith(path)
