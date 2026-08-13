@@ -181,7 +181,7 @@ export const MessageComposer = forwardRef<HTMLTextAreaElement, {
           than a plain input pill sitting inside a separate flush bar. */}
       <form
         onSubmit={handleSubmit}
-        className="flex items-end gap-1 rounded-full border border-border/60 bg-white/80 p-1.5 shadow-lg shadow-primary/10 backdrop-blur-lg"
+        className="flex items-end gap-1 rounded-full border border-border/60 bg-white/80 p-1.5 shadow-sm backdrop-blur-lg"
       >
         <input
           ref={fileInputRef}

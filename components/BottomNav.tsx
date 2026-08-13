@@ -33,8 +33,11 @@ export function BottomNav() {
           /90-ish) so content keeps showing through as it scrolls underneath -
           the frosted-glass look Instagram's floating nav has - with a
           stronger blur to keep icons/labels legible against whatever's
-          moving behind it. */}
-      <ul className="flex rounded-full border border-border/60 bg-white/60 shadow-lg shadow-primary/10 backdrop-blur-xl">
+          moving behind it. shadow-sm (not the larger, primary-tinted shadow
+          this had before) - a big diffuse tinted shadow behind a mostly-
+          transparent pill just reads as a grey haze hanging between the
+          pill and the page, not a natural drop shadow. */}
+      <ul className="flex rounded-full border border-border/60 bg-white/60 shadow-sm backdrop-blur-xl">
         {TABS.map(({ href, label, icon: Icon }) => {
           const active = pathname.startsWith(href);
           const unread = unreadByHref[href];
