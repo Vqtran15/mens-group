@@ -10,7 +10,7 @@ import { getCurrentMembership } from "@/lib/supabase/current-membership";
 import { BottomNav } from "@/components/BottomNav";
 import { SettingsLink } from "@/components/SettingsLink";
 import { PushPermissionPrompt } from "@/components/PushPermissionPrompt";
-import { UpdatePrompt } from "@/components/UpdatePrompt";
+import { AutoUpdater } from "@/components/AutoUpdater";
 import { OfflineBanner } from "@/components/OfflineBanner";
 import { TopicsSearchProvider, useTopicsSearch } from "@/components/topics/TopicsSearchContext";
 import { TopicsAddMenu } from "@/components/topics/TopicsAddMenu";
@@ -146,7 +146,7 @@ export default function AppLayout({
         <div className="flex h-dvh flex-col bg-background">
           <AppHeader />
           <OfflineBanner />
-          <UpdatePrompt />
+          <AutoUpdater />
           <PushPermissionPrompt />
           <main className="min-h-0 flex-1 overflow-y-auto">{children}</main>
           <BottomNav />

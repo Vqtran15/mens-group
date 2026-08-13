@@ -9,6 +9,7 @@ import { createClient } from "@/lib/supabase/client";
 import { Avatar, AVATAR_COLORS } from "@/components/Avatar";
 import { AvatarCropModal } from "@/components/settings/AvatarCropModal";
 import { NotificationSettings } from "@/components/settings/NotificationSettings";
+import { CheckForUpdateButton } from "@/components/settings/CheckForUpdateButton";
 import { Button } from "@/components/ui/Button";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { ConfirmSheet } from "@/components/ui/ConfirmSheet";
@@ -457,6 +458,19 @@ export function SettingsView() {
             )}
           </Button>
         </form>
+      </motion.section>
+
+      <motion.section
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.25, delay: 0.21, ease: "easeOut" }}
+        className="space-y-3 rounded-2xl border border-border/60 bg-white p-4 shadow-sm"
+      >
+        <h2 className="font-semibold text-primary">App</h2>
+        <p className="text-sm text-secondary">
+          Updates install automatically, but you can check right now instead of waiting.
+        </p>
+        <CheckForUpdateButton />
       </motion.section>
 
       <motion.section

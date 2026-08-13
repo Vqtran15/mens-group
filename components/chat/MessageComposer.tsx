@@ -12,6 +12,12 @@ import type { ChatMessage } from "@/lib/types";
 const MAX_TEXTAREA_HEIGHT_PX = 144;
 const MAX_MENTION_SUGGESTIONS = 5;
 
+// Persists an in-progress message across a forced reload (see AutoUpdater,
+// which applies a detected app update immediately with no confirmation) so
+// an unsent draft doesn't just vanish. Not scoped per-group since a member
+// only ever belongs to one group at a time in this app.
+const DRAFT_KEY = "chat-draft";
+
 export const MessageComposer = forwardRef<HTMLTextAreaElement, {
   onSend: (input: { body: string; imageFiles: File[] }) => void;
   replyingTo: ChatMessage | null;
@@ -35,6 +41,22 @@ export const MessageComposer = forwardRef<HTMLTextAreaElement, {
     if (!el) return;
     el.style.height = "auto";
     el.style.height = `${Math.min(el.scrollHeight, MAX_TEXTAREA_HEIGHT_PX)}px`;
+  }, [body]);
+
+  // Restored once on mount rather than in useState's initializer, since
+  // localStorage doesn't exist during server rendering and reading it there
+  // would be a hydration mismatch.
+  useEffect(() => {
+    const draft = localStorage.getItem(DRAFT_KEY);
+    if (draft) setBody(draft);
+  }, []);
+
+  useEffect(() => {
+    if (body) {
+      localStorage.setItem(DRAFT_KEY, body);
+    } else {
+      localStorage.removeItem(DRAFT_KEY);
+    }
   }, [body]);
 
   function handleSubmit(e: React.FormEvent) {
