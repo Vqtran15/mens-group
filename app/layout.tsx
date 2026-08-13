@@ -3,6 +3,7 @@ import { Plus_Jakarta_Sans } from "next/font/google";
 import Script from "next/script";
 import { SplashScreen } from "@/components/SplashScreen";
 import { ChunkErrorRecovery } from "@/components/ChunkErrorRecovery";
+import { ViewportFix } from "@/components/ViewportFix";
 import "./globals.css";
 
 const GA4_ID = process.env.NEXT_PUBLIC_GA4_MEASUREMENT_ID
@@ -58,6 +59,7 @@ export default function RootLayout({
             `}</Script>
           </>
         )}
+        <ViewportFix />
         <SplashScreen />
         <ChunkErrorRecovery />
         {children}

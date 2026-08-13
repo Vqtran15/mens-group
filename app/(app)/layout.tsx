@@ -145,12 +145,14 @@ export default function AppLayout({
   // Only block rendering on the very first check - once membership is
   // confirmed, later re-checks happen quietly and just redirect if needed,
   // instead of flashing this blank state on every navigation.
-  if (hasGroup === null) return <div className="h-dvh bg-background" />;
+  if (hasGroup === null) return <div className="bg-background" style={{ height: "var(--dvh, 100dvh)" }} />;
 
   return (
     <UnreadIndicatorProvider>
       <TopicsSearchProvider>
-        <div className="flex h-dvh flex-col bg-background">
+        {/* var(--dvh, 100dvh), not the h-dvh utility directly - see
+            ViewportFix, which corrects 100dvh's own iOS unreliability. */}
+        <div className="flex flex-col bg-background" style={{ height: "var(--dvh, 100dvh)" }}>
           <AppHeader />
           <OfflineBanner />
           <AutoUpdater />

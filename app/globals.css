@@ -25,10 +25,28 @@ html {
   background: var(--color-background);
 }
 
+/* --sab/--sat: env()-backed fallback, overridden with a JS-measured value
+   by ViewportFix once available (see components/ViewportFix.tsx) - iOS can
+   report env(safe-area-inset-bottom) as 0 both before a scroll event has
+   ever fired AND whenever the document isn't taller than the viewport,
+   which is exactly this app's shell (only the inner content area scrolls,
+   not body itself). The bottom nav pill and chat composer read --sab
+   instead of env() directly for this reason. */
+:root {
+  --sab: env(safe-area-inset-bottom, 0px);
+  --sat: env(safe-area-inset-top, 0px);
+}
+
 body {
   background: var(--color-background);
   color: #2f2b27;
   font-family: var(--font-sans), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  /* 1px taller than the viewport, not equal to it - satisfies iOS's "is
+     this document scrollable" check that env(safe-area-inset-bottom)
+     otherwise silently depends on, per the comment above. Invisible in
+     practice: nothing meaningful lives in that extra 1px, and nothing
+     else about the layout shifts. */
+  min-height: calc(100dvh + 1px);
 }
 
 /* Unlayered (outside @layer), so this beats any text-sm/text-xs utility

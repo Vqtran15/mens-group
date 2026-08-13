@@ -140,11 +140,14 @@ export const MessageComposer = forwardRef<HTMLTextAreaElement, {
     // instead of a flush, opaque bar. Chat hides BottomNav (see AppLayout),
     // so this is now the bottom-most element on the page and picks up the
     // safe-area padding it would otherwise have relied on that for.
+    // var(--sab), not env(safe-area-inset-bottom) directly - see
+    // ViewportFix/globals.css for why the raw env() value can't be trusted
+    // in this app's shell.
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.3, ease: "easeOut" }}
-      className="px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-2"
+      className="px-3 pb-[max(0.75rem,var(--sab,0px))] pt-2"
     >
       {replyingTo && (
         <div className="mb-2 flex items-center justify-between gap-2 rounded-2xl border border-border/60 bg-white/90 px-3 py-2 text-sm shadow-sm backdrop-blur-md">
