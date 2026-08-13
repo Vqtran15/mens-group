@@ -36,8 +36,13 @@ export function BottomNav() {
           moving behind it. shadow-sm (not the larger, primary-tinted shadow
           this had before) - a big diffuse tinted shadow behind a mostly-
           transparent pill just reads as a grey haze hanging between the
-          pill and the page, not a natural drop shadow. */}
-      <ul className="flex rounded-full border border-border/60 bg-white/60 shadow-sm backdrop-blur-xl">
+          pill and the page, not a natural drop shadow. overflow-hidden is
+          load-bearing here, not decorative - without it, some browsers
+          don't clip backdrop-blur's own paint area to the rounded-full
+          shape, so the blur's rectangular bounding box can show through as
+          a visible grey rectangle behind the pill instead of following its
+          curve. */}
+      <ul className="flex overflow-hidden rounded-full border border-border/60 bg-white/60 shadow-sm backdrop-blur-xl">
         {TABS.map(({ href, label, icon: Icon }) => {
           const active = pathname.startsWith(href);
           const unread = unreadByHref[href];

@@ -178,11 +178,15 @@ export const MessageComposer = forwardRef<HTMLTextAreaElement, {
         </div>
       )}
       {/* The whole bar - attach, emoji, input, send - is one pill, rather
-          than a plain input pill sitting inside a separate flush bar. */}
-      <form
-        onSubmit={handleSubmit}
-        className="flex items-end gap-1 rounded-full border border-border/60 bg-white/80 p-1.5 shadow-sm backdrop-blur-lg"
-      >
+          than a plain input pill sitting inside a separate flush bar. The
+          pill's background/blur is a separate absolutely-positioned layer
+          (clipped via its own overflow-hidden, fixing backdrop-blur's
+          rectangular-bounding-box clipping bug against rounded-full)
+          instead of living directly on <form> - putting overflow-hidden on
+          <form> itself would also clip the @mention dropdown below, which
+          intentionally renders outside the form's own box (bottom-full). */}
+      <form onSubmit={handleSubmit} className="relative flex items-end gap-1 rounded-full p-1.5">
+        <div className="absolute inset-0 -z-10 overflow-hidden rounded-full border border-border/60 bg-white/80 shadow-sm backdrop-blur-lg" />
         <input
           ref={fileInputRef}
           type="file"
