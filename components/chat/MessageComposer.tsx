@@ -193,7 +193,7 @@ export const MessageComposer = forwardRef<HTMLTextAreaElement, {
           would escape past it and stack behind the *page's* background
           instead of just behind its own siblings - making the whole pill
           invisible (this is exactly what happened without it). */}
-      <form onSubmit={handleSubmit} className="relative isolate flex items-end gap-1 rounded-full p-1.5">
+      <form onSubmit={handleSubmit} className="relative isolate flex items-center gap-1 rounded-full p-1.5">
         <div className="absolute inset-0 -z-10 overflow-hidden rounded-full border border-border/60 bg-white/80 shadow-sm backdrop-blur-lg" />
         <input
           ref={fileInputRef}
