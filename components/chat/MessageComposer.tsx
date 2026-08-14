@@ -144,8 +144,8 @@ export const MessageComposer = forwardRef<HTMLTextAreaElement, {
     // ViewportFix/globals.css for why the raw env() value can't be trusted
     // in this app's shell.
     <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
+      initial={{ opacity: 0, y: 16 }}
+      animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3, ease: "easeOut" }}
       className="px-3 pb-[max(0.75rem,var(--sab,0px))] pt-2"
     >
