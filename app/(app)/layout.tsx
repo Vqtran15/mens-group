@@ -57,6 +57,15 @@ const slideVariants = {
   exit: (direction: number) => ({ x: direction >= 0 ? -48 : 48, opacity: 0 }),
 };
 
+// Same shape as slideVariants, smaller offset - a header title is a couple
+// words, not a full page, so sliding it the same 48px as the content below
+// reads as too big a jump for how little space it occupies.
+const titleSlideVariants = {
+  enter: (direction: number) => ({ x: direction >= 0 ? 16 : -16, opacity: 0 }),
+  center: { x: 0, opacity: 1 },
+  exit: (direction: number) => ({ x: direction >= 0 ? -16 : 16, opacity: 0 }),
+};
+
 function TopicsSearchToggle() {
   const { open, setOpen } = useTopicsSearch();
   return (
@@ -71,7 +80,7 @@ function TopicsSearchToggle() {
   );
 }
 
-function AppHeader() {
+function AppHeader({ direction }: { direction: number }) {
   const pathname = usePathname();
   const title =
     SECTION_TITLES.find((section) => pathname.startsWith(section.prefix))?.title ?? "Men's Group";
@@ -84,7 +93,26 @@ function AppHeader() {
             so it's the one tab-root screen with no other way back to the
             rest of the app - needs its own exit. */}
         {pathname === "/chat" && <BackButton href="/calendar" />}
-        <span className="text-2xl font-extrabold tracking-tight text-primary">{title}</span>
+        {/* Keyed on title, not pathname - sub-pages within the same section
+            (e.g. /calendar/new) share the "Calendar" title, and shouldn't
+            replay this transition just because the path changed underneath
+            an unchanged heading. */}
+        <span className="relative inline-block">
+          <AnimatePresence mode="popLayout" initial={false} custom={direction}>
+            <motion.span
+              key={title}
+              custom={direction}
+              variants={titleSlideVariants}
+              initial="enter"
+              animate="center"
+              exit="exit"
+              transition={{ duration: 0.22, ease: "easeOut" }}
+              className="block text-2xl font-extrabold tracking-tight text-primary"
+            >
+              {title}
+            </motion.span>
+          </AnimatePresence>
+        </span>
       </div>
       <div className="flex items-center gap-1">
         {pathname === "/topics" && <TopicsSearchToggle />}
@@ -193,7 +221,7 @@ export default function AppLayout({
         {/* var(--dvh, 100dvh), not the h-dvh utility directly - see
             ViewportFix, which corrects 100dvh's own iOS unreliability. */}
         <div className="flex flex-col bg-background" style={{ height: "var(--dvh, 100dvh)" }}>
-          <AppHeader />
+          <AppHeader direction={direction} />
           <OfflineBanner />
           <AutoUpdater />
           <PushPermissionPrompt />
