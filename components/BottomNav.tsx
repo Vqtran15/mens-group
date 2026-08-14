@@ -24,14 +24,24 @@ export function BottomNav() {
   };
 
   return (
-    // Floating pill instead of a flush full-width bar (Instagram/Facebook/
-    // GroupMe-style) - the outer <nav> only provides the margin that lets
-    // the pill float above the bottom edge; the bg/border/shadow/rounding
-    // all live on the <ul> itself, which is the actual pill.
+    // Fixed overlay, not a normal-flow flex sibling of <main> - the latter
+    // is what was actually causing the "grey rectangle behind the pill"
+    // reports: as a normal-flow element, this <nav> claimed its own row
+    // below the scrollable area, so the page's own background color always
+    // showed through its transparent margins as a solid band, and content
+    // could never scroll underneath it no matter how translucent the pill
+    // itself was. Fixed positioning overlays it directly on top of <main>
+    // (which now pads its bottom by the pill's height - see AppLayout), so
+    // scrolled content actually passes behind the translucent/blurred pill,
+    // the Instagram-style effect this was always meant to have.
+    // pointer-events-none/auto split - the <nav>'s own padding is only a
+    // transparent margin for the pill to float in, not part of the pill
+    // itself, so it shouldn't intercept taps/scroll meant for the content
+    // now sitting underneath it.
     // var(--sab), not env(safe-area-inset-bottom) directly - see
     // ViewportFix/globals.css for why the raw env() value can't be trusted
     // in this app's shell.
-    <nav className="px-4 pb-[max(0.75rem,var(--sab,0px))] pt-1">
+    <nav className="pointer-events-none fixed inset-x-0 bottom-0 z-20 px-4 pb-[max(0.75rem,var(--sab,0px))] pt-1">
       {/* More translucent than a typical card (bg-white/60 vs. the usual
           /90-ish) so content keeps showing through as it scrolls underneath -
           the frosted-glass look Instagram's floating nav has - with a
@@ -45,7 +55,7 @@ export function BottomNav() {
           shape, so the blur's rectangular bounding box can show through as
           a visible grey rectangle behind the pill instead of following its
           curve. */}
-      <ul className="flex overflow-hidden rounded-full border border-border/60 bg-white/60 shadow-sm backdrop-blur-xl">
+      <ul className="pointer-events-auto flex overflow-hidden rounded-full border border-border/60 bg-white/60 shadow-sm backdrop-blur-xl">
         {TABS.map(({ href, label, icon: Icon }) => {
           const active = pathname.startsWith(href);
           const unread = unreadByHref[href];

@@ -16,6 +16,7 @@ import { OfflineBanner } from "@/components/OfflineBanner";
 import { TopicsSearchProvider, useTopicsSearch } from "@/components/topics/TopicsSearchContext";
 import { TopicsAddMenu } from "@/components/topics/TopicsAddMenu";
 import { UnreadIndicatorProvider } from "@/components/UnreadIndicatorContext";
+import { cn } from "@/lib/utils";
 
 const SECTION_TITLES: { prefix: string; title: string }[] = [
   { prefix: "/calendar", title: "Calendar" },
@@ -153,6 +154,10 @@ export default function AppLayout({
   const router = useRouter();
   const pathname = usePathname();
   const [hasGroup, setHasGroup] = useState<boolean | null>(null);
+  // Chat hides BottomNav for its own composer pill instead (see below) -
+  // every other route reserves space for it via bottom padding, now that
+  // it's a fixed overlay rather than a normal-flow row.
+  const showBottomNav = pathname !== "/chat";
 
   // -1 for anything that isn't exactly a tab root (sub-pages like
   // /calendar/new, /settings, etc.) - those keep their existing per-page
@@ -225,8 +230,21 @@ export default function AppLayout({
           <OfflineBanner />
           <AutoUpdater />
           <PushPermissionPrompt />
+          {/* BottomNav is a fixed overlay (see BottomNav.tsx), not a normal-
+              flow sibling - it no longer claims its own row here, so the
+              scroll containers below reserve that space themselves via
+              bottom padding, tall enough to clear the pill (roughly its own
+              height plus the safe-area inset) so the last item can still
+              scroll fully into view above it rather than under it. */}
           {tabIndex === -1 ? (
-            <main className="min-h-0 flex-1 overflow-y-auto">{children}</main>
+            <main
+              className={cn(
+                "min-h-0 flex-1 overflow-y-auto",
+                showBottomNav && "pb-[calc(5rem+var(--sab,0px))]"
+              )}
+            >
+              {children}
+            </main>
           ) : (
             <main className="relative min-h-0 flex-1 overflow-hidden">
               <AnimatePresence mode="popLayout" initial={false} custom={direction}>
@@ -238,7 +256,10 @@ export default function AppLayout({
                   animate="center"
                   exit="exit"
                   transition={{ duration: 0.22, ease: "easeOut" }}
-                  className="h-full overflow-y-auto"
+                  className={cn(
+                    "h-full overflow-y-auto",
+                    showBottomNav && "pb-[calc(5rem+var(--sab,0px))]"
+                  )}
                 >
                   {children}
                 </motion.div>
@@ -249,7 +270,7 @@ export default function AppLayout({
               and having both it and the nav pill float at the bottom
               crowded the space this was meant to open up. AppHeader's back
               button covers getting back out of Chat instead. */}
-          {pathname !== "/chat" && <BottomNav />}
+          {showBottomNav && <BottomNav />}
         </div>
       </TopicsSearchProvider>
     </UnreadIndicatorProvider>
