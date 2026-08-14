@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useContext, useEffect, useState } from "react";
 import Link from "next/link";
 import { AnimatePresence, motion } from "framer-motion";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname, useRouter, useSelectedLayoutSegment } from "next/navigation";
+import { LayoutRouterContext } from "next/dist/shared/lib/app-router-context.shared-runtime";
 import { ClockCounterClockwise, MagnifyingGlass, Plus } from "@phosphor-icons/react";
 import { createClient } from "@/lib/supabase/client";
 import { getCurrentMembership } from "@/lib/supabase/current-membership";
@@ -66,6 +67,47 @@ const titleSlideVariants = {
   center: { x: 0, opacity: 1 },
   exit: (direction: number) => ({ x: direction >= 0 ? -16 : 16, opacity: 0 }),
 };
+
+// Tracks the previous *distinct* value across renders without reading a ref
+// during render (disallowed by this project's react-hooks/refs rule).
+function usePreviousValue<T>(value: T): T | undefined {
+  const [current, setCurrent] = useState(value);
+  const [previous, setPrevious] = useState<T | undefined>(undefined);
+  if (value !== current) {
+    setPrevious(current);
+    setCurrent(value);
+  }
+  return previous;
+}
+
+// Load-bearing, not decorative - without this, the tab-slide below animated
+// correctly but showed the *wrong content*: the "exiting" tab's page
+// silently swapped to the new tab's content mid-slide instead of staying on
+// its own content while it animated away. Root cause: Next's
+// LayoutRouterContext (which tells the <LayoutRouter> further down inside
+// {children} which segment to actually render) is a live, shared reference
+// from an ancestor, not a per-navigation snapshot - so simply keying a
+// motion.div by pathname doesn't freeze what's inside it, since the deep
+// router component reads this context directly and live regardless of
+// which "old" element wraps it. Confirmed with a real two-route Playwright
+// test against a production build (a mocked/local-state version of the
+// same AnimatePresence pattern didn't reveal the bug at all - it only shows
+// up against real Next.js route children). Freezing the context
+// specifically for the instance whose own segment just changed is the
+// documented fix for this class of bug in Next.js App Router + Framer
+// Motion exit animations.
+function FrozenRouter({ children }: { children: React.ReactNode }) {
+  const context = useContext(LayoutRouterContext);
+  const prevContext = usePreviousValue(context) ?? null;
+  const segment = useSelectedLayoutSegment();
+  const prevSegment = usePreviousValue(segment);
+  const changed = segment !== prevSegment && segment !== undefined && prevSegment !== undefined;
+  return (
+    <LayoutRouterContext.Provider value={changed ? prevContext : context}>
+      {children}
+    </LayoutRouterContext.Provider>
+  );
+}
 
 function TopicsSearchToggle() {
   const { open, setOpen } = useTopicsSearch();
@@ -261,7 +303,7 @@ export default function AppLayout({
                     showBottomNav && "pb-[calc(5rem+var(--sab,0px))]"
                   )}
                 >
-                  {children}
+                  <FrozenRouter>{children}</FrozenRouter>
                 </motion.div>
               </AnimatePresence>
             </main>

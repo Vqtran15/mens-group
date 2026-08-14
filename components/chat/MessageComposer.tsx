@@ -1,6 +1,7 @@
 "use client";
 
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { motion } from "framer-motion";
 import { At, Image as ImageIcon, PaperPlaneTilt, X } from "@phosphor-icons/react";
 import { EmojiPickerPopover } from "@/components/chat/EmojiPickerPopover";
@@ -32,6 +33,18 @@ export const MessageComposer = forwardRef<HTMLTextAreaElement, {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const bodyInputRef = useRef<HTMLTextAreaElement>(null);
   useImperativeHandle(forwardedRef, () => bodyInputRef.current as HTMLTextAreaElement);
+
+  // Portalled to document.body rather than rendered in place - see the
+  // return statement below for why (this component sits several levels
+  // deep inside AppLayout's tab-slide AnimatePresence wrapper, which
+  // applies a CSS transform while animating; a `position: fixed` descendant
+  // of a transformed ancestor is fixed to *that ancestor's* box, not the
+  // real viewport, so without the portal this would visibly drag along with
+  // the page during every tab transition into or out of Chat instead of
+  // staying pinned to the screen edge). document.body doesn't exist during
+  // SSR, hence the mounted gate.
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
 
   // Re-measures on every change to body, not just keystrokes in this field -
   // the emoji picker and "replying to" state both set body programmatically,
@@ -135,11 +148,21 @@ export const MessageComposer = forwardRef<HTMLTextAreaElement, {
     if (fileInputRef.current) fileInputRef.current.value = "";
   }
 
-  return (
-    // Floating, transparent margin wrapper - same approach as BottomNav -
-    // instead of a flush, opaque bar. Chat hides BottomNav (see AppLayout),
-    // so this is now the bottom-most element on the page and picks up the
-    // safe-area padding it would otherwise have relied on that for.
+  if (!mounted) return null;
+
+  return createPortal(
+    // Fixed overlay, not a normal-flow row - same fix as BottomNav's
+    // (see BottomNav.tsx): in normal flow, this claimed its own row below
+    // the message list, so the page's own background always showed through
+    // its transparent margins as a solid band, and messages could never
+    // scroll underneath no matter how translucent the pill was. Now it
+    // overlays the bottom of the screen directly, and ChatView pads its
+    // scroll container's bottom to clear it instead of it taking up flex
+    // space - see ChatView.tsx.
+    // pointer-events-none/auto split - the padding around the actual
+    // content (reply banner, image chips, pill) is a transparent margin,
+    // not part of any of those, so it shouldn't block taps/scroll on
+    // messages now sitting underneath it.
     // var(--sab), not env(safe-area-inset-bottom) directly - see
     // ViewportFix/globals.css for why the raw env() value can't be trusted
     // in this app's shell.
@@ -147,109 +170,112 @@ export const MessageComposer = forwardRef<HTMLTextAreaElement, {
       initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3, ease: "easeOut" }}
-      className="px-3 pb-[max(0.75rem,var(--sab,0px))] pt-2"
+      className="pointer-events-none fixed inset-x-0 bottom-0 z-20 px-3 pb-[max(0.75rem,var(--sab,0px))] pt-2"
     >
-      {replyingTo && (
-        <div className="mb-2 flex items-center justify-between gap-2 rounded-2xl border border-border/60 bg-white/90 px-3 py-2 text-sm shadow-sm backdrop-blur-md">
-          <p className="truncate text-secondary">
-            Replying to <span className="font-medium">{replyingTo.profiles?.display_name ?? "Someone"}</span>:{" "}
-            {replyingTo.body || (replyingTo.image_urls.length > 0 ? "Photo" : replyingTo.shared_title ?? "")}
-          </p>
-          <button type="button" onClick={onCancelReply} aria-label="Cancel reply" className="shrink-0 text-muted">
-            <X size={16} />
-          </button>
-        </div>
-      )}
-      {imageFiles.length > 0 && (
-        <div className="mb-2 flex items-center gap-2 overflow-x-auto">
-          {imageFiles.map((file, i) => (
-            <div
-              key={`${file.name}-${i}`}
-              className="relative flex shrink-0 items-center gap-1.5 rounded-full bg-surface-muted py-1 pl-3 pr-1.5 text-sm"
-            >
-              <p className="max-w-[120px] truncate text-secondary">{file.name}</p>
-              <button
-                type="button"
-                onClick={() => removeImageAt(i)}
-                aria-label={`Remove ${file.name}`}
-                className="shrink-0 rounded-full p-1 text-muted transition-colors hover:bg-border/60"
+      <div className="pointer-events-auto">
+        {replyingTo && (
+          <div className="mb-2 flex items-center justify-between gap-2 rounded-2xl border border-border/60 bg-white/90 px-3 py-2 text-sm shadow-sm backdrop-blur-md">
+            <p className="truncate text-secondary">
+              Replying to <span className="font-medium">{replyingTo.profiles?.display_name ?? "Someone"}</span>:{" "}
+              {replyingTo.body || (replyingTo.image_urls.length > 0 ? "Photo" : replyingTo.shared_title ?? "")}
+            </p>
+            <button type="button" onClick={onCancelReply} aria-label="Cancel reply" className="shrink-0 text-muted">
+              <X size={16} />
+            </button>
+          </div>
+        )}
+        {imageFiles.length > 0 && (
+          <div className="mb-2 flex items-center gap-2 overflow-x-auto">
+            {imageFiles.map((file, i) => (
+              <div
+                key={`${file.name}-${i}`}
+                className="relative flex shrink-0 items-center gap-1.5 rounded-full bg-surface-muted py-1 pl-3 pr-1.5 text-sm"
               >
-                <X size={14} />
-              </button>
-            </div>
-          ))}
-        </div>
-      )}
-      {/* The whole bar - attach, emoji, input, send - is one pill, rather
-          than a plain input pill sitting inside a separate flush bar. The
-          pill's background/blur is a separate absolutely-positioned layer
-          (clipped via its own overflow-hidden, fixing backdrop-blur's
-          rectangular-bounding-box clipping bug against rounded-full)
-          instead of living directly on <form> - putting overflow-hidden on
-          <form> itself would also clip the @mention dropdown below, which
-          intentionally renders outside the form's own box (bottom-full). */}
-      {/* isolate is load-bearing, not decorative: relative alone doesn't
-          give <form> its own stacking context, so the backdrop's -z-10
-          would escape past it and stack behind the *page's* background
-          instead of just behind its own siblings - making the whole pill
-          invisible (this is exactly what happened without it). */}
-      <form onSubmit={handleSubmit} className="relative isolate flex items-center gap-1 rounded-full p-1.5">
-        <div className="absolute inset-0 -z-10 overflow-hidden rounded-full border border-border/60 bg-white/80 shadow-sm backdrop-blur-lg" />
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept="image/*"
-          multiple
-          className="hidden"
-          onChange={(e) => setImageFiles((prev) => [...prev, ...Array.from(e.target.files ?? [])])}
-        />
-        <button
-          type="button"
-          onClick={() => fileInputRef.current?.click()}
-          aria-label="Attach photos"
-          className="shrink-0 rounded-full p-2 text-secondary transition-colors hover:bg-surface-muted"
-        >
-          <ImageIcon size={20} />
-        </button>
-        <EmojiPickerPopover onSelect={(emoji) => setBody((b) => b + emoji)} />
-        <div className="relative min-w-0 flex-1">
-          {mentionMatches.length > 0 && (
-            <div className="absolute bottom-full left-0 z-20 mb-2 w-56 overflow-hidden rounded-2xl border border-border bg-white shadow-xl">
-              {mentionMatches.map((name) => (
+                <p className="max-w-[120px] truncate text-secondary">{file.name}</p>
                 <button
-                  key={name}
                   type="button"
-                  onClick={() => selectMention(name)}
-                  className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-secondary transition-colors hover:bg-surface-muted"
+                  onClick={() => removeImageAt(i)}
+                  aria-label={`Remove ${file.name}`}
+                  className="shrink-0 rounded-full p-1 text-muted transition-colors hover:bg-border/60"
                 >
-                  <At size={14} className="shrink-0 text-muted" />
-                  {name}
+                  <X size={14} />
                 </button>
-              ))}
-            </div>
-          )}
-          <textarea
-            ref={bodyInputRef}
-            value={body}
-            onChange={handleBodyChange}
-            onKeyDown={handleKeyDown}
-            placeholder="Message..."
-            rows={1}
-            // No border/background of its own now - the form itself is the
-            // pill, so a nested one here would look like a pill-in-a-pill.
-            className="max-h-36 w-full resize-none overflow-y-auto bg-transparent px-2 py-2 outline-none"
+              </div>
+            ))}
+          </div>
+        )}
+        {/* The whole bar - attach, emoji, input, send - is one pill, rather
+            than a plain input pill sitting inside a separate flush bar. The
+            pill's background/blur is a separate absolutely-positioned layer
+            (clipped via its own overflow-hidden, fixing backdrop-blur's
+            rectangular-bounding-box clipping bug against rounded-full)
+            instead of living directly on <form> - putting overflow-hidden on
+            <form> itself would also clip the @mention dropdown below, which
+            intentionally renders outside the form's own box (bottom-full). */}
+        {/* isolate is load-bearing, not decorative: relative alone doesn't
+            give <form> its own stacking context, so the backdrop's -z-10
+            would escape past it and stack behind the *page's* background
+            instead of just behind its own siblings - making the whole pill
+            invisible (this is exactly what happened without it). */}
+        <form onSubmit={handleSubmit} className="relative isolate flex items-center gap-1 rounded-full p-1.5">
+          <div className="absolute inset-0 -z-10 overflow-hidden rounded-full border border-border/60 bg-white/80 shadow-sm backdrop-blur-lg" />
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            multiple
+            className="hidden"
+            onChange={(e) => setImageFiles((prev) => [...prev, ...Array.from(e.target.files ?? [])])}
           />
-        </div>
-        <motion.button
-          whileTap={{ scale: 0.85, rotate: -15 }}
-          type="submit"
-          disabled={!body.trim() && imageFiles.length === 0}
-          aria-label="Send message"
-          className="shrink-0 rounded-full bg-primary p-2.5 text-white shadow-md shadow-primary/30 disabled:opacity-60"
-        >
-          <PaperPlaneTilt size={18} weight="fill" />
-        </motion.button>
-      </form>
-    </motion.div>
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            aria-label="Attach photos"
+            className="shrink-0 rounded-full p-2 text-secondary transition-colors hover:bg-surface-muted"
+          >
+            <ImageIcon size={20} />
+          </button>
+          <EmojiPickerPopover onSelect={(emoji) => setBody((b) => b + emoji)} />
+          <div className="relative min-w-0 flex-1">
+            {mentionMatches.length > 0 && (
+              <div className="absolute bottom-full left-0 z-20 mb-2 w-56 overflow-hidden rounded-2xl border border-border bg-white shadow-xl">
+                {mentionMatches.map((name) => (
+                  <button
+                    key={name}
+                    type="button"
+                    onClick={() => selectMention(name)}
+                    className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-secondary transition-colors hover:bg-surface-muted"
+                  >
+                    <At size={14} className="shrink-0 text-muted" />
+                    {name}
+                  </button>
+                ))}
+              </div>
+            )}
+            <textarea
+              ref={bodyInputRef}
+              value={body}
+              onChange={handleBodyChange}
+              onKeyDown={handleKeyDown}
+              placeholder="Message..."
+              rows={1}
+              // No border/background of its own now - the form itself is the
+              // pill, so a nested one here would look like a pill-in-a-pill.
+              className="max-h-36 w-full resize-none overflow-y-auto bg-transparent px-2 py-2 outline-none"
+            />
+          </div>
+          <motion.button
+            whileTap={{ scale: 0.85, rotate: -15 }}
+            type="submit"
+            disabled={!body.trim() && imageFiles.length === 0}
+            aria-label="Send message"
+            className="shrink-0 rounded-full bg-primary p-2.5 text-white shadow-md shadow-primary/30 disabled:opacity-60"
+          >
+            <PaperPlaneTilt size={18} weight="fill" />
+          </motion.button>
+        </form>
+      </div>
+    </motion.div>,
+    document.body
   );
 });

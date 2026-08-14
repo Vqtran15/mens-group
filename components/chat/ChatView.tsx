@@ -759,7 +759,12 @@ export function ChatView() {
         <div
           ref={containerRef}
           data-chat-scroll-container
-          className="h-full overflow-y-auto p-4"
+          // Bottom padding clears the composer, which is now a fixed
+          // overlay (portalled to document.body - see MessageComposer.tsx)
+          // rather than a normal-flow row, so this container no longer has
+          // its height reduced by it automatically. Same clearance value as
+          // BottomNav's own (see AppLayout) for a consistent-feeling gap.
+          className="h-full overflow-y-auto p-4 pb-[calc(5rem+var(--sab,0px))]"
         >
           {/* The message list swaps between skeleton and real content in
               place, rather than the whole view (composer included) being a
@@ -873,7 +878,11 @@ export function ChatView() {
               exit={{ opacity: 0, y: 10, x: "-50%" }}
               transition={{ duration: 0.2, ease: "easeOut" }}
               onClick={scrollToLatest}
-              className="absolute bottom-3 left-1/2 flex items-center gap-1.5 rounded-full bg-primary px-3.5 py-2 text-sm font-medium text-white shadow-lg shadow-primary/30"
+              // bottom-3 used to sit just above the composer for free, back
+              // when it was a normal-flow row right below this container.
+              // Now that it's a fixed overlay (see MessageComposer.tsx),
+              // this has to clear it explicitly using the same offset.
+              className="absolute bottom-[calc(5rem+var(--sab,0px)+0.75rem)] left-1/2 flex items-center gap-1.5 rounded-full bg-primary px-3.5 py-2 text-sm font-medium text-white shadow-lg shadow-primary/30"
             >
               <ArrowDown size={16} weight="bold" /> Jump to latest
             </motion.button>

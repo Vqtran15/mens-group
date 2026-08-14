@@ -11,7 +11,6 @@ import { reconcileScheduleEvents } from "@/lib/scheduleMaterialization";
 import { NextMeetingCard } from "@/components/calendar/NextMeetingCard";
 import { EventListItem } from "@/components/calendar/EventListItem";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { PullToRefresh } from "@/components/ui/PullToRefresh";
 import { startOfToday, toDateOnlyString } from "@/lib/utils";
 import type { CalendarEvent, MeetingSchedule, RelatedTopic, Rsvp } from "@/lib/types";
 
@@ -129,7 +128,6 @@ export function CalendarView() {
   const [nextMeeting, ...rest] = events;
 
   return (
-    <PullToRefresh onRefresh={() => loadEvents(userId, groupId)}>
     <div className="space-y-4 p-4">
       {nextMeeting && (
         <NextMeetingCard
@@ -186,6 +184,5 @@ export function CalendarView() {
         </div>
       )}
     </div>
-    </PullToRefresh>
   );
 }
