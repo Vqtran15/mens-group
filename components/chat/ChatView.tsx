@@ -744,37 +744,9 @@ export function ChatView() {
     }
   }
 
-  if (loading || !userId) {
-    return (
-      <div className="flex h-full flex-col">
-        <div className="flex-1 space-y-4 overflow-y-auto p-4">
-          <div className="flex gap-2">
-            <Skeleton className="h-8 w-8 shrink-0 rounded-full" />
-            <Skeleton className="h-12 w-2/3 rounded-2xl" />
-          </div>
-          <div className="flex flex-row-reverse gap-2">
-            <Skeleton className="h-8 w-8 shrink-0 rounded-full" />
-            <Skeleton className="h-10 w-1/2 rounded-2xl" />
-          </div>
-          <div className="flex gap-2">
-            <Skeleton className="h-8 w-8 shrink-0 rounded-full" />
-            <Skeleton className="h-16 w-2/3 rounded-2xl" />
-          </div>
-          <div className="flex flex-row-reverse gap-2">
-            <Skeleton className="h-8 w-8 shrink-0 rounded-full" />
-            <Skeleton className="h-12 w-1/3 rounded-2xl" />
-          </div>
-        </div>
-        <div className="flex items-center gap-2 border-t border-border bg-white p-3">
-          <Skeleton className="h-10 flex-1 rounded-full" />
-          <Skeleton className="h-10 w-10 shrink-0 rounded-full" />
-        </div>
-      </div>
-    );
-  }
-
   const messagesById = new Map(messages.map((m) => [m.id, m]));
   const actionSheetMessage = actionSheetMessageId ? messagesById.get(actionSheetMessageId) : null;
+  const showSkeleton = loading || !userId;
 
   return (
     <div className="flex h-full flex-col">
@@ -789,76 +761,107 @@ export function ChatView() {
           data-chat-scroll-container
           className="h-full overflow-y-auto p-4"
         >
-          {loadingMoreHistory && (
-            <div className="flex justify-center pb-3">
-              <CircleNotch size={18} className="animate-spin text-muted" />
+          {/* The message list swaps between skeleton and real content in
+              place, rather than the whole view (composer included) being a
+              separate early return - the composer used to unmount/remount
+              (replaying its entrance animation) the instant messages
+              finished loading, right after already appearing as a plain,
+              differently-styled skeleton bar - a jarring flicker rather than
+              one smooth entrance. Now it mounts once, in its final form,
+              alongside the rest of the page. */}
+          {showSkeleton ? (
+            <div className="space-y-4">
+              <div className="flex gap-2">
+                <Skeleton className="h-8 w-8 shrink-0 rounded-full" />
+                <Skeleton className="h-12 w-2/3 rounded-2xl" />
+              </div>
+              <div className="flex flex-row-reverse gap-2">
+                <Skeleton className="h-8 w-8 shrink-0 rounded-full" />
+                <Skeleton className="h-10 w-1/2 rounded-2xl" />
+              </div>
+              <div className="flex gap-2">
+                <Skeleton className="h-8 w-8 shrink-0 rounded-full" />
+                <Skeleton className="h-16 w-2/3 rounded-2xl" />
+              </div>
+              <div className="flex flex-row-reverse gap-2">
+                <Skeleton className="h-8 w-8 shrink-0 rounded-full" />
+                <Skeleton className="h-12 w-1/3 rounded-2xl" />
+              </div>
             </div>
-          )}
-          {!hasMoreHistory && !loadingMoreHistory && messages.length > 0 && (
-            <p className="pb-3 text-center text-xs text-muted">Beginning of conversation</p>
-          )}
-          {messages.length === 0 && (
-            <EmptyState
-              icon={HandWaving}
-              title="Say hello!"
-              subtitle="This is the start of your group chat. Send the first message."
-              onClick={() => composerInputRef.current?.focus()}
-            />
-          )}
-          {messages.map((message, index) => {
-            const previous = messages[index - 1];
-            const showDaySeparator =
-              !previous || !isSameLocalDay(new Date(message.created_at), new Date(previous.created_at));
-            const showNewDivider = message.id === firstUnreadId;
-            return (
-            <div key={message.id} data-message-id={message.id} ref={observeMessageEl}>
-              {showDaySeparator && (
-                // Each message has its own wrapper div (for a stable
-                // per-message DOM handle - see observeMessageEl), so this
-                // separator is always its wrapper's first child; a
-                // first:mt-0 CSS class would zero the top margin on every
-                // separator, not just the one at the very top of the whole
-                // list, collapsing it flush against the previous bubble.
-                <div className={cn("my-4 flex items-center justify-center", index === 0 && "mt-0")}>
-                  <span className="rounded-full bg-surface-muted px-3 py-1 text-xs font-medium text-secondary">
-                    {chatDayLabel(new Date(message.created_at))}
-                  </span>
+          ) : (
+            <>
+              {loadingMoreHistory && (
+                <div className="flex justify-center pb-3">
+                  <CircleNotch size={18} className="animate-spin text-muted" />
                 </div>
               )}
-              {showNewDivider && !showDaySeparator && (
-                <div className="my-4 flex items-center gap-2">
-                  <div className="h-px flex-1 bg-accent/40" />
-                  <span className="text-xs font-medium text-accent">New messages</span>
-                  <div className="h-px flex-1 bg-accent/40" />
-                </div>
+              {!hasMoreHistory && !loadingMoreHistory && messages.length > 0 && (
+                <p className="pb-3 text-center text-xs text-muted">Beginning of conversation</p>
               )}
-              <MessageBubble
-                message={message}
-                isOwn={message.created_by === userId}
-                pending={message.pending}
-                uploadingImages={message.uploadingImages}
-                failed={message.failed}
-                groupStart={isGroupStart(message, messages[index - 1])}
-                isFirstMessage={index === 0}
-                reactions={reactionsByMessage[message.id] ?? []}
-                currentUserId={userId}
-                replyToMessage={message.reply_to_id ? messagesById.get(message.reply_to_id) : null}
-                replyToDeleted={Boolean(message.reply_to_id) && !messagesById.has(message.reply_to_id ?? "")}
-                isEditing={editingMessageId === message.id}
-                resolveImageUrl={(raw) => resolvedImageUrls[raw] ?? null}
-                memberNames={memberNames}
-                onDoubleTapReact={() => handleToggleReaction(message.id, DEFAULT_REACTION)}
-                onOpenActions={() => setActionSheetMessageId(message.id)}
-                onToggleReaction={(emoji) => handleToggleReaction(message.id, emoji)}
-                onSaveEdit={(body) => handleSaveEdit(message.id, body)}
-                onCancelEdit={() => setEditingMessageId(null)}
-                onRetry={() => handleRetrySend(message)}
-                onDiscardFailed={() => handleDiscardFailed(message)}
-              />
-            </div>
-            );
-          })}
-          <div ref={bottomRef} />
+              {messages.length === 0 && (
+                <EmptyState
+                  icon={HandWaving}
+                  title="Say hello!"
+                  subtitle="This is the start of your group chat. Send the first message."
+                  onClick={() => composerInputRef.current?.focus()}
+                />
+              )}
+              {messages.map((message, index) => {
+                const previous = messages[index - 1];
+                const showDaySeparator =
+                  !previous || !isSameLocalDay(new Date(message.created_at), new Date(previous.created_at));
+                const showNewDivider = message.id === firstUnreadId;
+                return (
+                <div key={message.id} data-message-id={message.id} ref={observeMessageEl}>
+                  {showDaySeparator && (
+                    // Each message has its own wrapper div (for a stable
+                    // per-message DOM handle - see observeMessageEl), so this
+                    // separator is always its wrapper's first child; a
+                    // first:mt-0 CSS class would zero the top margin on every
+                    // separator, not just the one at the very top of the whole
+                    // list, collapsing it flush against the previous bubble.
+                    <div className={cn("my-4 flex items-center justify-center", index === 0 && "mt-0")}>
+                      <span className="rounded-full bg-surface-muted px-3 py-1 text-xs font-medium text-secondary">
+                        {chatDayLabel(new Date(message.created_at))}
+                      </span>
+                    </div>
+                  )}
+                  {showNewDivider && !showDaySeparator && (
+                    <div className="my-4 flex items-center gap-2">
+                      <div className="h-px flex-1 bg-accent/40" />
+                      <span className="text-xs font-medium text-accent">New messages</span>
+                      <div className="h-px flex-1 bg-accent/40" />
+                    </div>
+                  )}
+                  <MessageBubble
+                    message={message}
+                    isOwn={message.created_by === userId}
+                    pending={message.pending}
+                    uploadingImages={message.uploadingImages}
+                    failed={message.failed}
+                    groupStart={isGroupStart(message, messages[index - 1])}
+                    isFirstMessage={index === 0}
+                    reactions={reactionsByMessage[message.id] ?? []}
+                    currentUserId={userId}
+                    replyToMessage={message.reply_to_id ? messagesById.get(message.reply_to_id) : null}
+                    replyToDeleted={Boolean(message.reply_to_id) && !messagesById.has(message.reply_to_id ?? "")}
+                    isEditing={editingMessageId === message.id}
+                    resolveImageUrl={(raw) => resolvedImageUrls[raw] ?? null}
+                    memberNames={memberNames}
+                    onDoubleTapReact={() => handleToggleReaction(message.id, DEFAULT_REACTION)}
+                    onOpenActions={() => setActionSheetMessageId(message.id)}
+                    onToggleReaction={(emoji) => handleToggleReaction(message.id, emoji)}
+                    onSaveEdit={(body) => handleSaveEdit(message.id, body)}
+                    onCancelEdit={() => setEditingMessageId(null)}
+                    onRetry={() => handleRetrySend(message)}
+                    onDiscardFailed={() => handleDiscardFailed(message)}
+                  />
+                </div>
+                );
+              })}
+              <div ref={bottomRef} />
+            </>
+          )}
         </div>
 
         <AnimatePresence>

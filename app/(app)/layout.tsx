@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { motion } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 import { usePathname, useRouter } from "next/navigation";
 import { ClockCounterClockwise, MagnifyingGlass, Plus } from "@phosphor-icons/react";
 import { createClient } from "@/lib/supabase/client";
@@ -36,6 +36,26 @@ const ADD_ACTIONS: { path: string; href: string; label: string }[] = [
 ];
 
 const MotionLink = motion.create(Link);
+
+// Matches BottomNav's left-to-right tab order, so switching tabs slides the
+// incoming page in from whichever side it actually sits on (like a segmented
+// control or Android's ViewPager), rather than every tab switch defaulting
+// to the same direction. Not exported from BottomNav itself - this is the
+// only other place tab order matters, and duplicating four route strings is
+// simpler than threading a shared export through for it.
+const TAB_HREFS = ["/calendar", "/topics", "/chat", "/tools"];
+
+// Functions of `custom`, not static objects computed from a closed-over
+// `direction` - AnimatePresence re-broadcasts a fresh `custom` value to
+// already-exiting children (see the `custom` prop below), but only variant
+// functions actually re-read it. A plain object would freeze the *outgoing*
+// page's exit direction at whatever it was when that page itself entered,
+// which is the previous transition's direction, not the current one.
+const slideVariants = {
+  enter: (direction: number) => ({ x: direction >= 0 ? 48 : -48, opacity: 0 }),
+  center: { x: 0, opacity: 1 },
+  exit: (direction: number) => ({ x: direction >= 0 ? -48 : 48, opacity: 0 }),
+};
 
 function TopicsSearchToggle() {
   const { open, setOpen } = useTopicsSearch();
@@ -106,6 +126,26 @@ export default function AppLayout({
   const pathname = usePathname();
   const [hasGroup, setHasGroup] = useState<boolean | null>(null);
 
+  // -1 for anything that isn't exactly a tab root (sub-pages like
+  // /calendar/new, /settings, etc.) - those keep their existing per-page
+  // PageEnter transition untouched; only actual tab-to-tab switches get the
+  // sliding treatment below.
+  const tabIndex = TAB_HREFS.indexOf(pathname);
+  // Deriving "previous tab index" via a ref read during render is exactly
+  // what the newer react-hooks/refs rule forbids - this is React's own
+  // sanctioned alternative ("adjusting state during render"): comparing
+  // against state and calling its setter mid-render bails out and re-renders
+  // immediately with the update already applied, before anything commits to
+  // the screen, so no ref and no extra effect round-trip are needed.
+  const [prevTabIndex, setPrevTabIndex] = useState(tabIndex);
+  const [direction, setDirection] = useState(1);
+  if (tabIndex !== prevTabIndex) {
+    if (tabIndex !== -1 && prevTabIndex !== -1) {
+      setDirection(Math.sign(tabIndex - prevTabIndex));
+    }
+    setPrevTabIndex(tabIndex);
+  }
+
   // Re-checks on every navigation, not just on first mount - Next.js keeps
   // this layout mounted across sibling routes under (app), so a mount-only
   // check would miss a group disappearing (e.g. deleted by its creator)
@@ -157,7 +197,26 @@ export default function AppLayout({
           <OfflineBanner />
           <AutoUpdater />
           <PushPermissionPrompt />
-          <main className="min-h-0 flex-1 overflow-y-auto">{children}</main>
+          {tabIndex === -1 ? (
+            <main className="min-h-0 flex-1 overflow-y-auto">{children}</main>
+          ) : (
+            <main className="relative min-h-0 flex-1 overflow-hidden">
+              <AnimatePresence mode="popLayout" initial={false} custom={direction}>
+                <motion.div
+                  key={pathname}
+                  custom={direction}
+                  variants={slideVariants}
+                  initial="enter"
+                  animate="center"
+                  exit="exit"
+                  transition={{ duration: 0.22, ease: "easeOut" }}
+                  className="h-full overflow-y-auto"
+                >
+                  {children}
+                </motion.div>
+              </AnimatePresence>
+            </main>
+          )}
           {/* Hidden on Chat - the composer is now a full-width pill itself,
               and having both it and the nav pill float at the bottom
               crowded the space this was meant to open up. AppHeader's back
