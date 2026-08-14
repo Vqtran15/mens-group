@@ -764,7 +764,16 @@ export function ChatView() {
           // rather than a normal-flow row, so this container no longer has
           // its height reduced by it automatically. Same clearance value as
           // BottomNav's own (see AppLayout) for a consistent-feeling gap.
-          className="h-full overflow-y-auto p-4 pb-[calc(5rem+var(--sab,0px))]"
+          // scroll-pb (not just pb) is load-bearing: plain padding sits
+          // *after* the scroll target in the DOM (bottomRef, or the first
+          // unread message), so scrollIntoView's own "how far is enough"
+          // calculation doesn't reliably treat it as space to leave
+          // visible - it can end up landing right at the padding's inner
+          // edge instead, leaving the actual last message tucked behind the
+          // composer. scroll-padding-bottom insets every scrollIntoView
+          // call in this container by exactly this much, so the target
+          // always clears the pill, not just usually.
+          className="h-full overflow-y-auto p-4 pb-[calc(5rem+var(--sab,0px))] scroll-pb-[calc(5rem+var(--sab,0px))]"
         >
           {/* The message list swaps between skeleton and real content in
               place, rather than the whole view (composer included) being a
