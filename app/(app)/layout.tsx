@@ -201,24 +201,28 @@ export default function AppLayout({
   // it's a fixed overlay rather than a normal-flow row.
   const showBottomNav = pathname !== "/chat";
 
-  // -1 for anything that isn't exactly a tab root (sub-pages like
-  // /calendar/new, /settings, etc.) - those keep their existing per-page
-  // PageEnter transition untouched; only actual tab-to-tab switches get the
-  // sliding treatment below.
-  const tabIndex = TAB_HREFS.indexOf(pathname);
+  // -1 for anything that isn't under a tab at all (e.g. /settings) - those
+  // keep the plain, unwrapped branch below. This is deliberately a *prefix*
+  // match, not an exact one: /calendar/new, /tools/resources, etc. all
+  // belong to their tab's subtree too, and need to land in the wrapped
+  // branch alongside their tab root - see the comment on the branch itself
+  // for why that's load-bearing, not just for consistency.
+  const activeTabIndex = TAB_HREFS.findIndex(
+    (href) => pathname === href || pathname.startsWith(`${href}/`)
+  );
   // Deriving "previous tab index" via a ref read during render is exactly
   // what the newer react-hooks/refs rule forbids - this is React's own
   // sanctioned alternative ("adjusting state during render"): comparing
   // against state and calling its setter mid-render bails out and re-renders
   // immediately with the update already applied, before anything commits to
   // the screen, so no ref and no extra effect round-trip are needed.
-  const [prevTabIndex, setPrevTabIndex] = useState(tabIndex);
+  const [prevTabIndex, setPrevTabIndex] = useState(activeTabIndex);
   const [direction, setDirection] = useState(1);
-  if (tabIndex !== prevTabIndex) {
-    if (tabIndex !== -1 && prevTabIndex !== -1) {
-      setDirection(Math.sign(tabIndex - prevTabIndex));
+  if (activeTabIndex !== prevTabIndex) {
+    if (activeTabIndex !== -1 && prevTabIndex !== -1) {
+      setDirection(Math.sign(activeTabIndex - prevTabIndex));
     }
-    setPrevTabIndex(tabIndex);
+    setPrevTabIndex(activeTabIndex);
   }
 
   // Re-checks on every navigation, not just on first mount - Next.js keeps
@@ -278,7 +282,7 @@ export default function AppLayout({
               bottom padding, tall enough to clear the pill (roughly its own
               height plus the safe-area inset) so the last item can still
               scroll fully into view above it rather than under it. */}
-          {tabIndex === -1 ? (
+          {activeTabIndex === -1 ? (
             <main
               className={cn(
                 "min-h-0 flex-1 overflow-y-auto",
@@ -289,9 +293,24 @@ export default function AppLayout({
             </main>
           ) : (
             <main className="relative min-h-0 flex-1 overflow-hidden">
+              {/* Keyed on the *tab*, not the raw pathname - sub-pages within
+                  a tab (e.g. /tools/resources) share their tab root's key,
+                  so this wrapper's shape and identity stay stable across
+                  navigation within a tab and only actually change (playing
+                  the slide) on a genuine tab-to-tab switch. Keying on
+                  pathname directly used to force this whole branch to
+                  remount on every /tools <-> /tools/resources-style
+                  navigation - both because the *other* branch (the plain
+                  one above) doesn't exist here at all for an exact-pathname
+                  key, and because any nested layout further down inside
+                  {children} (e.g. app/(app)/tools/layout.tsx's own
+                  list<->card push/pop) got torn down and rebuilt from
+                  scratch every time, discarding its own transition-tracking
+                  state before it ever got to animate - in both directions,
+                  not just one. */}
               <AnimatePresence mode="popLayout" initial={false} custom={direction}>
                 <motion.div
-                  key={pathname}
+                  key={TAB_HREFS[activeTabIndex]}
                   custom={direction}
                   variants={slideVariants}
                   initial="enter"
