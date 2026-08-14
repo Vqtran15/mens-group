@@ -19,6 +19,9 @@ export function EmptyState({
 
   return (
     <Container
+      initial={{ opacity: 0, y: 12 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.25, ease: "easeOut" }}
       {...(onClick ? { type: "button", onClick, whileTap: { scale: 0.98 } } : {})}
       className={cn(
         "flex w-full flex-col items-center gap-2 rounded-2xl border border-dashed border-border bg-white/60 px-6 py-10 text-center",
