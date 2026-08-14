@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { ArrowDown, CircleNotch, HandWaving } from "@phosphor-icons/react";
 import { createClient } from "@/lib/supabase/client";
@@ -93,6 +93,13 @@ export function ChatView() {
   // the state directly would freeze loadMoreMessages's view of these at
   // whatever they were on that one render.
   const messagesRef = useRef<PendingChatMessage[]>([]);
+  // Same reasoning as messagesRef - handleToggleReaction needs to read
+  // whatever reactions currently exist for a message without itself
+  // depending on reactionsByMessage, so it can stay a stable useCallback
+  // (see below) instead of getting a new identity - and forcing every
+  // mounted MessageBubble to re-render - on every single reaction anywhere
+  // in the conversation.
+  const reactionsByMessageRef = useRef<Record<string, Reaction[]>>({});
   const hasMoreHistoryRef = useRef(true);
   const loadingMoreHistoryRef = useRef(false);
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -353,6 +360,10 @@ export function ChatView() {
     messagesRef.current = messages;
   }, [messages]);
 
+  useEffect(() => {
+    reactionsByMessageRef.current = reactionsByMessage;
+  }, [reactionsByMessage]);
+
   // Guards against the scroll listener seeing the in-flight frames of our
   // own smooth-scroll-to-bottom as "the user scrolled away" and flashing the
   // jump-to-latest button back on before the animation settles.
@@ -540,9 +551,15 @@ export function ChatView() {
   // Shared by both the initial send and a retry tap - a retry reuses the
   // same bubble (tempId) and the same local preview blobs rather than
   // starting over, so the user doesn't lose their place or re-pick photos.
-  async function sendMessagePayload(tempId: string, payload: RetryPayload) {
+  // Reads userIdRef instead of the userId state directly, and is wrapped in
+  // useCallback with an empty dependency array - it only ever closes over
+  // refs and stable setState functions, so this is safe and keeps it (and
+  // handleRetrySend, which calls it) from getting a new identity on every
+  // render, same as the other per-message handlers below.
+  const sendMessagePayload = useCallback(async (tempId: string, payload: RetryPayload) => {
     const { body, imageFiles, previewUrls, replyToId } = payload;
-    if (!userId || !groupIdRef.current) return;
+    const currentUserId = userIdRef.current;
+    if (!currentUserId || !groupIdRef.current) return;
     const supabase = createClient();
 
     setMessages((prev) =>
@@ -569,7 +586,7 @@ export function ChatView() {
       .from("chat_messages")
       .insert({
         body,
-        created_by: userId,
+        created_by: currentUserId,
         group_id: groupIdRef.current,
         image_urls: imageUrls,
         reply_to_id: replyToId,
@@ -610,7 +627,7 @@ export function ChatView() {
         setResolvedImageUrls((prev) => ({ ...prev, ...resolved }));
       });
     }
-  }
+  }, []);
 
   async function handleSend({ body, imageFiles }: { body: string; imageFiles: File[] }) {
     if (!userId || !groupIdRef.current) return;
@@ -656,23 +673,40 @@ export function ChatView() {
     await sendMessagePayload(tempId, retryPayload);
   }
 
-  function handleRetrySend(message: PendingChatMessage) {
-    if (!message.retryPayload) return;
+  // Takes just the id (not the whole message) and looks it up via
+  // messagesRef - MessageBubble's own `message` prop is typed as the base
+  // ChatMessage (it never needed the pending/retryPayload fields directly,
+  // those arrive as separate props), so handing back an id instead of the
+  // object avoids a type mismatch against PendingChatMessage while keeping
+  // this stable via the same ref-based pattern as everything else here.
+  const handleRetrySend = useCallback((messageId: string) => {
+    const message = messagesRef.current.find((m) => m.id === messageId);
+    if (!message?.retryPayload) return;
     sendMessagePayload(message.id, message.retryPayload);
-  }
+  }, [sendMessagePayload]);
 
-  function handleDiscardFailed(message: PendingChatMessage) {
+  const handleDiscardFailed = useCallback((messageId: string) => {
+    const message = messagesRef.current.find((m) => m.id === messageId);
+    if (!message) return;
     message.image_urls.forEach((url) => {
       if (url.startsWith("blob:")) URL.revokeObjectURL(url);
     });
-    setMessages((prev) => prev.filter((m) => m.id !== message.id));
-  }
+    setMessages((prev) => prev.filter((m) => m.id !== messageId));
+  }, []);
 
-  async function handleToggleReaction(messageId: string, emoji: string) {
-    if (!userId) return;
+  // Reads reactionsByMessageRef instead of the reactionsByMessage state
+  // directly, and userIdRef instead of userId - both purely so this can
+  // have an empty dependency array and stay referentially stable across
+  // every reaction anywhere in the conversation, not just ones on this
+  // particular message. Without that, every mounted MessageBubble (which
+  // all receive this same function as a prop) would re-render whenever
+  // anyone reacted to anything, defeating React.memo on MessageBubble.
+  const handleToggleReaction = useCallback(async (messageId: string, emoji: string) => {
+    const currentUserId = userIdRef.current;
+    if (!currentUserId) return;
     const supabase = createClient();
-    const existing = (reactionsByMessage[messageId] ?? []).find(
-      (r) => r.user_id === userId && r.emoji === emoji
+    const existing = (reactionsByMessageRef.current[messageId] ?? []).find(
+      (r) => r.user_id === currentUserId && r.emoji === emoji
     );
 
     if (existing) {
@@ -685,7 +719,7 @@ export function ChatView() {
       const tempReaction: Reaction = {
         id: crypto.randomUUID(),
         message_id: messageId,
-        user_id: userId,
+        user_id: currentUserId,
         emoji,
         created_at: new Date().toISOString(),
       };
@@ -695,7 +729,7 @@ export function ChatView() {
       }));
       const { data } = await supabase
         .from("message_reactions")
-        .insert({ message_id: messageId, user_id: userId, emoji })
+        .insert({ message_id: messageId, user_id: currentUserId, emoji })
         .select()
         .single();
       if (data) {
@@ -711,9 +745,19 @@ export function ChatView() {
         });
       }
     }
-  }
+  }, []);
 
-  async function handleSaveEdit(messageId: string, newBody: string) {
+  // Fixed-emoji shorthand for double-tap-to-react - stable for the same
+  // reason as handleToggleReaction itself (which this just wraps).
+  const handleDoubleTapReact = useCallback(
+    (messageId: string) => handleToggleReaction(messageId, DEFAULT_REACTION),
+    [handleToggleReaction]
+  );
+  const handleOpenActions = useCallback((messageId: string) => setActionSheetMessageId(messageId), []);
+  const handleCancelEdit = useCallback(() => setEditingMessageId(null), []);
+  const resolveImageUrl = useCallback((raw: string) => resolvedImageUrls[raw] ?? null, [resolvedImageUrls]);
+
+  const handleSaveEdit = useCallback(async (messageId: string, newBody: string) => {
     const supabase = createClient();
     const editedAt = new Date().toISOString();
     setMessages((prev) =>
@@ -721,7 +765,7 @@ export function ChatView() {
     );
     setEditingMessageId(null);
     await supabase.from("chat_messages").update({ body: newBody, edited_at: editedAt }).eq("id", messageId);
-  }
+  }, []);
 
   async function handleDeleteMessage(message: PendingChatMessage) {
     const messageId = message.id;
@@ -744,7 +788,7 @@ export function ChatView() {
     }
   }
 
-  const messagesById = new Map(messages.map((m) => [m.id, m]));
+  const messagesById = useMemo(() => new Map(messages.map((m) => [m.id, m])), [messages]);
   const actionSheetMessage = actionSheetMessageId ? messagesById.get(actionSheetMessageId) : null;
   const showSkeleton = loading || !userId;
 
@@ -860,15 +904,15 @@ export function ChatView() {
                     replyToMessage={message.reply_to_id ? messagesById.get(message.reply_to_id) : null}
                     replyToDeleted={Boolean(message.reply_to_id) && !messagesById.has(message.reply_to_id ?? "")}
                     isEditing={editingMessageId === message.id}
-                    resolveImageUrl={(raw) => resolvedImageUrls[raw] ?? null}
+                    resolveImageUrl={resolveImageUrl}
                     memberNames={memberNames}
-                    onDoubleTapReact={() => handleToggleReaction(message.id, DEFAULT_REACTION)}
-                    onOpenActions={() => setActionSheetMessageId(message.id)}
-                    onToggleReaction={(emoji) => handleToggleReaction(message.id, emoji)}
-                    onSaveEdit={(body) => handleSaveEdit(message.id, body)}
-                    onCancelEdit={() => setEditingMessageId(null)}
-                    onRetry={() => handleRetrySend(message)}
-                    onDiscardFailed={() => handleDiscardFailed(message)}
+                    onDoubleTapReact={handleDoubleTapReact}
+                    onOpenActions={handleOpenActions}
+                    onToggleReaction={handleToggleReaction}
+                    onSaveEdit={handleSaveEdit}
+                    onCancelEdit={handleCancelEdit}
+                    onRetry={handleRetrySend}
+                    onDiscardFailed={handleDiscardFailed}
                   />
                 </div>
                 );

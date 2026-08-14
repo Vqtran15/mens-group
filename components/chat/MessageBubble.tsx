@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { memo, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { motion } from "framer-motion";
@@ -45,7 +45,7 @@ function messagePreviewText(message: ChatMessage): string {
   return "";
 }
 
-export function MessageBubble({
+export const MessageBubble = memo(function MessageBubble({
   message,
   isOwn,
   pending,
@@ -100,13 +100,18 @@ export function MessageBubble({
   // list for efficiency.
   resolveImageUrl: (raw: string) => string | null;
   memberNames?: string[];
-  onDoubleTapReact: () => void;
-  onOpenActions: () => void;
-  onToggleReaction: (emoji: string) => void;
-  onSaveEdit: (body: string) => void;
+  // All keyed by this bubble's own message.id, rather than each being a
+  // pre-bound no-arg closure - lets ChatView pass the same stable function
+  // reference to every bubble (see its own useCallback wrapping) instead of
+  // creating a brand new closure per message on every render, which is what
+  // makes wrapping this component in memo() below actually do something.
+  onDoubleTapReact: (messageId: string) => void;
+  onOpenActions: (messageId: string) => void;
+  onToggleReaction: (messageId: string, emoji: string) => void;
+  onSaveEdit: (messageId: string, body: string) => void;
   onCancelEdit: () => void;
-  onRetry: () => void;
-  onDiscardFailed: () => void;
+  onRetry: (messageId: string) => void;
+  onDiscardFailed: (messageId: string) => void;
 }) {
   const name = message.profiles?.display_name ?? "Someone";
   const avatarColor = message.profiles?.avatar_color;
@@ -125,16 +130,16 @@ export function MessageBubble({
   // firing on the stale temp id would otherwise silently target a message
   // that no longer exists once the id swap completes.
   const gestureHandlers = useMessageGestures({
-    onDoubleTap: pending ? () => {} : onDoubleTapReact,
-    onLongPress: pending ? () => {} : onOpenActions,
+    onDoubleTap: pending ? () => {} : () => onDoubleTapReact(message.id),
+    onLongPress: pending ? () => {} : () => onOpenActions(message.id),
   });
 
   // The images get their own gesture instance (rather than sharing the text
   // bubble's) so a plain tap can open the lightbox without interfering with
   // double-tap-to-react or long-press-for-actions, which still work on them too.
   const imageGestureHandlers = useMessageGestures({
-    onDoubleTap: pending ? () => {} : onDoubleTapReact,
-    onLongPress: pending ? () => {} : onOpenActions,
+    onDoubleTap: pending ? () => {} : () => onDoubleTapReact(message.id),
+    onLongPress: pending ? () => {} : () => onOpenActions(message.id),
     onSingleTap: pending || uploadingImages ? () => {} : () => setLightboxIndex(pendingImageIndexRef.current),
   });
 
@@ -182,7 +187,7 @@ export function MessageBubble({
               <Button variant="secondary" onClick={onCancelEdit}>
                 Cancel
               </Button>
-              <Button onClick={() => onSaveEdit(editValue)}>Save</Button>
+              <Button onClick={() => onSaveEdit(message.id, editValue)}>Save</Button>
             </div>
           </div>
         ) : (
@@ -357,12 +362,12 @@ export function MessageBubble({
                 <span>Failed to send</span>
                 <button
                   type="button"
-                  onClick={onRetry}
+                  onClick={() => onRetry(message.id)}
                   className="flex items-center gap-0.5 font-medium underline underline-offset-2"
                 >
                   <ArrowClockwise size={12} /> Retry
                 </button>
-                <button type="button" onClick={onDiscardFailed} aria-label="Discard failed message" className="text-muted">
+                <button type="button" onClick={() => onDiscardFailed(message.id)} aria-label="Discard failed message" className="text-muted">
                   <Trash size={12} />
                 </button>
               </div>
@@ -370,7 +375,11 @@ export function MessageBubble({
           </div>
         )}
 
-        <ReactionPills reactions={reactions} currentUserId={currentUserId} onToggle={onToggleReaction} />
+        <ReactionPills
+          reactions={reactions}
+          currentUserId={currentUserId}
+          onToggle={(emoji) => onToggleReaction(message.id, emoji)}
+        />
       </div>
 
       {lightboxIndex !== null && images.length > 0 && (
@@ -383,4 +392,4 @@ export function MessageBubble({
       )}
     </motion.div>
   );
-}
+});
