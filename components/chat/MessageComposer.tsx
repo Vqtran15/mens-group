@@ -2,7 +2,8 @@
 
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { motion } from "framer-motion";
+import { usePathname } from "next/navigation";
+import { AnimatePresence, motion } from "framer-motion";
 import { At, Image as ImageIcon, PaperPlaneTilt, X } from "@phosphor-icons/react";
 import { EmojiPickerPopover } from "@/components/chat/EmojiPickerPopover";
 import type { ChatMessage } from "@/lib/types";
@@ -45,6 +46,18 @@ export const MessageComposer = forwardRef<HTMLTextAreaElement, {
   // SSR, hence the mounted gate.
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
+
+  // Drives the composer's own exit animation below. Deliberately reading
+  // pathname directly rather than relying on ChatView/this component simply
+  // unmounting when navigation leaves /chat: this whole subtree stays alive
+  // for the page-slide's exit duration (see FrozenRouter in
+  // app/(app)/layout.tsx), but usePathname() is a separate, unfrozen context
+  // that updates immediately - so this flips to false well before the
+  // eventual unmount, giving AnimatePresence below room to actually play the
+  // exit instead of the portal's DOM node just vanishing with the rest of
+  // the page at the very end.
+  const pathname = usePathname();
+  const isChatRoute = pathname === "/chat";
 
   // Re-measures on every change to body, not just keystrokes in this field -
   // the emoji picker and "replying to" state both set body programmatically,
@@ -166,12 +179,15 @@ export const MessageComposer = forwardRef<HTMLTextAreaElement, {
     // var(--sab), not env(safe-area-inset-bottom) directly - see
     // ViewportFix/globals.css for why the raw env() value can't be trusted
     // in this app's shell.
-    <motion.div
-      initial={{ opacity: 0, y: 16 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.3, ease: "easeOut" }}
-      className="pointer-events-none fixed inset-x-0 bottom-0 z-20 px-3 pb-[max(0.75rem,var(--sab,0px))] pt-2"
-    >
+    <AnimatePresence>
+      {isChatRoute && (
+        <motion.div
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: 16 }}
+          transition={{ duration: 0.2, ease: "easeOut" }}
+          className="pointer-events-none fixed inset-x-0 bottom-0 z-20 px-3 pb-[max(0.75rem,var(--sab,0px))] pt-2"
+        >
       <div className="pointer-events-auto">
         {replyingTo && (
           <div className="mb-2 flex items-center justify-between gap-2 rounded-2xl border border-border/60 bg-white/90 px-3 py-2 text-sm shadow-sm backdrop-blur-md">
@@ -275,7 +291,9 @@ export const MessageComposer = forwardRef<HTMLTextAreaElement, {
           </motion.button>
         </form>
       </div>
-    </motion.div>,
+        </motion.div>
+      )}
+    </AnimatePresence>,
     document.body
   );
 });

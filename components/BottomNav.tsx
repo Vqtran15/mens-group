@@ -41,7 +41,13 @@ export function BottomNav() {
     // var(--sab), not env(safe-area-inset-bottom) directly - see
     // ViewportFix/globals.css for why the raw env() value can't be trusted
     // in this app's shell.
-    <nav className="pointer-events-none fixed inset-x-0 bottom-0 z-20 px-4 pb-[max(0.75rem,var(--sab,0px))] pt-1">
+    <motion.nav
+      initial={{ opacity: 0, y: 16 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: 16 }}
+      transition={{ duration: 0.2, ease: "easeOut" }}
+      className="pointer-events-none fixed inset-x-0 bottom-0 z-20 px-4 pb-[max(0.75rem,var(--sab,0px))] pt-1"
+    >
       {/* More translucent than a typical card (bg-white/60 vs. the usual
           /90-ish) so content keeps showing through as it scrolls underneath -
           the frosted-glass look Instagram's floating nav has - with a
@@ -98,6 +104,6 @@ export function BottomNav() {
           );
         })}
       </ul>
-    </nav>
+    </motion.nav>
   );
 }

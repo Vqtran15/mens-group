@@ -123,7 +123,7 @@ function TopicsSearchToggle() {
   );
 }
 
-function AppHeader({ direction }: { direction: number }) {
+function AppHeader({ direction, lastNonChatTab }: { direction: number; lastNonChatTab: string }) {
   const pathname = usePathname();
   const title =
     SECTION_TITLES.find((section) => pathname.startsWith(section.prefix))?.title ?? "Men's Group";
@@ -134,8 +134,11 @@ function AppHeader({ direction }: { direction: number }) {
       <div className="flex items-center gap-2">
         {/* Chat hides BottomNav (see below) to give the pill composer room,
             so it's the one tab-root screen with no other way back to the
-            rest of the app - needs its own exit. */}
-        {pathname === "/chat" && <BackButton href="/calendar" />}
+            rest of the app - needs its own exit. Goes back to whichever tab
+            the user actually came from (lastNonChatTab), not a hardcoded
+            /calendar - someone entering Chat from Topics or Tools shouldn't
+            get dumped on Calendar instead of back where they were. */}
+        {pathname === "/chat" && <BackButton href={lastNonChatTab} />}
         {/* Keyed on title, not pathname - sub-pages within the same section
             (e.g. /calendar/new) share the "Calendar" title, and shouldn't
             replay this transition just because the path changed underneath
@@ -225,6 +228,22 @@ export default function AppLayout({
     setPrevTabIndex(activeTabIndex);
   }
 
+  // What Chat's back button returns to. Updated (during render, same
+  // adjustment pattern as above) any time the active tab is a real,
+  // non-Chat tab, and left alone otherwise - so it keeps pointing at
+  // wherever the user actually came from for as long as they're sitting on
+  // /chat, instead of resetting the moment Chat itself becomes active.
+  // Defaults to Calendar for a cold load straight into /chat (e.g. a
+  // deep link), where there's no real "came from" tab to point back to.
+  const [lastNonChatTab, setLastNonChatTab] = useState(TAB_HREFS[0]);
+  if (
+    activeTabIndex !== -1 &&
+    TAB_HREFS[activeTabIndex] !== "/chat" &&
+    TAB_HREFS[activeTabIndex] !== lastNonChatTab
+  ) {
+    setLastNonChatTab(TAB_HREFS[activeTabIndex]);
+  }
+
   // Re-checks on every navigation, not just on first mount - Next.js keeps
   // this layout mounted across sibling routes under (app), so a mount-only
   // check would miss a group disappearing (e.g. deleted by its creator)
@@ -272,7 +291,7 @@ export default function AppLayout({
         {/* var(--dvh, 100dvh), not the h-dvh utility directly - see
             ViewportFix, which corrects 100dvh's own iOS unreliability. */}
         <div className="flex flex-col bg-background" style={{ height: "var(--dvh, 100dvh)" }}>
-          <AppHeader direction={direction} />
+          <AppHeader direction={direction} lastNonChatTab={lastNonChatTab} />
           <OfflineBanner />
           <AutoUpdater />
           <PushPermissionPrompt />
@@ -330,8 +349,12 @@ export default function AppLayout({
           {/* Hidden on Chat - the composer is now a full-width pill itself,
               and having both it and the nav pill float at the bottom
               crowded the space this was meant to open up. AppHeader's back
-              button covers getting back out of Chat instead. */}
-          {showBottomNav && <BottomNav />}
+              button covers getting back out of Chat instead. Wrapped in
+              AnimatePresence (BottomNav is a motion.nav with its own
+              enter/exit variants) so it fades in/out at the Chat boundary
+              instead of popping, matching MessageComposer's equivalent fix
+              and the rest of the app's motion language. */}
+          <AnimatePresence>{showBottomNav && <BottomNav />}</AnimatePresence>
         </div>
       </TopicsSearchProvider>
     </UnreadIndicatorProvider>

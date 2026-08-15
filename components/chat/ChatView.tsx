@@ -946,7 +946,11 @@ export function ChatView() {
               // when it was a normal-flow row right below this container.
               // Now that it's a fixed overlay (see MessageComposer.tsx),
               // this has to clear it explicitly using the same offset.
-              className="absolute bottom-[calc(5rem+var(--sab,0px)+0.75rem)] left-1/2 flex items-center gap-1.5 rounded-full bg-primary px-3.5 py-2 text-sm font-medium text-white shadow-lg shadow-primary/30"
+              // bg-primary/90 + backdrop-blur (not solid bg-primary) so it
+              // reads as a frosted pill floating above the scrolled content
+              // underneath it, matching BottomNav's treatment, instead of a
+              // flat block that just clips into whatever message is behind it.
+              className="absolute bottom-[calc(5rem+var(--sab,0px)+0.75rem)] left-1/2 flex items-center gap-1.5 rounded-full border border-white/20 bg-primary/90 px-3.5 py-2 text-sm font-medium text-white shadow-lg shadow-primary/30 backdrop-blur-md"
             >
               <ArrowDown size={16} weight="bold" /> Jump to latest
             </motion.button>
