@@ -51,6 +51,17 @@ function chatDayLabel(date: Date): string {
 
 const DEFAULT_REACTION = "❤️";
 
+// A shared, stable fallback - not a fresh `[]` literal at each call site.
+// reactionsByMessage[id] is undefined for the (usually most) messages with
+// no reactions, and `?? []` would otherwise hand MessageBubble a brand new
+// array reference on every single ChatView re-render, even ones triggered
+// by a reaction on some *other* message (reactionsByMessage itself gets a
+// new top-level reference on any change). Since reactions is a prop
+// MessageBubble's React.memo shallow-compares, that would silently defeat
+// the memoization for every reaction-less message on every reaction event
+// anywhere in the conversation - exactly the case this was meant to fix.
+const EMPTY_REACTIONS: Reaction[] = [];
+
 type RetryPayload = {
   body: string;
   imageFiles: File[];
@@ -899,7 +910,7 @@ export function ChatView() {
                     failed={message.failed}
                     groupStart={isGroupStart(message, messages[index - 1])}
                     isFirstMessage={index === 0}
-                    reactions={reactionsByMessage[message.id] ?? []}
+                    reactions={reactionsByMessage[message.id] ?? EMPTY_REACTIONS}
                     currentUserId={userId}
                     replyToMessage={message.reply_to_id ? messagesById.get(message.reply_to_id) : null}
                     replyToDeleted={Boolean(message.reply_to_id) && !messagesById.has(message.reply_to_id ?? "")}
