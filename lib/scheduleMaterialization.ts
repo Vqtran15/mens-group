@@ -26,6 +26,23 @@ interface ExistingEventRow {
  * Shared by CalendarView (which tops this up as occurrences pass) and
  * MeetingScheduleForm (which runs it right after a schedule edit) so the
  * two never drift into different reconciliation behavior again.
+ *
+ * Even so, a "stale" row can still show up here for reasons this function
+ * can't fully rule out - most notably legacy rows written before this
+ * matching-by-calendar-date logic existed, which can be stored on the
+ * *wrong day entirely* rather than just the wrong time on the right day (see
+ * the incident this guarded against: a pre-fix timezone bug materialized a
+ * group's occurrences a day off, and the very first reconciliation to touch
+ * those rows after the fix shipped correctly identified them as no longer
+ * matching anything - and deleted them, along with every RSVP attached).
+ * Matching-by-date only protects RSVPs when the old date is already right;
+ * it can't protect against the old date itself being wrong. So this is a
+ * second, independent safety net: whatever the reason a row looks stale,
+ * never actually delete it if anyone has RSVP'd - leave it in place
+ * (it'll just look like a duplicate/orphaned occurrence rather than
+ * silently erasing someone's response) and let a human notice and clean it
+ * up, instead of a bug in the *reconciliation logic itself* being able to
+ * cascade-delete RSVPs a fourth time.
  */
 export async function reconcileScheduleEvents(
   supabase: SupabaseClient,
@@ -90,8 +107,21 @@ export async function reconcileScheduleEvents(
     changed = true;
   }
   if (staleIds.length > 0) {
-    await supabase.from("events").delete().in("id", staleIds);
-    changed = true;
+    const { data: staleRsvps } = await supabase.from("rsvps").select("event_id").in("event_id", staleIds);
+    const idsWithRsvps = new Set((staleRsvps ?? []).map((r) => r.event_id as string));
+    const safeToDeleteIds = staleIds.filter((id) => !idsWithRsvps.has(id));
+    const protectedIds = staleIds.filter((id) => idsWithRsvps.has(id));
+
+    if (protectedIds.length > 0) {
+      console.warn(
+        "[reconcileScheduleEvents] Refusing to delete event(s) that still have RSVPs, even though they no longer match the current schedule pattern - leaving them in place instead:",
+        protectedIds
+      );
+    }
+    if (safeToDeleteIds.length > 0) {
+      await supabase.from("events").delete().in("id", safeToDeleteIds);
+      changed = true;
+    }
   }
 
   return changed;
