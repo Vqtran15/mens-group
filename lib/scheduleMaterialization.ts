@@ -8,6 +8,7 @@ interface ExistingEventRow {
   starts_at: string;
   title: string;
   location: string | null;
+  location_overridden: boolean;
 }
 
 /**
@@ -30,19 +31,28 @@ interface ExistingEventRow {
  * Even so, a "stale" row can still show up here for reasons this function
  * can't fully rule out - most notably legacy rows written before this
  * matching-by-calendar-date logic existed, which can be stored on the
- * *wrong day entirely* rather than just the wrong time on the right day (see
- * the incident this guarded against: a pre-fix timezone bug materialized a
- * group's occurrences a day off, and the very first reconciliation to touch
- * those rows after the fix shipped correctly identified them as no longer
- * matching anything - and deleted them, along with every RSVP attached).
- * Matching-by-date only protects RSVPs when the old date is already right;
- * it can't protect against the old date itself being wrong. So this is a
- * second, independent safety net: whatever the reason a row looks stale,
- * never actually delete it if anyone has RSVP'd - leave it in place
- * (it'll just look like a duplicate/orphaned occurrence rather than
- * silently erasing someone's response) and let a human notice and clean it
- * up, instead of a bug in the *reconciliation logic itself* being able to
- * cascade-delete RSVPs a fourth time.
+ * *wrong day entirely* rather than just the wrong time on the right day.
+ * Deleting a stale row is now always safe regardless of why it happened:
+ * migration 0041_rsvp_stable_occurrence_key.sql moved a recurring RSVP's
+ * real identity to (schedule_id, occurrence_date) and made a DB trigger
+ * *detach* (not cascade-delete) its RSVPs the moment the row they were
+ * attached to is deleted. The re-attach step below is what completes the
+ * loop - the moment a fresh row for that same occurrence gets inserted
+ * (schedule reverted, a skip got undone, whatever), any RSVPs still
+ * waiting around detached get reattached to it, so the churn ends up
+ * invisible to the people who RSVP'd instead of needing an app-level
+ * "don't actually delete this" special case (the previous approach here,
+ * which this replaces - it also had the side effect of leaving a
+ * confusing duplicate/orphaned card on the calendar indefinitely).
+ *
+ * `location` is the one field this does NOT unconditionally sync from the
+ * schedule: a row with `location_overridden` was explicitly given a
+ * different location via the per-occurrence "Edit location" action (see
+ * migration 0040), and this leaves it alone rather than stomping it back to
+ * the schedule's own location on the very next reconcile - which is exactly
+ * what used to happen (the override would get silently undone within the
+ * same page load that saved it, since saving triggers a reload that
+ * immediately re-runs this function).
  */
 export async function reconcileScheduleEvents(
   supabase: SupabaseClient,
@@ -72,7 +82,11 @@ export async function reconcileScheduleEvents(
       title: schedule.label,
       starts_at: date.toISOString(),
       ends_at: endsAt.toISOString(),
-      location: schedule.location,
+      // Only sync from the schedule's own location when this occurrence
+      // hasn't been individually overridden - an overridden row keeps
+      // whatever it already has, which also makes it compare equal to
+      // itself below so it doesn't trigger a spurious update on its own.
+      location: existing?.location_overridden ? existing.location : schedule.location,
     };
 
     if (!existing) {
@@ -99,29 +113,33 @@ export async function reconcileScheduleEvents(
   let changed = false;
 
   if (toInsert.length > 0) {
-    await supabase.from("events").upsert(toInsert, { onConflict: "schedule_id,starts_at" });
+    const { data: insertedRows } = await supabase
+      .from("events")
+      .upsert(toInsert, { onConflict: "schedule_id,starts_at" })
+      .select("id, starts_at");
     changed = true;
+
+    // Re-attach any RSVPs left detached by a previously-deleted row for
+    // this exact occurrence (schedule_id + occurrence_date) - see
+    // migration 0041_rsvp_stable_occurrence_key.sql. A SECURITY DEFINER
+    // RPC, not a direct table update: reconciliation runs under whichever
+    // member's session happens to load Calendar next, and the rsvps
+    // UPDATE policy only allows a user to touch their own row - a direct
+    // update here would silently reattach only the triggering member's
+    // own RSVP and leave everyone else's stuck detached. Harmless no-op
+    // when there's nothing to reattach (the common case: a genuinely
+    // brand-new occurrence nobody has RSVP'd to yet).
+    if (insertedRows) {
+      await Promise.all(insertedRows.map((row) => supabase.rpc("reattach_occurrence_rsvps", { p_event_id: row.id })));
+    }
   }
   if (toUpdate.length > 0) {
     await Promise.all(toUpdate.map(({ id, patch }) => supabase.from("events").update(patch).eq("id", id)));
     changed = true;
   }
   if (staleIds.length > 0) {
-    const { data: staleRsvps } = await supabase.from("rsvps").select("event_id").in("event_id", staleIds);
-    const idsWithRsvps = new Set((staleRsvps ?? []).map((r) => r.event_id as string));
-    const safeToDeleteIds = staleIds.filter((id) => !idsWithRsvps.has(id));
-    const protectedIds = staleIds.filter((id) => idsWithRsvps.has(id));
-
-    if (protectedIds.length > 0) {
-      console.warn(
-        "[reconcileScheduleEvents] Refusing to delete event(s) that still have RSVPs, even though they no longer match the current schedule pattern - leaving them in place instead:",
-        protectedIds
-      );
-    }
-    if (safeToDeleteIds.length > 0) {
-      await supabase.from("events").delete().in("id", safeToDeleteIds);
-      changed = true;
-    }
+    await supabase.from("events").delete().in("id", staleIds);
+    changed = true;
   }
 
   return changed;
