@@ -3,9 +3,10 @@
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import { Check, LockSimple, LockSimpleOpen, Plus, Trash } from "@phosphor-icons/react";
+import { Check, LockSimple, LockSimpleOpen, PaperPlaneTilt, Plus, Trash } from "@phosphor-icons/react";
 import { createClient } from "@/lib/supabase/client";
 import { getCurrentMembership } from "@/lib/supabase/current-membership";
+import { shareToChat } from "@/lib/supabase/shareToChat";
 import { Button } from "@/components/ui/Button";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { ConfirmSheet } from "@/components/ui/ConfirmSheet";
@@ -19,6 +20,7 @@ export function PollDetailView({ pollId }: { pollId: string }) {
   const [poll, setPoll] = useState<Poll | null>(null);
   const [options, setOptions] = useState<OptionWithVotes[] | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
+  const [groupId, setGroupId] = useState<string | null>(null);
   const [newOption, setNewOption] = useState("");
   const [addingOption, setAddingOption] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -30,6 +32,7 @@ export function PollDetailView({ pollId }: { pollId: string }) {
     const membership = await getCurrentMembership(supabase);
     if (!membership) return;
     setUserId(membership.userId);
+    setGroupId(membership.groupId);
 
     const [{ data: pollData }, { data: optionsData }] = await Promise.all([
       supabase.from("polls").select("*").eq("id", pollId).single(),
@@ -112,6 +115,20 @@ export function PollDetailView({ pollId }: { pollId: string }) {
     load();
   }
 
+  async function handleShare() {
+    if (!poll || !userId || !groupId) return;
+    const supabase = createClient();
+    await shareToChat(supabase, {
+      groupId,
+      userId,
+      kind: "poll",
+      refId: poll.id,
+      title: poll.question,
+      subtitle: `${totalVotes} ${totalVotes === 1 ? "vote" : "votes"}${poll.closed ? " · Closed" : ""}`,
+    });
+    router.push("/chat");
+  }
+
   async function handleDeletePoll() {
     const supabase = createClient();
     await supabase.from("polls").delete().eq("id", pollId);
@@ -140,17 +157,25 @@ export function PollDetailView({ pollId }: { pollId: string }) {
             onChange={(e) => setQuestionValue(e.target.value)}
             onBlur={submitQuestionEdit}
             onKeyDown={(e) => e.key === "Enter" && submitQuestionEdit()}
-            className="w-full rounded-xl border border-border bg-white px-3 py-2 text-lg font-semibold text-primary outline-none focus:border-primary"
+            className="min-w-0 flex-1 rounded-xl border border-border bg-white px-3 py-2 text-lg font-semibold text-primary outline-none focus:border-primary"
           />
         ) : (
           <button
             type="button"
             onClick={() => setEditingQuestion(true)}
-            className="text-left text-lg font-semibold text-primary"
+            className="min-w-0 flex-1 text-left text-lg font-semibold text-primary"
           >
             {poll.question}
           </button>
         )}
+        <button
+          type="button"
+          onClick={handleShare}
+          aria-label="Share to chat"
+          className="shrink-0 rounded-full p-1.5 text-secondary transition-colors hover:bg-surface-muted"
+        >
+          <PaperPlaneTilt size={18} />
+        </button>
       </div>
       <p className="text-xs text-muted">
         {totalVotes} {totalVotes === 1 ? "vote" : "votes"} {poll.closed && "· Voting closed"}
