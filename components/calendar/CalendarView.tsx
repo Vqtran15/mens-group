@@ -6,6 +6,7 @@ import { motion } from "framer-motion";
 import { CalendarBlank, CaretRight, Repeat } from "@phosphor-icons/react";
 import { createClient } from "@/lib/supabase/client";
 import { getCurrentMembership } from "@/lib/supabase/current-membership";
+import { isAdminEmail } from "@/lib/admin";
 import { OCCURRENCES_TO_MATERIALIZE } from "@/lib/recurrence";
 import { reconcileScheduleEvents } from "@/lib/scheduleMaterialization";
 import { NextMeetingCard } from "@/components/calendar/NextMeetingCard";
@@ -19,6 +20,7 @@ const MotionLink = motion.create(Link);
 export function CalendarView() {
   const [userId, setUserId] = useState<string | null>(null);
   const [groupId, setGroupId] = useState<string | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
   const [hasSchedule, setHasSchedule] = useState(true);
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   // Whether the featured event (events[0]) falls on today's calendar day -
@@ -115,6 +117,7 @@ export function CalendarView() {
 
       setUserId(membership.userId);
       setGroupId(membership.groupId);
+      setIsAdmin(isAdminEmail(membership.email));
       loadEvents(membership.userId, membership.groupId);
     }
 
@@ -134,6 +137,7 @@ export function CalendarView() {
           event={nextMeeting}
           rsvps={rsvpsByEvent[nextMeeting.id] ?? []}
           userId={userId}
+          isAdmin={isAdmin}
           onChanged={() => loadEvents(userId, groupId)}
           relatedTopics={topicsByDate[toDateOnlyString(new Date(nextMeeting.starts_at))] ?? []}
           isToday={featuredIsToday}
@@ -147,7 +151,7 @@ export function CalendarView() {
         />
       )}
 
-      {!hasSchedule && (
+      {!hasSchedule && isAdmin && (
         <MotionLink
           href="/calendar/schedule/edit"
           whileTap={{ scale: 0.98 }}
@@ -176,6 +180,7 @@ export function CalendarView() {
                 event={event}
                 rsvps={rsvpsByEvent[event.id] ?? []}
                 userId={userId}
+                isAdmin={isAdmin}
                 onChanged={() => loadEvents(userId, groupId)}
                 relatedTopics={topicsByDate[toDateOnlyString(new Date(event.starts_at))] ?? []}
               />

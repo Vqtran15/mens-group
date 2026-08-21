@@ -3,6 +3,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 export interface CurrentMembership {
   userId: string;
   groupId: string;
+  email: string | null;
 }
 
 export async function getCurrentMembership(
@@ -25,5 +26,5 @@ export async function getCurrentMembership(
 
   if (!profile?.group_id) return null;
 
-  return { userId: session.user.id, groupId: profile.group_id };
+  return { userId: session.user.id, groupId: profile.group_id, email: session.user.email ?? null };
 }

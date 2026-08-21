@@ -18,6 +18,7 @@ export function NextMeetingCard({
   event,
   rsvps,
   userId,
+  isAdmin,
   onChanged,
   relatedTopics = [],
   isToday = false,
@@ -25,6 +26,7 @@ export function NextMeetingCard({
   event: CalendarEvent;
   rsvps: Rsvp[];
   userId: string;
+  isAdmin: boolean;
   onChanged: () => void;
   relatedTopics?: RelatedTopic[];
   isToday?: boolean;
@@ -42,6 +44,11 @@ export function NextMeetingCard({
   // so for these the "•••" menu targets the underlying meeting_schedule
   // instead, which is what actually controls every future occurrence.
   const isRecurring = event.is_recurring;
+  // Every action this menu offers for a recurring meeting (edit series,
+  // skip, edit location, delete/deactivate the series) is admin-only - see
+  // migration 0040_admin_only_schedule_actions.sql. A one-off event's own
+  // actions are unaffected and stay open to any member.
+  const canManage = !isRecurring || isAdmin;
 
   async function handleDelete() {
     const supabase = createClient();
@@ -115,14 +122,16 @@ export function NextMeetingCard({
         <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-highlight-light">
           <Sparkle size={14} weight="fill" /> {isToday ? "Today's meeting" : "Next meeting"}
         </p>
-        <button
-          type="button"
-          onClick={() => setActionsOpen(true)}
-          aria-label="Meeting actions"
-          className="shrink-0 rounded-full p-1.5 text-white transition-colors hover:bg-white/15"
-        >
-          <DotsThreeVertical size={18} weight="bold" />
-        </button>
+        {canManage && (
+          <button
+            type="button"
+            onClick={() => setActionsOpen(true)}
+            aria-label="Meeting actions"
+            className="shrink-0 rounded-full p-1.5 text-white transition-colors hover:bg-white/15"
+          >
+            <DotsThreeVertical size={18} weight="bold" />
+          </button>
+        )}
       </div>
 
       <div className="mt-3 flex items-center gap-3">

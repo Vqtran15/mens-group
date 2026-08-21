@@ -7,6 +7,7 @@ import { WarningCircle, Clock, ArrowCounterClockwise } from "@phosphor-icons/rea
 import { createClient } from "@/lib/supabase/client";
 import { getCurrentMembership } from "@/lib/supabase/current-membership";
 import { reconcileScheduleEvents } from "@/lib/scheduleMaterialization";
+import { isAdminEmail } from "@/lib/admin";
 import { SuccessButton, type SubmitStatus } from "@/components/ui/SuccessButton";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { cn, formatDate, parseDateOnly, startOfToday, toDateOnlyString } from "@/lib/utils";
@@ -87,6 +88,16 @@ export function MeetingScheduleForm() {
         setLoading(false);
         return;
       }
+      // This whole page - creating, editing, or deleting the recurring
+      // schedule - is admin-only (see migration
+      // 0040_admin_only_schedule_actions.sql for the actual RLS
+      // enforcement). Redirecting here is just so a non-admin who lands on
+      // this route directly (not through a hidden UI entry point) sees
+      // something sensible instead of a form that would fail on submit.
+      if (!isAdminEmail(membership.email)) {
+        router.replace("/calendar");
+        return;
+      }
       setGroupId(membership.groupId);
       setUserId(membership.userId);
 
@@ -119,7 +130,7 @@ export function MeetingScheduleForm() {
       setLoading(false);
     }
     init();
-  }, []);
+  }, [router]);
 
   function toggleOccurrence(value: number) {
     setOccurrences((prev) =>
@@ -192,7 +203,7 @@ export function MeetingScheduleForm() {
       // two never drift into different reconciliation behavior.
       const { data: existingEvents } = await supabase
         .from("events")
-        .select("id, starts_at, title, location")
+        .select("id, starts_at, title, location, location_overridden")
         .eq("schedule_id", scheduleId)
         .gte("starts_at", startOfToday().toISOString());
 

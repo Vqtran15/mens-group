@@ -17,12 +17,14 @@ export function EventListItem({
   event,
   rsvps,
   userId,
+  isAdmin,
   onChanged,
   relatedTopics = [],
 }: {
   event: CalendarEvent;
   rsvps: Rsvp[];
   userId: string;
+  isAdmin: boolean;
   onChanged: () => void;
   relatedTopics?: RelatedTopic[];
 }) {
@@ -39,6 +41,11 @@ export function EventListItem({
   // so for these the "•••" menu targets the underlying meeting_schedule
   // instead, which is what actually controls every future occurrence.
   const isRecurring = event.is_recurring;
+  // Every action this menu offers for a recurring meeting (edit series,
+  // skip, edit location, delete/deactivate the series) is admin-only - see
+  // migration 0040_admin_only_schedule_actions.sql. A one-off event's own
+  // actions are unaffected and stay open to any member.
+  const canManage = !isRecurring || isAdmin;
 
   async function handleDelete() {
     const supabase = createClient();
@@ -112,14 +119,16 @@ export function EventListItem({
       <div className="min-w-0 flex-1">
         <div className="flex items-start justify-between gap-2">
           <p className="font-medium text-primary">{event.title}</p>
-          <button
-            type="button"
-            onClick={() => setActionsOpen(true)}
-            aria-label="Event actions"
-            className="shrink-0 rounded-full p-1.5 text-secondary transition-colors hover:bg-surface-muted"
-          >
-            <DotsThreeVertical size={18} weight="bold" />
-          </button>
+          {canManage && (
+            <button
+              type="button"
+              onClick={() => setActionsOpen(true)}
+              aria-label="Event actions"
+              className="shrink-0 rounded-full p-1.5 text-secondary transition-colors hover:bg-surface-muted"
+            >
+              <DotsThreeVertical size={18} weight="bold" />
+            </button>
+          )}
         </div>
         <p className="mt-1 text-sm text-secondary">{formatTime(startsAt)}</p>
         {event.location && (
