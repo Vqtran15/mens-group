@@ -168,18 +168,19 @@ export function PollDetailView({ pollId }: { pollId: string }) {
             {poll.question}
           </button>
         )}
+      </div>
+      <div className="flex items-center justify-between gap-2">
+        <p className="text-xs text-muted">
+          {totalVotes} {totalVotes === 1 ? "vote" : "votes"} {poll.closed && "· Voting closed"}
+        </p>
         <button
           type="button"
           onClick={handleShare}
-          aria-label="Share to chat"
-          className="shrink-0 rounded-full p-1.5 text-secondary transition-colors hover:bg-surface-muted"
+          className="flex items-center gap-1.5 rounded-full px-2.5 py-1 text-sm text-secondary transition-colors hover:bg-surface-muted"
         >
-          <PaperPlaneTilt size={18} />
+          <PaperPlaneTilt size={16} /> Share to chat
         </button>
       </div>
-      <p className="text-xs text-muted">
-        {totalVotes} {totalVotes === 1 ? "vote" : "votes"} {poll.closed && "· Voting closed"}
-      </p>
 
       <div className="space-y-2">
         {options.map((option, i) => {
