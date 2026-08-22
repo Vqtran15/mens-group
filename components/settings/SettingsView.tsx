@@ -41,6 +41,7 @@ export function SettingsView() {
   const [deleteAccountConfirmOpen, setDeleteAccountConfirmOpen] = useState(false);
   const [deletingAccount, setDeletingAccount] = useState(false);
   const [dangerZoneOpen, setDangerZoneOpen] = useState(false);
+  const [passwordSectionOpen, setPasswordSectionOpen] = useState(false);
   const [deleteAccountError, setDeleteAccountError] = useState<string | null>(null);
 
   const [avatarColor, setAvatarColor] = useState<string | null>(null);
@@ -414,50 +415,11 @@ export function SettingsView() {
         transition={{ duration: 0.25, delay: 0.18, ease: "easeOut" }}
         className="space-y-3 rounded-2xl border border-border/60 bg-white p-4 shadow-sm"
       >
-        <h2 className="font-semibold text-primary">Change password</h2>
-        <form onSubmit={handleChangePassword} className="space-y-3">
-          <div>
-            <label htmlFor="newPassword" className="mb-1.5 block text-sm font-medium text-secondary">
-              New password
-            </label>
-            <input
-              id="newPassword"
-              type="password"
-              value={newPassword}
-              onChange={(e) => setNewPassword(e.target.value)}
-              className={fieldClass}
-            />
-          </div>
-          <div>
-            <label htmlFor="confirmNewPassword" className="mb-1.5 block text-sm font-medium text-secondary">
-              Confirm new password
-            </label>
-            <input
-              id="confirmNewPassword"
-              type="password"
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-              className={fieldClass}
-            />
-          </div>
-          {passwordError && (
-            <p className="flex items-center gap-1.5 rounded-lg bg-accent/10 px-3 py-2 text-sm text-accent">
-              <WarningCircle size={16} className="shrink-0" />
-              {passwordError}
-            </p>
-          )}
-          <Button type="submit" disabled={passwordStatus === "saving"} variant="secondary">
-            {passwordStatus === "saved" ? (
-              <>
-                <CheckCircle size={16} /> Updated
-              </>
-            ) : passwordStatus === "saving" ? (
-              "Updating..."
-            ) : (
-              "Update password"
-            )}
-          </Button>
-        </form>
+        <h2 className="font-semibold text-primary">App</h2>
+        <p className="text-sm text-secondary">
+          Updates install automatically, but you can check right now instead of waiting.
+        </p>
+        <CheckForUpdateButton />
       </motion.section>
 
       <motion.section
@@ -466,11 +428,74 @@ export function SettingsView() {
         transition={{ duration: 0.25, delay: 0.21, ease: "easeOut" }}
         className="space-y-3 rounded-2xl border border-border/60 bg-white p-4 shadow-sm"
       >
-        <h2 className="font-semibold text-primary">App</h2>
-        <p className="text-sm text-secondary">
-          Updates install automatically, but you can check right now instead of waiting.
-        </p>
-        <CheckForUpdateButton />
+        <button
+          type="button"
+          onClick={() => setPasswordSectionOpen((open) => !open)}
+          aria-expanded={passwordSectionOpen}
+          className="flex w-full items-center justify-between"
+        >
+          <h2 className="font-semibold text-primary">Change password</h2>
+          <CaretDown
+            size={18}
+            className={cn("text-secondary transition-transform", passwordSectionOpen && "rotate-180")}
+          />
+        </button>
+
+        <AnimatePresence initial={false}>
+          {passwordSectionOpen && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: "auto", opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              transition={{ duration: 0.2, ease: "easeOut" }}
+              className="overflow-hidden"
+            >
+              <form onSubmit={handleChangePassword} className="space-y-3">
+                <div>
+                  <label htmlFor="newPassword" className="mb-1.5 block text-sm font-medium text-secondary">
+                    New password
+                  </label>
+                  <input
+                    id="newPassword"
+                    type="password"
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    className={fieldClass}
+                  />
+                </div>
+                <div>
+                  <label htmlFor="confirmNewPassword" className="mb-1.5 block text-sm font-medium text-secondary">
+                    Confirm new password
+                  </label>
+                  <input
+                    id="confirmNewPassword"
+                    type="password"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    className={fieldClass}
+                  />
+                </div>
+                {passwordError && (
+                  <p className="flex items-center gap-1.5 rounded-lg bg-accent/10 px-3 py-2 text-sm text-accent">
+                    <WarningCircle size={16} className="shrink-0" />
+                    {passwordError}
+                  </p>
+                )}
+                <Button type="submit" disabled={passwordStatus === "saving"} variant="secondary">
+                  {passwordStatus === "saved" ? (
+                    <>
+                      <CheckCircle size={16} /> Updated
+                    </>
+                  ) : passwordStatus === "saving" ? (
+                    "Updating..."
+                  ) : (
+                    "Update password"
+                  )}
+                </Button>
+              </form>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </motion.section>
 
       <motion.section
