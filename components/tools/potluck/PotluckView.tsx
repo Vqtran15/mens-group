@@ -7,6 +7,7 @@ import { Broom, ForkKnife, PaperPlaneTilt, Plus, Trash, X } from "@phosphor-icon
 import { createClient } from "@/lib/supabase/client";
 import { getCurrentMembership } from "@/lib/supabase/current-membership";
 import { shareToChat } from "@/lib/supabase/shareToChat";
+import { isAdminEmail } from "@/lib/admin";
 import { Avatar } from "@/components/Avatar";
 import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -22,6 +23,7 @@ export function PotluckView() {
   const [items, setItems] = useState<PotluckItem[] | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
   const [groupId, setGroupId] = useState<string | null>(null);
+  const [email, setEmail] = useState<string | null>(null);
   const [newItemName, setNewItemName] = useState("");
   const [newItemCategory, setNewItemCategory] = useState(CATEGORIES[0]);
   const [adding, setAdding] = useState(false);
@@ -36,6 +38,7 @@ export function PotluckView() {
     if (!membership) return;
     setUserId(membership.userId);
     setGroupId(membership.groupId);
+    setEmail(membership.email);
     const { data } = await supabase
       .from("potluck_items")
       .select("*, claimed_by_profile:profiles!potluck_items_claimed_by_fkey(display_name, avatar_color, avatar_url)")
@@ -146,6 +149,12 @@ export function PotluckView() {
     );
   }
 
+  // Claiming/unclaiming and adding items stay open to every member - only
+  // renaming/removing an existing item (or clearing the whole list) is
+  // limited to whoever added it or an admin. Mirrored server-side by
+  // restrict_potluck_item_edits() in 0046_restrict_poll_and_potluck_editing.sql.
+  const isAdmin = isAdminEmail(email);
+
   return (
     <div className="space-y-4 p-4">
       <form
@@ -190,13 +199,15 @@ export function PotluckView() {
             >
               <PaperPlaneTilt size={16} /> Share to chat
             </button>
-            <button
-              type="button"
-              onClick={() => setConfirmClearAll(true)}
-              className="flex items-center gap-1.5 rounded-full px-2.5 py-1 text-sm text-accent transition-colors hover:bg-accent/10"
-            >
-              <Broom size={16} /> Clear all
-            </button>
+            {isAdmin && (
+              <button
+                type="button"
+                onClick={() => setConfirmClearAll(true)}
+                className="flex items-center gap-1.5 rounded-full px-2.5 py-1 text-sm text-accent transition-colors hover:bg-accent/10"
+              >
+                <Broom size={16} /> Clear all
+              </button>
+            )}
           </div>
         </div>
       )}
@@ -211,6 +222,7 @@ export function PotluckView() {
         <div className="space-y-2">
           {items.map((item, i) => {
             const isMine = item.claimed_by === userId;
+            const canEditItem = isAdmin || item.created_by === userId;
             return (
               <motion.div
                 key={item.id}
@@ -229,7 +241,7 @@ export function PotluckView() {
                       onKeyDown={(e) => e.key === "Enter" && submitEdit(item.id)}
                       className="w-full rounded-lg border border-border px-2 py-1 text-sm outline-none focus:border-primary"
                     />
-                  ) : (
+                  ) : canEditItem ? (
                     <button
                       type="button"
                       onClick={() => startEdit(item)}
@@ -237,6 +249,8 @@ export function PotluckView() {
                     >
                       {item.item_name}
                     </button>
+                  ) : (
+                    <p className="truncate font-medium text-primary">{item.item_name}</p>
                   )}
                   <div className="mt-1 flex items-center gap-1.5">
                     {item.category && (
@@ -283,14 +297,16 @@ export function PotluckView() {
                     Claim
                   </button>
                 )}
-                <button
-                  type="button"
-                  onClick={() => handleDelete(item)}
-                  aria-label={`Delete ${item.item_name}`}
-                  className="shrink-0 rounded-full p-1.5 text-muted transition-colors hover:bg-accent/10 hover:text-accent"
-                >
-                  <Trash size={16} />
-                </button>
+                {canEditItem && (
+                  <button
+                    type="button"
+                    onClick={() => handleDelete(item)}
+                    aria-label={`Delete ${item.item_name}`}
+                    className="shrink-0 rounded-full p-1.5 text-muted transition-colors hover:bg-accent/10 hover:text-accent"
+                  >
+                    <Trash size={16} />
+                  </button>
+                )}
               </motion.div>
             );
           })}

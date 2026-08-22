@@ -7,6 +7,7 @@ import { Check, LockSimple, LockSimpleOpen, PaperPlaneTilt, Plus, Trash } from "
 import { createClient } from "@/lib/supabase/client";
 import { getCurrentMembership } from "@/lib/supabase/current-membership";
 import { shareToChat } from "@/lib/supabase/shareToChat";
+import { isAdminEmail } from "@/lib/admin";
 import { Button } from "@/components/ui/Button";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { ConfirmSheet } from "@/components/ui/ConfirmSheet";
@@ -21,6 +22,7 @@ export function PollDetailView({ pollId }: { pollId: string }) {
   const [options, setOptions] = useState<OptionWithVotes[] | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
   const [groupId, setGroupId] = useState<string | null>(null);
+  const [email, setEmail] = useState<string | null>(null);
   const [newOption, setNewOption] = useState("");
   const [addingOption, setAddingOption] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -33,6 +35,7 @@ export function PollDetailView({ pollId }: { pollId: string }) {
     if (!membership) return;
     setUserId(membership.userId);
     setGroupId(membership.groupId);
+    setEmail(membership.email);
 
     const [{ data: pollData }, { data: optionsData }] = await Promise.all([
       supabase.from("polls").select("*").eq("id", pollId).is("archived_at", null).single(),
@@ -60,6 +63,10 @@ export function PollDetailView({ pollId }: { pollId: string }) {
 
   const totalVotes = options?.reduce((sum, o) => sum + o.poll_votes.length, 0) ?? 0;
   const myVoteOptionId = options?.find((o) => o.poll_votes.some((v) => v.user_id === userId))?.id ?? null;
+  // Voting stays open to every member - only closing/deleting/editing the
+  // poll itself (question, options) is limited to whoever created it or an
+  // admin. Mirrored server-side by 0046_restrict_poll_and_potluck_editing.sql.
+  const canEdit = !!poll && (isAdminEmail(email) || poll.created_by === userId);
 
   async function handleVote(option: OptionWithVotes) {
     if (!userId || poll?.closed) return;
@@ -160,7 +167,7 @@ export function PollDetailView({ pollId }: { pollId: string }) {
             onKeyDown={(e) => e.key === "Enter" && submitQuestionEdit()}
             className="min-w-0 flex-1 rounded-xl border border-border bg-white px-3 py-2 text-lg font-semibold text-primary outline-none focus:border-primary"
           />
-        ) : (
+        ) : canEdit ? (
           <button
             type="button"
             onClick={() => setEditingQuestion(true)}
@@ -168,6 +175,8 @@ export function PollDetailView({ pollId }: { pollId: string }) {
           >
             {poll.question}
           </button>
+        ) : (
+          <p className="min-w-0 flex-1 text-lg font-semibold text-primary">{poll.question}</p>
         )}
       </div>
       <div className="flex items-center justify-between gap-2">
@@ -219,40 +228,46 @@ export function PollDetailView({ pollId }: { pollId: string }) {
                   </span>
                 </div>
               </button>
-              <button
-                type="button"
-                onClick={() => handleRemoveOption(option)}
-                aria-label={`Remove option ${option.option_text}`}
-                className="shrink-0 rounded-full p-1.5 text-muted transition-colors hover:bg-accent/10 hover:text-accent"
-              >
-                <Trash size={14} />
-              </button>
+              {canEdit && (
+                <button
+                  type="button"
+                  onClick={() => handleRemoveOption(option)}
+                  aria-label={`Remove option ${option.option_text}`}
+                  className="shrink-0 rounded-full p-1.5 text-muted transition-colors hover:bg-accent/10 hover:text-accent"
+                >
+                  <Trash size={14} />
+                </button>
+              )}
             </motion.div>
           );
         })}
       </div>
 
-      <form onSubmit={handleAddOption} className="flex items-center gap-2">
-        <input
-          value={newOption}
-          onChange={(e) => setNewOption(e.target.value)}
-          placeholder="Add another option"
-          className="min-w-0 flex-1 rounded-xl border border-border bg-white px-3 py-2.5 text-sm shadow-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
-        />
-        <Button type="submit" variant="secondary" disabled={addingOption || !newOption.trim()}>
-          <Plus size={16} />
-        </Button>
-      </form>
+      {canEdit && (
+        <form onSubmit={handleAddOption} className="flex items-center gap-2">
+          <input
+            value={newOption}
+            onChange={(e) => setNewOption(e.target.value)}
+            placeholder="Add another option"
+            className="min-w-0 flex-1 rounded-xl border border-border bg-white px-3 py-2.5 text-sm shadow-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
+          />
+          <Button type="submit" variant="secondary" disabled={addingOption || !newOption.trim()}>
+            <Plus size={16} />
+          </Button>
+        </form>
+      )}
 
-      <div className="flex gap-2 pt-2">
-        <Button type="button" variant="secondary" onClick={toggleClosed} className="flex-1">
-          {poll.closed ? <LockSimpleOpen size={16} /> : <LockSimple size={16} />}
-          {poll.closed ? "Reopen voting" : "Close voting"}
-        </Button>
-        <Button type="button" variant="danger" onClick={() => setConfirmDelete(true)} className="flex-1">
-          <Trash size={16} /> Delete poll
-        </Button>
-      </div>
+      {canEdit && (
+        <div className="flex gap-2 pt-2">
+          <Button type="button" variant="secondary" onClick={toggleClosed} className="flex-1">
+            {poll.closed ? <LockSimpleOpen size={16} /> : <LockSimple size={16} />}
+            {poll.closed ? "Reopen voting" : "Close voting"}
+          </Button>
+          <Button type="button" variant="danger" onClick={() => setConfirmDelete(true)} className="flex-1">
+            <Trash size={16} /> Delete poll
+          </Button>
+        </div>
+      )}
 
       <ConfirmSheet
         open={confirmDelete}

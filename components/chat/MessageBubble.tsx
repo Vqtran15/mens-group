@@ -22,6 +22,7 @@ import { linkifyText } from "@/lib/linkifyText";
 import { useMessageGestures } from "@/lib/hooks/useMessageGestures";
 import { ReactionPills } from "@/components/chat/ReactionPills";
 import { ImageLightbox } from "@/components/chat/ImageLightbox";
+import { InlinePollCard } from "@/components/chat/InlinePollCard";
 import type { ChatMessage, Reaction, SharedKind } from "@/lib/types";
 
 const MAX_THUMBNAILS = 4;
@@ -304,7 +305,11 @@ export const MessageBubble = memo(function MessageBubble({
                 })}
               </div>
             )}
-            {message.shared_kind && (() => {
+            {message.shared_kind === "poll" && message.shared_ref_id ? (
+              <div {...gestureHandlers} className={cn("select-none", message.body && "mb-1")}>
+                <InlinePollCard pollId={message.shared_ref_id} currentUserId={currentUserId} />
+              </div>
+            ) : message.shared_kind && (() => {
               const SharedIcon = SHARED_ICON[message.shared_kind];
               return (
                 <div {...gestureHandlers} className={cn("w-[240px] max-w-full select-none", message.body && "mb-1")}>
