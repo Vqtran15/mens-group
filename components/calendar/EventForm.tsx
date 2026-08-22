@@ -39,6 +39,7 @@ export function EventForm({ eventId }: { eventId?: string }) {
       .from("events")
       .select("title, starts_at, location")
       .eq("id", eventId)
+      .is("archived_at", null)
       .single()
       .then(({ data }) => {
         if (data) {

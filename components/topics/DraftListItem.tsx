@@ -22,7 +22,7 @@ export function DraftListItem({ draft, onChanged }: { draft: TopicDraft; onChang
 
   async function handleDelete() {
     const supabase = createClient();
-    await supabase.from("topic_drafts").delete().eq("id", draft.id);
+    await supabase.from("topic_drafts").update({ archived_at: new Date().toISOString() }).eq("id", draft.id);
     setConfirmOpen(false);
     onChanged();
   }

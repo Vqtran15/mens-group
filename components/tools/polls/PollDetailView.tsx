@@ -35,11 +35,12 @@ export function PollDetailView({ pollId }: { pollId: string }) {
     setGroupId(membership.groupId);
 
     const [{ data: pollData }, { data: optionsData }] = await Promise.all([
-      supabase.from("polls").select("*").eq("id", pollId).single(),
+      supabase.from("polls").select("*").eq("id", pollId).is("archived_at", null).single(),
       supabase
         .from("poll_options")
         .select("*, poll_votes(id, user_id)")
         .eq("poll_id", pollId)
+        .is("archived_at", null)
         .order("created_at", { ascending: true }),
     ]);
 
@@ -95,7 +96,7 @@ export function PollDetailView({ pollId }: { pollId: string }) {
 
   async function handleRemoveOption(option: OptionWithVotes) {
     const supabase = createClient();
-    await supabase.from("poll_options").delete().eq("id", option.id);
+    await supabase.from("poll_options").update({ archived_at: new Date().toISOString() }).eq("id", option.id);
     load();
   }
 
@@ -131,7 +132,7 @@ export function PollDetailView({ pollId }: { pollId: string }) {
 
   async function handleDeletePoll() {
     const supabase = createClient();
-    await supabase.from("polls").delete().eq("id", pollId);
+    await supabase.from("polls").update({ archived_at: new Date().toISOString() }).eq("id", pollId);
     setConfirmDelete(false);
     router.push("/tools/polls");
     router.refresh();

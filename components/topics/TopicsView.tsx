@@ -32,6 +32,7 @@ export function TopicsView() {
     const { data } = await supabase
       .from("topics")
       .select("*, profiles(display_name, avatar_color, avatar_url)")
+      .is("archived_at", null)
       .order("topic_date", { ascending: false })
       .order("created_at", { ascending: false });
     setTopics(data ?? []);

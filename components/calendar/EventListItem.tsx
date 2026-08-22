@@ -50,15 +50,16 @@ export function EventListItem({
   async function handleDelete() {
     const supabase = createClient();
     if (isRecurring && event.schedule_id) {
-      // Only clears future occurrences, then deactivates the schedule so it
-      // stops generating new ones - deleting the meeting_schedule row itself
-      // would cascade through every event ever tied to it (events.schedule_id
-      // has no date filter), wiping RSVP/attendance history for meetings
-      // that already happened, not just the "future occurrences" this
-      // action is meant to affect.
+      // Archives future occurrences (see migration
+      // 0043_archive_instead_of_delete.sql) rather than deleting them, then
+      // deactivates the schedule so it stops generating new ones -
+      // touching the meeting_schedule row itself would reach every event
+      // ever tied to it (events.schedule_id has no date filter), archiving
+      // history that already happened, not just the "future occurrences"
+      // this action is meant to affect.
       await supabase
         .from("events")
-        .delete()
+        .update({ archived_at: new Date().toISOString() })
         .eq("schedule_id", event.schedule_id)
         .gte("starts_at", startOfToday().toISOString());
       await supabase
@@ -66,7 +67,7 @@ export function EventListItem({
         .update({ active: false })
         .eq("id", event.schedule_id);
     } else {
-      await supabase.from("events").delete().eq("id", event.id);
+      await supabase.from("events").update({ archived_at: new Date().toISOString() }).eq("id", event.id);
     }
     setConfirmOpen(false);
     onChanged();

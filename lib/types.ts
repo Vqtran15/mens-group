@@ -89,6 +89,7 @@ export interface ChatMessage {
   reply_to_id: string | null;
   edited_at: string | null;
   created_at: string;
+  archived_at: string | null;
   shared_kind: SharedKind | null;
   shared_ref_id: string | null;
   shared_title: string | null;

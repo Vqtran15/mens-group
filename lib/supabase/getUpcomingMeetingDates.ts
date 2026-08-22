@@ -12,6 +12,7 @@ export async function getUpcomingMeetingDates(
     .from("events")
     .select("starts_at")
     .eq("group_id", groupId)
+    .is("archived_at", null)
     .gte("starts_at", new Date().toISOString())
     .order("starts_at", { ascending: true })
     .limit(20);

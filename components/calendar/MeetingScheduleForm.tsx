@@ -205,6 +205,7 @@ export function MeetingScheduleForm() {
         .from("events")
         .select("id, starts_at, title, location, location_overridden")
         .eq("schedule_id", scheduleId)
+        .is("archived_at", null)
         .gte("starts_at", startOfToday().toISOString());
 
       await reconcileScheduleEvents(

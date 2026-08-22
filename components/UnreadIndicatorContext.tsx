@@ -46,6 +46,7 @@ export function UnreadIndicatorProvider({ children }: { children: React.ReactNod
         .from("chat_messages")
         .select("created_at, created_by")
         .eq("group_id", membership.groupId)
+        .is("archived_at", null)
         .order("created_at", { ascending: false })
         .limit(1)
         .maybeSingle();

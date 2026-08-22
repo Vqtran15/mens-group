@@ -29,6 +29,7 @@ export function DraftForm({ draftId }: { draftId?: string }) {
       .from("topic_drafts")
       .select("title, description")
       .eq("id", draftId)
+      .is("archived_at", null)
       .single()
       .then(({ data }) => {
         if (data) {

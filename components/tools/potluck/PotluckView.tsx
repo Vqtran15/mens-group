@@ -39,6 +39,7 @@ export function PotluckView() {
     const { data } = await supabase
       .from("potluck_items")
       .select("*, claimed_by_profile:profiles!potluck_items_claimed_by_fkey(display_name, avatar_color, avatar_url)")
+      .is("archived_at", null)
       .order("created_at", { ascending: true });
     setItems(data ?? []);
   }, []);
@@ -81,7 +82,7 @@ export function PotluckView() {
 
   async function handleDelete(item: PotluckItem) {
     const supabase = createClient();
-    await supabase.from("potluck_items").delete().eq("id", item.id);
+    await supabase.from("potluck_items").update({ archived_at: new Date().toISOString() }).eq("id", item.id);
     load();
   }
 
@@ -112,7 +113,7 @@ export function PotluckView() {
     if (!groupId) return;
     setClearing(true);
     const supabase = createClient();
-    await supabase.from("potluck_items").delete().eq("group_id", groupId);
+    await supabase.from("potluck_items").update({ archived_at: new Date().toISOString() }).eq("group_id", groupId);
     setClearing(false);
     setConfirmClearAll(false);
     load();

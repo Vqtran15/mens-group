@@ -32,18 +32,21 @@ interface ExistingEventRow {
  * can't fully rule out - most notably legacy rows written before this
  * matching-by-calendar-date logic existed, which can be stored on the
  * *wrong day entirely* rather than just the wrong time on the right day.
- * Deleting a stale row is now always safe regardless of why it happened:
- * migration 0041_rsvp_stable_occurrence_key.sql moved a recurring RSVP's
- * real identity to (schedule_id, occurrence_date) and made a DB trigger
- * *detach* (not cascade-delete) its RSVPs the moment the row they were
- * attached to is deleted. The re-attach step below is what completes the
- * loop - the moment a fresh row for that same occurrence gets inserted
- * (schedule reverted, a skip got undone, whatever), any RSVPs still
- * waiting around detached get reattached to it, so the churn ends up
- * invisible to the people who RSVP'd instead of needing an app-level
- * "don't actually delete this" special case (the previous approach here,
- * which this replaces - it also had the side effect of leaving a
- * confusing duplicate/orphaned card on the calendar indefinitely).
+ * A stale row is archived (see migration 0043_archive_instead_of_delete.sql),
+ * never actually deleted, and migration 0041_rsvp_stable_occurrence_key.sql
+ * made archiving a recurring row detach (not destroy) its RSVPs, the same
+ * way an outright delete used to. The re-attach step below is what
+ * completes the loop - the moment a fresh row for that same occurrence
+ * gets (re)materialized (schedule reverted, a skip got undone, whatever),
+ * any RSVPs still waiting around detached get reattached to it, so the
+ * churn ends up invisible to the people who RSVP'd.
+ *
+ * `existingEventRows` is expected to already be filtered to
+ * `archived_at IS NULL` by the caller - an archived row must look
+ * "not existing" to this function, both so a still-current occurrence date
+ * gets a fresh (visible, unarchived) row instead of silently staying
+ * archived, and so the unique (schedule_id, starts_at) index doesn't fight
+ * the upsert below when that exact date needs to exist again.
  *
  * `location` is the one field this does NOT unconditionally sync from the
  * schedule: a row with `location_overridden` was explicitly given a
@@ -96,6 +99,12 @@ export async function reconcileScheduleEvents(
         is_recurring: true,
         schedule_id: schedule.id,
         group_id: groupId,
+        // Explicit, not just the column default: the upsert below can also
+        // land on an *archived* row sharing this exact (schedule_id,
+        // starts_at) - onConflict only updates the columns present in this
+        // object, so without this an archived occurrence coming back into
+        // rotation would silently stay archived forever.
+        archived_at: null,
       });
     } else if (
       existing.starts_at !== patch.starts_at ||
@@ -138,7 +147,7 @@ export async function reconcileScheduleEvents(
     changed = true;
   }
   if (staleIds.length > 0) {
-    await supabase.from("events").delete().in("id", staleIds);
+    await supabase.from("events").update({ archived_at: new Date().toISOString() }).in("id", staleIds);
     changed = true;
   }
 

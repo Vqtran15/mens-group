@@ -26,7 +26,7 @@ export function TopicListItem({ topic, onChanged }: { topic: Topic; onChanged: (
 
   async function handleDelete() {
     const supabase = createClient();
-    await supabase.from("topics").delete().eq("id", topic.id);
+    await supabase.from("topics").update({ archived_at: new Date().toISOString() }).eq("id", topic.id);
     setConfirmOpen(false);
     onChanged();
   }

@@ -7,7 +7,6 @@ import { createClient } from "@/lib/supabase/client";
 import { getCurrentMembership } from "@/lib/supabase/current-membership";
 import { uploadChatPhoto } from "@/lib/supabase/uploadChatPhoto";
 import { resolveChatPhotoUrls } from "@/lib/supabase/resolveChatPhotoUrls";
-import { extractChatPhotoPath } from "@/lib/supabase/chatPhotoPath";
 import { MessageBubble } from "@/components/chat/MessageBubble";
 import { MessageComposer } from "@/components/chat/MessageComposer";
 import { MessageActionSheet } from "@/components/chat/MessageActionSheet";
@@ -162,6 +161,7 @@ export function ChatView() {
         supabase
           .from("chat_messages")
           .select("*, profiles(display_name, avatar_color, avatar_url), message_reactions(*)")
+          .is("archived_at", null)
           .order("created_at", { ascending: false })
           .limit(100),
       ]);
@@ -241,6 +241,20 @@ export function ChatView() {
           { event: "UPDATE", schema: "public", table: "chat_messages" },
           (payload) => {
             const row = payload.new as ChatMessage;
+            // "Delete" now archives instead of removing the row (see
+            // migration 0043_archive_instead_of_delete.sql), which arrives
+            // here as an UPDATE, not a DELETE - treat it the same way the
+            // DELETE handler below already does.
+            if (row.archived_at) {
+              setMessages((prev) => prev.filter((m) => m.id !== row.id));
+              setReactionsByMessage((prev) => {
+                if (!(row.id in prev)) return prev;
+                const rest = { ...prev };
+                delete rest[row.id];
+                return rest;
+              });
+              return;
+            }
             setMessages((prev) =>
               prev.map((m) => (m.id === row.id ? { ...m, body: row.body, edited_at: row.edited_at } : m))
             );
@@ -301,6 +315,7 @@ export function ChatView() {
       const { data } = await supabase
         .from("chat_messages")
         .select("*, profiles(display_name, avatar_color, avatar_url), message_reactions(*)")
+        .is("archived_at", null)
         .order("created_at", { ascending: false })
         .limit(100);
       if (!data || data.length === 0 || cancelled) return;
@@ -495,6 +510,7 @@ export function ChatView() {
     const { data } = await supabase
       .from("chat_messages")
       .select("*, profiles(display_name, avatar_color, avatar_url), message_reactions(*)")
+      .is("archived_at", null)
       .lt("created_at", oldest.created_at)
       .order("created_at", { ascending: false })
       .limit(100);
@@ -660,6 +676,7 @@ export function ChatView() {
       reply_to_id: replyToId,
       edited_at: null,
       created_at: new Date().toISOString(),
+      archived_at: null,
       shared_kind: null,
       shared_ref_id: null,
       shared_title: null,
@@ -788,15 +805,12 @@ export function ChatView() {
       delete rest[messageId];
       return rest;
     });
-    await supabase.from("chat_messages").delete().eq("id", messageId);
-    // Deleting the row doesn't touch Storage on its own - without this, a
-    // "deleted" photo message's images stay sitting in the bucket and (now
-    // that reads are group-scoped, not just unguessable) remain fetchable
-    // by any other member indefinitely via their old signed-URL path.
-    if (message.image_urls.length > 0) {
-      const paths = message.image_urls.map(extractChatPhotoPath);
-      await supabase.storage.from("chat-photos").remove(paths);
-    }
+    // Archives instead of deleting the row (see migration
+    // 0043_archive_instead_of_delete.sql) - Storage images are deliberately
+    // left alone now too, unlike a real delete: the whole point of
+    // archiving is staying restorable, and a restored message with its
+    // images already scrubbed from the bucket would just be broken.
+    await supabase.from("chat_messages").update({ archived_at: new Date().toISOString() }).eq("id", messageId);
   }
 
   const messagesById = useMemo(() => new Map(messages.map((m) => [m.id, m])), [messages]);

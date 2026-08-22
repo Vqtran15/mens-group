@@ -16,6 +16,7 @@ export function TopicsAddMenu() {
     supabase
       .from("topic_drafts")
       .select("id", { count: "exact", head: true })
+      .is("archived_at", null)
       .then(({ count }) => setDraftCount(count ?? 0));
   }, []);
 

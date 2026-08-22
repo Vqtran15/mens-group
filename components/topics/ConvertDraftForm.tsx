@@ -35,7 +35,7 @@ export function ConvertDraftForm({ draftId }: { draftId: string }) {
       }
 
       const [{ data: draft }, dates] = await Promise.all([
-        supabase.from("topic_drafts").select("title, description").eq("id", draftId).single(),
+        supabase.from("topic_drafts").select("title, description").eq("id", draftId).is("archived_at", null).single(),
         getUpcomingMeetingDates(supabase, membership.groupId),
       ]);
 
@@ -81,9 +81,9 @@ export function ConvertDraftForm({ draftId }: { draftId: string }) {
       return;
     }
 
-    // The draft has now become a real topic - remove the scratchpad copy so
-    // it doesn't linger in Drafts alongside the published version.
-    await supabase.from("topic_drafts").delete().eq("id", draftId);
+    // The draft has now become a real topic - archive the scratchpad copy
+    // so it doesn't linger in Drafts alongside the published version.
+    await supabase.from("topic_drafts").update({ archived_at: new Date().toISOString() }).eq("id", draftId);
 
     setStatus("success");
     setTimeout(() => {

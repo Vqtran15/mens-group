@@ -23,6 +23,7 @@ export function DraftsView() {
     const { data } = await supabase
       .from("topic_drafts")
       .select("*")
+      .is("archived_at", null)
       .order("updated_at", { ascending: false });
     setDrafts(data ?? []);
     setLoading(false);

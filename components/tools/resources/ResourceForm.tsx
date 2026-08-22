@@ -36,6 +36,7 @@ export function ResourceForm({ resourceId }: { resourceId?: string }) {
           .from("resources")
           .select("title, url, description")
           .eq("id", resourceId)
+          .is("archived_at", null)
           .single();
         if (data) {
           setTitle(data.title);

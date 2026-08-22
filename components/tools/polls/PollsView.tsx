@@ -14,7 +14,7 @@ import { cn } from "@/lib/utils";
 import type { Poll } from "@/lib/types";
 
 interface PollWithVoteCounts extends Omit<Poll, "poll_options"> {
-  poll_options: { id: string; poll_votes: { id: string }[] }[];
+  poll_options: { id: string; archived_at: string | null; poll_votes: { id: string }[] }[];
 }
 
 export function PollsView() {
@@ -31,12 +31,18 @@ export function PollsView() {
     setGroupId(membership.groupId);
     const { data } = await supabase
       .from("polls")
-      .select("*, poll_options(id, poll_votes(id))")
+      .select("*, poll_options(id, archived_at, poll_votes(id))")
+      .is("archived_at", null)
       .order("created_at", { ascending: false });
 
     const withCounts = ((data ?? []) as unknown as PollWithVoteCounts[]).map(({ poll_options, ...rest }) => ({
       ...rest,
-      vote_count: poll_options.reduce((sum, o) => sum + o.poll_votes.length, 0),
+      // Embedded filters on a nested resource are unreliable across
+      // PostgREST versions, so this excludes archived options from the
+      // count client-side instead of trying to filter them in the query.
+      vote_count: poll_options
+        .filter((o) => !o.archived_at)
+        .reduce((sum, o) => sum + o.poll_votes.length, 0),
     }));
     setPolls(withCounts);
   }, []);

@@ -52,10 +52,11 @@ export function CalendarView() {
         .from("events")
         .select(eventsSelect)
         .eq("group_id", groupId)
+        .is("archived_at", null)
         .gte("starts_at", startOfToday().toISOString())
         .order("starts_at", { ascending: true })
         .limit(20),
-      supabase.from("topics").select("id, title, topic_date").eq("group_id", groupId),
+      supabase.from("topics").select("id, title, topic_date").eq("group_id", groupId).is("archived_at", null),
     ]);
 
     let finalEventRows = eventRows;
@@ -70,6 +71,7 @@ export function CalendarView() {
           .from("events")
           .select(eventsSelect)
           .eq("group_id", groupId)
+          .is("archived_at", null)
           .gte("starts_at", startOfToday().toISOString())
           .order("starts_at", { ascending: true })
           .limit(20);

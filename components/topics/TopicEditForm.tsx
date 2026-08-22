@@ -31,6 +31,7 @@ export function TopicEditForm({ topicId }: { topicId: string }) {
         .from("topics")
         .select("title, description, topic_date, group_id")
         .eq("id", topicId)
+        .is("archived_at", null)
         .single();
 
       if (data) {

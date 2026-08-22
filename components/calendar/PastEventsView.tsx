@@ -53,10 +53,11 @@ export function PastEventsView() {
         .from("events")
         .select(eventsSelect)
         .eq("group_id", currentGroupId)
+        .is("archived_at", null)
         .lt("starts_at", startOfToday().toISOString())
         .order("starts_at", { ascending: false })
         .limit(PAGE_SIZE),
-      supabase.from("topics").select("id, title, topic_date").eq("group_id", currentGroupId),
+      supabase.from("topics").select("id, title, topic_date").eq("group_id", currentGroupId).is("archived_at", null),
     ]);
 
     const dateMap: Record<string, RelatedTopic[]> = {};
@@ -77,6 +78,7 @@ export function PastEventsView() {
       .from("events")
       .select(eventsSelect)
       .eq("group_id", groupId)
+      .is("archived_at", null)
       .lt("starts_at", oldest.starts_at)
       .order("starts_at", { ascending: false })
       .limit(PAGE_SIZE);

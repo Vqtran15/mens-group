@@ -23,7 +23,7 @@ export function TopicDetailView({ topicId }: { topicId: string }) {
 
     async function init() {
       const supabase = createClient();
-      const { data } = await supabase.from("topics").select("*").eq("id", topicId).single();
+      const { data } = await supabase.from("topics").select("*").eq("id", topicId).is("archived_at", null).single();
       if (cancelled) return;
       setTopic(data);
       setLoading(false);

@@ -31,6 +31,7 @@ export function ResourcesView() {
     const { data } = await supabase
       .from("resources")
       .select("*, profiles(display_name, avatar_color, avatar_url)")
+      .is("archived_at", null)
       .order("created_at", { ascending: false });
     setResources(data ?? []);
   }, []);
@@ -45,7 +46,7 @@ export function ResourcesView() {
   async function handleDelete() {
     if (!confirmDelete) return;
     const supabase = createClient();
-    await supabase.from("resources").delete().eq("id", confirmDelete.id);
+    await supabase.from("resources").update({ archived_at: new Date().toISOString() }).eq("id", confirmDelete.id);
     setConfirmDelete(null);
     load();
   }
