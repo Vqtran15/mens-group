@@ -125,7 +125,17 @@ export function ChatView() {
   // overwrites it - this is what "unread" is measured against for the
   // initial scroll target, so it has to reflect the value as of walking in.
   const lastSeenAtMountRef = useRef<string | null>(null);
-  const { markChatSeen } = useUnreadIndicator();
+  const { markChatSeen, setChatOpen } = useUnreadIndicator();
+
+  // Tells UnreadIndicatorContext to stand down while this view is mounted -
+  // it has its own separate chat_messages subscription for the nav badge,
+  // and without this a message arriving while chat is already open races
+  // that subscription against this component's own markChatSeen() below
+  // (see the comment on setChatOpen at its definition).
+  useEffect(() => {
+    setChatOpen(true);
+    return () => setChatOpen(false);
+  }, [setChatOpen]);
 
   useEffect(() => {
     const supabase = createClient();

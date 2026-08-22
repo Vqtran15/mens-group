@@ -1,12 +1,22 @@
 "use client";
 
-import { createContext, useContext, useEffect, useRef, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { getCurrentMembership } from "@/lib/supabase/current-membership";
 
 interface UnreadState {
   chatUnread: boolean;
   markChatSeen: () => void;
+  // ChatView calls this on mount/unmount. This provider has its own
+  // realtime subscription to chat_messages (see below) independent of
+  // ChatView's - without this flag, a message arriving while chat is
+  // already open races ChatView's own markChatSeen() against this
+  // provider's INSERT handler, and whichever runs last wins. Since there's
+  // no ordering guarantee between two independent subscriptions reacting
+  // to the same event, the badge could stay lit even while you're looking
+  // right at the message. Gating this provider's own unread-setting logic
+  // on "is chat currently open" removes the race instead of trying to win it.
+  setChatOpen: (open: boolean) => void;
 }
 
 const UnreadContext = createContext<UnreadState | null>(null);
@@ -30,6 +40,7 @@ export function UnreadIndicatorProvider({ children }: { children: React.ReactNod
   const [chatUnread, setChatUnread] = useState(false);
   const groupIdRef = useRef<string | null>(null);
   const userIdRef = useRef<string | null>(null);
+  const chatOpenRef = useRef(false);
 
   useEffect(() => {
     const supabase = createClient();
@@ -53,7 +64,11 @@ export function UnreadIndicatorProvider({ children }: { children: React.ReactNod
 
       if (cancelled) return;
 
-      if (latestMessage && latestMessage.created_by !== membership.userId) {
+      // If chat is already open by the time this resolves, ChatView's own
+      // markChatSeen() owns the "seen" state instead - deferring to it here
+      // (rather than also computing our own answer) is what avoids the
+      // race described above.
+      if (!chatOpenRef.current && latestMessage && latestMessage.created_by !== membership.userId) {
         setChatUnread(isNewerThanStored(latestMessage.created_at, chatSeenKey(membership.groupId)));
       }
 
@@ -64,7 +79,11 @@ export function UnreadIndicatorProvider({ children }: { children: React.ReactNod
           { event: "INSERT", schema: "public", table: "chat_messages" },
           (payload) => {
             const row = payload.new as { group_id: string; created_by: string };
-            if (row.group_id === groupIdRef.current && row.created_by !== userIdRef.current) {
+            if (
+              row.group_id === groupIdRef.current &&
+              row.created_by !== userIdRef.current &&
+              !chatOpenRef.current
+            ) {
               setChatUnread(true);
             }
           }
@@ -96,15 +115,23 @@ export function UnreadIndicatorProvider({ children }: { children: React.ReactNod
     }
   }, [chatUnread]);
 
-  function markChatSeen() {
+  // useCallback so these have a stable identity - ChatView depends on
+  // setChatOpen in a mount/unmount-only effect, and a fresh function
+  // reference on every provider render would otherwise fire that effect's
+  // cleanup/setup on every unrelated re-render too.
+  const markChatSeen = useCallback(() => {
     if (groupIdRef.current) {
       localStorage.setItem(chatSeenKey(groupIdRef.current), new Date().toISOString());
     }
     setChatUnread(false);
-  }
+  }, []);
+
+  const setChatOpen = useCallback((open: boolean) => {
+    chatOpenRef.current = open;
+  }, []);
 
   return (
-    <UnreadContext.Provider value={{ chatUnread, markChatSeen }}>
+    <UnreadContext.Provider value={{ chatUnread, markChatSeen, setChatOpen }}>
       {children}
     </UnreadContext.Provider>
   );
