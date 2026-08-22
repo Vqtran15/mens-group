@@ -1,0 +1,41 @@
+name: CI
+
+# Type-check, lint, and build on every push/PR - the same three checks that
+# were previously only ever run by hand before a commit. This is a safety
+# net for the mechanics (does it compile, does it build), not a correctness
+# suite - it won't catch a bad RLS policy or broken realtime wiring, only
+# that the app is soundly structured enough to ship. No Supabase secrets
+# are configured here on purpose: `next build` never touches the database
+# (every Supabase client in this app is created lazily at request time, not
+# at build time) - confirmed by running a clean build with zero env vars
+# set before adding this workflow.
+on:
+  push:
+    branches: [staging, main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Type-check
+        run: npx tsc --noEmit
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Build
+        run: npm run build

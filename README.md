@@ -1,4 +1,11 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+A Next.js PWA for running a small recurring group: calendar/RSVPs, group
+chat, discussion topics, polls, a potluck sign-up list, and shared
+resources, backed by Supabase.
+
+**Start here:** [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) - data
+model, key design decisions, the migration workflow, and a "known gaps"
+list, written for a new developer to get oriented without reading all 48
+migrations in order.
 
 ## Getting Started
 
