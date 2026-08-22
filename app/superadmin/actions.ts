@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { requireAdmin } from "@/lib/admin/requireAdmin";
+import { requireSuperadmin } from "@/lib/superadmin/requireSuperadmin";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 export interface AdminMember {
@@ -21,7 +21,7 @@ export interface AdminGroup {
 }
 
 export async function getAdminData(): Promise<AdminGroup[]> {
-  await requireAdmin();
+  await requireSuperadmin();
   const supabase = createAdminClient();
 
   const { data, error } = await supabase
@@ -36,7 +36,7 @@ export async function getAdminData(): Promise<AdminGroup[]> {
 // Members with no group at all (never joined one, or removed via
 // removeUserFromGroup below) - otherwise invisible from the groups list.
 export async function getUnassignedUsers(): Promise<AdminMember[]> {
-  await requireAdmin();
+  await requireSuperadmin();
   const supabase = createAdminClient();
 
   const { data, error } = await supabase
@@ -50,36 +50,36 @@ export async function getUnassignedUsers(): Promise<AdminMember[]> {
 }
 
 export async function renameGroupAction(groupId: string, newName: string) {
-  await requireAdmin();
+  await requireSuperadmin();
   const trimmed = newName.trim();
   if (!trimmed) throw new Error("Group name can't be empty");
 
   const supabase = createAdminClient();
   const { error } = await supabase.from("groups").update({ name: trimmed }).eq("id", groupId);
   if (error) throw new Error(error.message);
-  revalidatePath("/admin");
+  revalidatePath("/superadmin");
 }
 
 // Cascades to the group's topics/events/chat/schedule via FK constraints
 // (see migration 0021) - members aren't deleted, just lose their group_id
 // and land back on /onboarding next time they open the app.
 export async function deleteGroupAction(groupId: string) {
-  await requireAdmin();
+  await requireSuperadmin();
   const supabase = createAdminClient();
   const { error } = await supabase.from("groups").delete().eq("id", groupId);
   if (error) throw new Error(error.message);
-  revalidatePath("/admin");
+  revalidatePath("/superadmin");
 }
 
 // Kicks a member out of their group without touching their account - they
 // keep their login and profile, just land on /onboarding to join/create
 // another group next time they open the app.
 export async function removeUserFromGroupAction(userId: string) {
-  await requireAdmin();
+  await requireSuperadmin();
   const supabase = createAdminClient();
   const { error } = await supabase.from("profiles").update({ group_id: null }).eq("id", userId);
   if (error) throw new Error(error.message);
-  revalidatePath("/admin");
+  revalidatePath("/superadmin");
 }
 
 // Full account deletion via the auth admin API - cascades to the profile
@@ -88,9 +88,9 @@ export async function removeUserFromGroupAction(userId: string) {
 // topics/events/chat messages stay, credited to "Someone"; their own
 // reactions/RSVPs are removed outright.
 export async function deleteUserAccountAction(userId: string) {
-  await requireAdmin();
+  await requireSuperadmin();
   const supabase = createAdminClient();
   const { error } = await supabase.auth.admin.deleteUser(userId);
   if (error) throw new Error(error.message);
-  revalidatePath("/admin");
+  revalidatePath("/superadmin");
 }

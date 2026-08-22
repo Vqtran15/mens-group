@@ -14,7 +14,7 @@ import {
 } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/Button";
 import { Skeleton } from "@/components/ui/Skeleton";
-import { TypedConfirmDialog } from "@/components/admin/TypedConfirmDialog";
+import { TypedConfirmDialog } from "@/components/superadmin/TypedConfirmDialog";
 import { cn, formatDate } from "@/lib/utils";
 import {
   deleteGroupAction,
@@ -25,7 +25,7 @@ import {
   renameGroupAction,
   type AdminGroup,
   type AdminMember,
-} from "@/app/admin/actions";
+} from "@/app/superadmin/actions";
 
 type PendingDelete =
   | { kind: "group"; group: AdminGroup }

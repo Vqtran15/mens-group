@@ -1,5 +1,5 @@
-import { AdminView } from "@/components/admin/AdminView";
+import { AdminView } from "@/components/superadmin/AdminView";
 
-export default function AdminPage() {
+export default function SuperadminPage() {
   return <AdminView />;
 }
