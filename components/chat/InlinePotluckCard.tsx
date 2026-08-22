@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useId, useState } from "react";
 import Link from "next/link";
 import { ForkKnife, Plus } from "@phosphor-icons/react";
 import { createClient } from "@/lib/supabase/client";
@@ -20,6 +20,13 @@ const MAX_VISIBLE_ITEMS = 6;
 // restrict_potluck_item_edits() in 0046) - this card only covers the two
 // actions meant to stay open to everyone: adding and claiming.
 export function InlinePotluckCard({ currentUserId }: { currentUserId: string }) {
+  // There's only one potluck list per group, so every share of it in chat
+  // resolves to the same groupId - if the channel topic were keyed on that
+  // alone, a second shared-list message would try to .on() a channel the
+  // first one already .subscribe()'d (Supabase's client reuses channel
+  // objects by topic name), which throws and crashes the whole page. The
+  // instance-unique suffix keeps every card's channel independent.
+  const instanceId = useId().replace(/[^a-zA-Z0-9]/g, "");
   const [groupId, setGroupId] = useState<string | null>(null);
   const [items, setItems] = useState<PotluckItem[] | null>(null);
   const [newItemName, setNewItemName] = useState("");
@@ -56,7 +63,7 @@ export function InlinePotluckCard({ currentUserId }: { currentUserId: string }) 
     if (!groupId) return;
     const supabase = createClient();
     const channel = supabase
-      .channel(`inline_potluck_${groupId}`)
+      .channel(`inline_potluck_${groupId}_${instanceId}`)
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "potluck_items", filter: `group_id=eq.${groupId}` },
@@ -67,7 +74,7 @@ export function InlinePotluckCard({ currentUserId }: { currentUserId: string }) 
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [groupId, load]);
+  }, [groupId, load, instanceId]);
 
   async function handleAddItem(e: React.FormEvent) {
     e.preventDefault();

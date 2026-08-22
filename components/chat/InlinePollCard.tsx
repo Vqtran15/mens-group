@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useId, useState } from "react";
 import Link from "next/link";
 import { Check, ChartBar, LockSimple } from "@phosphor-icons/react";
 import { createClient } from "@/lib/supabase/client";
@@ -24,6 +24,13 @@ type PollRow = {
 // instead of needing to leave it, and stays in sync across everyone viewing
 // it via a realtime subscription scoped to this one poll.
 export function InlinePollCard({ pollId, currentUserId }: { pollId: string; currentUserId: string }) {
+  // If the same poll gets shared to chat more than once, each share resolves
+  // to the same pollId - if the channel topic were keyed on that alone, the
+  // second card's .on() would land on a channel the first card already
+  // .subscribe()'d (Supabase's client reuses channel objects by topic
+  // name), which throws and crashes the whole page. The instance-unique
+  // suffix keeps every card's channel independent.
+  const instanceId = useId().replace(/[^a-zA-Z0-9]/g, "");
   const [poll, setPoll] = useState<PollRow | null | undefined>(undefined);
   const [options, setOptions] = useState<OptionWithVotes[]>([]);
 
@@ -49,7 +56,7 @@ export function InlinePollCard({ pollId, currentUserId }: { pollId: string; curr
     init();
     const supabase = createClient();
     const channel = supabase
-      .channel(`inline_poll_${pollId}`)
+      .channel(`inline_poll_${pollId}_${instanceId}`)
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "poll_votes", filter: `poll_id=eq.${pollId}` },
@@ -70,7 +77,7 @@ export function InlinePollCard({ pollId, currentUserId }: { pollId: string; curr
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [pollId, load]);
+  }, [pollId, load, instanceId]);
 
   const totalVotes = options.reduce((sum, o) => sum + o.poll_votes.length, 0);
   const myVoteOptionId = options.find((o) => o.poll_votes.some((v) => v.user_id === currentUserId))?.id ?? null;
