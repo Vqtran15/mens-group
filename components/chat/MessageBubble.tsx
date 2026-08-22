@@ -23,6 +23,7 @@ import { useMessageGestures } from "@/lib/hooks/useMessageGestures";
 import { ReactionPills } from "@/components/chat/ReactionPills";
 import { ImageLightbox } from "@/components/chat/ImageLightbox";
 import { InlinePollCard } from "@/components/chat/InlinePollCard";
+import { InlinePotluckCard } from "@/components/chat/InlinePotluckCard";
 import type { ChatMessage, Reaction, SharedKind } from "@/lib/types";
 
 const MAX_THUMBNAILS = 4;
@@ -308,6 +309,10 @@ export const MessageBubble = memo(function MessageBubble({
             {message.shared_kind === "poll" && message.shared_ref_id ? (
               <div {...gestureHandlers} className={cn("select-none", message.body && "mb-1")}>
                 <InlinePollCard pollId={message.shared_ref_id} currentUserId={currentUserId} />
+              </div>
+            ) : message.shared_kind === "potluck" ? (
+              <div {...gestureHandlers} className={cn("select-none", message.body && "mb-1")}>
+                <InlinePotluckCard currentUserId={currentUserId} />
               </div>
             ) : message.shared_kind && (() => {
               const SharedIcon = SHARED_ICON[message.shared_kind];
