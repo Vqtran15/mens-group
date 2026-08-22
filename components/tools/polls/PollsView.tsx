@@ -8,6 +8,7 @@ import { ChartBar, LockSimple, PaperPlaneTilt } from "@phosphor-icons/react";
 import { createClient } from "@/lib/supabase/client";
 import { getCurrentMembership } from "@/lib/supabase/current-membership";
 import { shareToChat } from "@/lib/supabase/shareToChat";
+import { Avatar } from "@/components/Avatar";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { cn } from "@/lib/utils";
@@ -31,7 +32,7 @@ export function PollsView() {
     setGroupId(membership.groupId);
     const { data } = await supabase
       .from("polls")
-      .select("*, poll_options(id, archived_at, poll_votes(id))")
+      .select("*, profiles(display_name, avatar_color, avatar_url), poll_options(id, archived_at, poll_votes(id))")
       .is("archived_at", null)
       .order("created_at", { ascending: false });
 
@@ -106,6 +107,22 @@ export function PollsView() {
               <p className={cn("mt-1.5 text-xs text-muted")}>
                 {poll.vote_count} {poll.vote_count === 1 ? "vote" : "votes"}
               </p>
+              <div className="mt-2 flex items-center gap-1.5">
+                <Avatar
+                  name={poll.profiles?.display_name ?? "Someone"}
+                  color={poll.profiles?.avatar_color}
+                  imageUrl={poll.profiles?.avatar_url}
+                  size={18}
+                />
+                <span className="text-xs text-muted">
+                  {poll.profiles?.display_name ?? "Someone"} ·{" "}
+                  {new Date(poll.created_at).toLocaleDateString("en-US", {
+                    month: "short",
+                    day: "numeric",
+                    year: "numeric",
+                  })}
+                </span>
+              </div>
             </Link>
             <div className="mt-1.5 flex justify-end">
               <button

@@ -140,6 +140,7 @@ export interface Poll {
   created_by: string | null;
   created_at: string;
   poll_options?: PollOption[];
+  profiles?: Pick<Profile, "display_name" | "avatar_color" | "avatar_url">;
 }
 
 export interface PollOption {
