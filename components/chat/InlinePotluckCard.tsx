@@ -5,7 +5,6 @@ import Link from "next/link";
 import { ForkKnife, LockSimple, Plus } from "@phosphor-icons/react";
 import { createClient } from "@/lib/supabase/client";
 import { Avatar } from "@/components/Avatar";
-import { cn } from "@/lib/utils";
 import type { PotluckItem } from "@/lib/types";
 
 const MAX_VISIBLE_ITEMS = 6;
@@ -18,11 +17,11 @@ type PotluckRow = {
 };
 
 // Renders one potluck list live in chat, same idea as InlinePollCard - lets
-// people add what they're bringing and claim/unclaim an item without
-// leaving the thread, kept in sync via a realtime subscription scoped to
-// this one potluck. Renaming/removing an item (or closing/deleting the
-// whole list) stays a Potluck-page-only action - this card only covers the
-// two actions meant to stay open to everyone: adding and claiming.
+// people add what they're bringing without leaving the thread, kept in sync
+// via a realtime subscription scoped to this one potluck. Adding an item
+// *is* signing up to bring it - there's no separate claim step, so whoever
+// typed it in is who the card shows next to it. Renaming/removing an item
+// (or closing/deleting the whole list) stays a Potluck-page-only action.
 export function InlinePotluckCard({ potluckId, currentUserId }: { potluckId: string; currentUserId: string }) {
   // If the same potluck gets shared to chat more than once, each share
   // resolves to the same potluckId - if the channel topic were keyed on
@@ -42,7 +41,7 @@ export function InlinePotluckCard({ potluckId, currentUserId }: { potluckId: str
       supabase.from("potlucks").select("id, title, closed, archived_at").eq("id", potluckId).maybeSingle(),
       supabase
         .from("potluck_items")
-        .select("*, claimed_by_profile:profiles!potluck_items_claimed_by_fkey(display_name, avatar_color, avatar_url)")
+        .select("*, created_by_profile:profiles!potluck_items_created_by_fkey(display_name, avatar_color, avatar_url)")
         .eq("potluck_id", potluckId)
         .is("archived_at", null)
         .order("created_at", { ascending: true }),
@@ -93,20 +92,6 @@ export function InlinePotluckCard({ potluckId, currentUserId }: { potluckId: str
     load();
   }
 
-  async function handleClaim(item: PotluckItem) {
-    if (signupsClosed) return;
-    const supabase = createClient();
-    await supabase.from("potluck_items").update({ claimed_by: currentUserId }).eq("id", item.id);
-    load();
-  }
-
-  async function handleRelease(item: PotluckItem) {
-    if (signupsClosed) return;
-    const supabase = createClient();
-    await supabase.from("potluck_items").update({ claimed_by: null }).eq("id", item.id);
-    load();
-  }
-
   if (potluck === undefined) {
     return <div className="h-24 w-[280px] max-w-full animate-pulse rounded-2xl bg-surface-muted" />;
   }
@@ -141,7 +126,7 @@ export function InlinePotluckCard({ potluckId, currentUserId }: { potluckId: str
       ) : (
         <div className="space-y-1.5">
           {visibleItems.map((item) => {
-            const isMine = item.claimed_by === currentUserId;
+            const isMine = item.created_by === currentUserId;
             return (
               <div
                 key={item.id}
@@ -149,45 +134,20 @@ export function InlinePotluckCard({ potluckId, currentUserId }: { potluckId: str
               >
                 <div className="min-w-0 flex-1">
                   <p className="truncate font-medium text-secondary">{item.item_name}</p>
-                  {item.claimed_by_profile && (
+                  {item.created_by_profile && (
                     <span className="flex items-center gap-1">
                       <Avatar
-                        name={item.claimed_by_profile.display_name}
-                        color={item.claimed_by_profile.avatar_color}
-                        imageUrl={item.claimed_by_profile.avatar_url}
+                        name={item.created_by_profile.display_name}
+                        color={item.created_by_profile.avatar_color}
+                        imageUrl={item.created_by_profile.avatar_url}
                         size={14}
                       />
                       <span className="text-xs text-muted">
-                        {isMine ? "You" : item.claimed_by_profile.display_name}
+                        {isMine ? "You" : item.created_by_profile.display_name}
                       </span>
                     </span>
                   )}
                 </div>
-                {item.claimed_by ? (
-                  <button
-                    type="button"
-                    onClick={() => handleRelease(item)}
-                    disabled={signupsClosed && !isMine}
-                    aria-label={isMine ? "Unclaim this item" : `${item.item_name} is claimed`}
-                    className={cn(
-                      "shrink-0 rounded-full px-2 py-1 text-xs font-medium transition-colors disabled:cursor-default",
-                      isMine
-                        ? "bg-primary/10 text-primary hover:bg-primary/20"
-                        : "bg-surface-muted text-muted"
-                    )}
-                  >
-                    {isMine ? "Unclaim" : "Claimed"}
-                  </button>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={() => handleClaim(item)}
-                    disabled={signupsClosed}
-                    className="shrink-0 rounded-full bg-primary px-2 py-1 text-xs font-medium text-white shadow-sm shadow-primary/30 disabled:opacity-50"
-                  >
-                    Claim
-                  </button>
-                )}
               </div>
             );
           })}

@@ -13,7 +13,6 @@ import {
   PaperPlaneTilt,
   Plus,
   Trash,
-  X,
 } from "@phosphor-icons/react";
 import { createClient } from "@/lib/supabase/client";
 import { getCurrentMembership } from "@/lib/supabase/current-membership";
@@ -24,7 +23,7 @@ import { Button } from "@/components/ui/Button";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { ConfirmSheet } from "@/components/ui/ConfirmSheet";
 import { EventPickerSheet, type PickableEvent } from "@/components/ui/EventPickerSheet";
-import { cn, startOfToday } from "@/lib/utils";
+import { startOfToday } from "@/lib/utils";
 import type { Potluck, PotluckItem } from "@/lib/types";
 
 const CATEGORIES = ["Main", "Side", "Dessert", "Drink", "Other"];
@@ -61,7 +60,7 @@ export function PotluckDetailView({ potluckId }: { potluckId: string }) {
       supabase.from("potlucks").select("*").eq("id", potluckId).is("archived_at", null).single(),
       supabase
         .from("potluck_items")
-        .select("*, claimed_by_profile:profiles!potluck_items_claimed_by_fkey(display_name, avatar_color, avatar_url)")
+        .select("*, created_by_profile:profiles!potluck_items_created_by_fkey(display_name, avatar_color, avatar_url)")
         .eq("potluck_id", potluckId)
         .is("archived_at", null)
         .order("created_at", { ascending: true }),
@@ -88,11 +87,12 @@ export function PotluckDetailView({ potluckId }: { potluckId: string }) {
     init();
   }, [load]);
 
-  // Claiming/unclaiming and adding items stay open to every member (blocked
-  // only once signups are closed, enforced server-side too - see
-  // restrict_potluck_item_edits() in 0049_potluck_multi_instance.sql).
-  // Renaming/removing an item, closing signups, editing the title, and
-  // deleting the potluck are all limited to whoever created it or an admin.
+  // Adding an item stays open to every member (blocked only once signups
+  // are closed, enforced server-side too - see restrict_potluck_item_edits()
+  // in 0049_potluck_multi_instance.sql) - and adding *is* signing up to
+  // bring it, there's no separate claim step. Renaming/removing an item,
+  // closing signups, editing the title, and deleting the potluck are all
+  // limited to whoever created it or an admin.
   const canEdit = !!potluck && (isAdminEmail(email) || potluck.created_by === userId);
   const signupsClosed = !potluck || potluck.closed;
 
@@ -111,20 +111,6 @@ export function PotluckDetailView({ potluckId }: { potluckId: string }) {
     });
     setNewItemName("");
     setAdding(false);
-    load();
-  }
-
-  async function handleClaim(item: PotluckItem) {
-    if (!userId || signupsClosed) return;
-    const supabase = createClient();
-    await supabase.from("potluck_items").update({ claimed_by: userId }).eq("id", item.id);
-    load();
-  }
-
-  async function handleRelease(item: PotluckItem) {
-    if (signupsClosed) return;
-    const supabase = createClient();
-    await supabase.from("potluck_items").update({ claimed_by: null }).eq("id", item.id);
     load();
   }
 
@@ -336,7 +322,7 @@ export function PotluckDetailView({ potluckId }: { potluckId: string }) {
 
       <div className="space-y-2">
         {items.map((item, i) => {
-          const isMine = item.claimed_by === userId;
+          const isMine = item.created_by === userId;
           const canEditItem = isAdminEmail(email) || item.created_by === userId;
           return (
             <motion.div
@@ -373,47 +359,22 @@ export function PotluckDetailView({ potluckId }: { potluckId: string }) {
                       {item.category}
                     </span>
                   )}
-                  {item.claimed_by_profile && (
+                  {item.created_by_profile && (
                     <span className="flex items-center gap-1">
                       <Avatar
-                        name={item.claimed_by_profile.display_name}
-                        color={item.claimed_by_profile.avatar_color}
-                        imageUrl={item.claimed_by_profile.avatar_url}
+                        name={item.created_by_profile.display_name}
+                        color={item.created_by_profile.avatar_color}
+                        imageUrl={item.created_by_profile.avatar_url}
                         size={16}
                       />
                       <span className="text-xs text-muted">
-                        {isMine ? "You" : item.claimed_by_profile.display_name}
+                        {isMine ? "You" : item.created_by_profile.display_name}
                       </span>
                     </span>
                   )}
                 </div>
               </div>
 
-              {item.claimed_by ? (
-                <button
-                  type="button"
-                  onClick={() => handleRelease(item)}
-                  disabled={signupsClosed && !isMine}
-                  aria-label="Release this item"
-                  className={cn(
-                    "shrink-0 rounded-full px-2.5 py-1.5 text-xs font-medium transition-colors disabled:cursor-default disabled:opacity-50",
-                    isMine
-                      ? "bg-primary/10 text-primary hover:bg-primary/20"
-                      : "bg-surface-muted text-secondary hover:bg-border/60"
-                  )}
-                >
-                  {isMine ? "Unclaim" : <X size={14} />}
-                </button>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => handleClaim(item)}
-                  disabled={signupsClosed}
-                  className="shrink-0 rounded-full bg-primary px-2.5 py-1.5 text-xs font-medium text-white shadow-sm shadow-primary/30 disabled:opacity-50"
-                >
-                  Claim
-                </button>
-              )}
               {canEditItem && (
                 <button
                   type="button"
