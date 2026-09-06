@@ -36,7 +36,7 @@ const SHARED_ICON: Record<SharedKind, typeof BookOpen> = {
 
 function sharedHref(kind: SharedKind, refId: string | null): string {
   if (kind === "poll") return refId ? `/tools/polls/${refId}` : "/tools/polls";
-  if (kind === "potluck") return "/tools/potluck";
+  if (kind === "potluck") return refId ? `/tools/potluck/${refId}` : "/tools/potluck";
   return "/tools/resources";
 }
 
@@ -310,9 +310,9 @@ export const MessageBubble = memo(function MessageBubble({
               <div {...gestureHandlers} className={cn("select-none", message.body && "mb-1")}>
                 <InlinePollCard pollId={message.shared_ref_id} currentUserId={currentUserId} />
               </div>
-            ) : message.shared_kind === "potluck" ? (
+            ) : message.shared_kind === "potluck" && message.shared_ref_id ? (
               <div {...gestureHandlers} className={cn("select-none", message.body && "mb-1")}>
-                <InlinePotluckCard currentUserId={currentUserId} />
+                <InlinePotluckCard potluckId={message.shared_ref_id} currentUserId={currentUserId} />
               </div>
             ) : message.shared_kind && (() => {
               const SharedIcon = SHARED_ICON[message.shared_kind];

@@ -1,36 +1,32 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import { Broom, ForkKnife, PaperPlaneTilt, Plus, Trash, X } from "@phosphor-icons/react";
+import { ForkKnife, LockSimple, PaperPlaneTilt } from "@phosphor-icons/react";
 import { createClient } from "@/lib/supabase/client";
 import { getCurrentMembership } from "@/lib/supabase/current-membership";
 import { shareToChat } from "@/lib/supabase/shareToChat";
-import { isAdminEmail } from "@/lib/admin";
 import { Avatar } from "@/components/Avatar";
-import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Skeleton } from "@/components/ui/Skeleton";
-import { ConfirmSheet } from "@/components/ui/ConfirmSheet";
 import { cn } from "@/lib/utils";
-import type { PotluckItem } from "@/lib/types";
+import type { Potluck } from "@/lib/types";
 
-const CATEGORIES = ["Main", "Side", "Dessert", "Drink", "Other"];
+interface PotluckWithItemCounts extends Potluck {
+  potluck_items: { id: string; archived_at: string | null }[];
+}
 
+// The list of potluck lists for the group - one flat ongoing list per group
+// used to be the whole feature; now potluck works like polls, so this
+// mirrors PollsView.tsx closely (item_count here plays the role vote_count
+// plays there).
 export function PotluckView() {
   const router = useRouter();
-  const [items, setItems] = useState<PotluckItem[] | null>(null);
+  const [potlucks, setPotlucks] = useState<(Potluck & { item_count: number })[] | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
   const [groupId, setGroupId] = useState<string | null>(null);
-  const [email, setEmail] = useState<string | null>(null);
-  const [newItemName, setNewItemName] = useState("");
-  const [newItemCategory, setNewItemCategory] = useState(CATEGORIES[0]);
-  const [adding, setAdding] = useState(false);
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [editValue, setEditValue] = useState("");
-  const [confirmClearAll, setConfirmClearAll] = useState(false);
-  const [clearing, setClearing] = useState(false);
 
   const load = useCallback(async () => {
     const supabase = createClient();
@@ -38,13 +34,17 @@ export function PotluckView() {
     if (!membership) return;
     setUserId(membership.userId);
     setGroupId(membership.groupId);
-    setEmail(membership.email);
     const { data } = await supabase
-      .from("potluck_items")
-      .select("*, claimed_by_profile:profiles!potluck_items_claimed_by_fkey(display_name, avatar_color, avatar_url)")
+      .from("potlucks")
+      .select("*, profiles(display_name, avatar_color, avatar_url), potluck_items(id, archived_at)")
       .is("archived_at", null)
-      .order("created_at", { ascending: true });
-    setItems(data ?? []);
+      .order("created_at", { ascending: false });
+
+    const withCounts = ((data ?? []) as unknown as PotluckWithItemCounts[]).map(({ potluck_items, ...rest }) => ({
+      ...rest,
+      item_count: potluck_items.filter((i) => !i.archived_at).length,
+    }));
+    setPotlucks(withCounts);
   }, []);
 
   useEffect(() => {
@@ -54,273 +54,87 @@ export function PotluckView() {
     init();
   }, [load]);
 
-  async function handleAddItem(e: React.FormEvent) {
-    e.preventDefault();
-    if (!newItemName.trim() || !groupId || !userId) return;
-    setAdding(true);
+  async function handleShare(potluck: Potluck & { item_count: number }) {
+    if (!userId || !groupId) return;
     const supabase = createClient();
-    await supabase.from("potluck_items").insert({
-      item_name: newItemName.trim(),
-      category: newItemCategory,
-      created_by: userId,
-      group_id: groupId,
-    });
-    setNewItemName("");
-    setAdding(false);
-    load();
-  }
-
-  async function handleClaim(item: PotluckItem) {
-    if (!userId) return;
-    const supabase = createClient();
-    await supabase.from("potluck_items").update({ claimed_by: userId }).eq("id", item.id);
-    load();
-  }
-
-  async function handleRelease(item: PotluckItem) {
-    const supabase = createClient();
-    await supabase.from("potluck_items").update({ claimed_by: null }).eq("id", item.id);
-    load();
-  }
-
-  async function handleDelete(item: PotluckItem) {
-    const supabase = createClient();
-    await supabase.from("potluck_items").update({ archived_at: new Date().toISOString() }).eq("id", item.id);
-    load();
-  }
-
-  // Shares the whole list as one card rather than a single item - a potluck
-  // is inherently a group thing, so "who's bringing what" is what's useful
-  // in chat, not one dish in isolation.
-  async function handleShareList() {
-    if (!userId || !groupId || items === null || items.length === 0) return;
-    const supabase = createClient();
-    const names = items.map((i) => i.item_name);
-    const preview = names.slice(0, 3).join(", ");
-    const subtitle = names.length > 3 ? `${preview} +${names.length - 3} more` : preview;
     await shareToChat(supabase, {
       groupId,
       userId,
       kind: "potluck",
-      refId: null,
-      title: `Potluck list (${items.length})`,
-      subtitle,
+      refId: potluck.id,
+      title: potluck.title,
+      subtitle: `${potluck.item_count} ${potluck.item_count === 1 ? "item" : "items"}${potluck.closed ? " · Closed" : ""}`,
     });
     router.push("/chat");
   }
 
-  // Clears the whole shared list at once, e.g. between potluck occasions -
-  // this is the one bulk/irreversible action here, so it's the only thing
-  // in this tool that gets a confirmation step.
-  async function handleClearAll() {
-    if (!groupId) return;
-    setClearing(true);
-    const supabase = createClient();
-    await supabase.from("potluck_items").update({ archived_at: new Date().toISOString() }).eq("group_id", groupId);
-    setClearing(false);
-    setConfirmClearAll(false);
-    load();
-  }
-
-  function startEdit(item: PotluckItem) {
-    setEditingId(item.id);
-    setEditValue(item.item_name);
-  }
-
-  async function submitEdit(itemId: string) {
-    const trimmed = editValue.trim();
-    if (!trimmed) {
-      setEditingId(null);
-      return;
-    }
-    const supabase = createClient();
-    await supabase.from("potluck_items").update({ item_name: trimmed }).eq("id", itemId);
-    setEditingId(null);
-    load();
-  }
-
-  if (items === null) {
+  if (potlucks === null) {
     return (
       <div className="space-y-3 p-4">
-        <Skeleton className="h-16 w-full rounded-2xl" />
-        <Skeleton className="h-16 w-full rounded-2xl" />
-        <Skeleton className="h-16 w-full rounded-2xl" />
+        <Skeleton className="h-20 w-full rounded-2xl" />
+        <Skeleton className="h-20 w-full rounded-2xl" />
       </div>
     );
   }
 
-  // Claiming/unclaiming and adding items stay open to every member - only
-  // renaming/removing an existing item (or clearing the whole list) is
-  // limited to whoever added it or an admin. Mirrored server-side by
-  // restrict_potluck_item_edits() in 0046_restrict_poll_and_potluck_editing.sql.
-  const isAdmin = isAdminEmail(email);
-
   return (
-    <div className="space-y-4 p-4">
-      <form
-        onSubmit={handleAddItem}
-        className="space-y-2 rounded-2xl border border-border/60 bg-white p-4 shadow-sm"
-      >
-        <p className="text-sm font-medium text-secondary">What are you bringing?</p>
-        <div className="flex gap-2">
-          <input
-            value={newItemName}
-            onChange={(e) => setNewItemName(e.target.value)}
-            placeholder="e.g. Mac and cheese"
-            className="min-w-0 flex-1 rounded-xl border border-border bg-white px-3 py-2.5 text-sm shadow-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
-          />
-          <select
-            value={newItemCategory}
-            onChange={(e) => setNewItemCategory(e.target.value)}
-            className="shrink-0 rounded-xl border border-border bg-white px-2 py-2.5 text-sm shadow-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
-          >
-            {CATEGORIES.map((c) => (
-              <option key={c} value={c}>
-                {c}
-              </option>
-            ))}
-          </select>
-        </div>
-        <Button type="submit" disabled={adding || !newItemName.trim()} className="w-full">
-          <Plus size={16} /> {adding ? "Adding..." : "Add to the list"}
-        </Button>
-      </form>
-
-      {items.length > 0 && (
-        <div className="flex items-center justify-between">
-          <p className="text-sm text-secondary">
-            {items.length} {items.length === 1 ? "item" : "items"}
-          </p>
-          <div className="flex items-center gap-1">
-            <button
-              type="button"
-              onClick={handleShareList}
-              className="flex items-center gap-1.5 rounded-full px-2.5 py-1 text-sm text-secondary transition-colors hover:bg-surface-muted"
-            >
-              <PaperPlaneTilt size={16} /> Share to chat
-            </button>
-            {isAdmin && (
-              <button
-                type="button"
-                onClick={() => setConfirmClearAll(true)}
-                className="flex items-center gap-1.5 rounded-full px-2.5 py-1 text-sm text-accent transition-colors hover:bg-accent/10"
-              >
-                <Broom size={16} /> Clear all
-              </button>
-            )}
-          </div>
-        </div>
-      )}
-
-      {items.length === 0 ? (
+    <div className="space-y-3 p-4">
+      {potlucks.length === 0 && (
         <EmptyState
           icon={ForkKnife}
-          title="Nothing on the list yet"
-          subtitle="Add the first item above so people can claim what they're bringing."
+          title="No potlucks yet"
+          subtitle="Start a list so people can add what they're bringing."
         />
-      ) : (
-        <div className="space-y-2">
-          {items.map((item, i) => {
-            const isMine = item.claimed_by === userId;
-            const canEditItem = isAdmin || item.created_by === userId;
-            return (
-              <motion.div
-                key={item.id}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.2, delay: Math.min(i, 8) * 0.04, ease: "easeOut" }}
-                className="flex items-center gap-2 rounded-2xl border border-border/60 bg-white p-3 shadow-sm"
-              >
-                <div className="min-w-0 flex-1">
-                  {editingId === item.id ? (
-                    <input
-                      autoFocus
-                      value={editValue}
-                      onChange={(e) => setEditValue(e.target.value)}
-                      onBlur={() => submitEdit(item.id)}
-                      onKeyDown={(e) => e.key === "Enter" && submitEdit(item.id)}
-                      className="w-full rounded-lg border border-border px-2 py-1 text-sm outline-none focus:border-primary"
-                    />
-                  ) : canEditItem ? (
-                    <button
-                      type="button"
-                      onClick={() => startEdit(item)}
-                      className="block truncate text-left font-medium text-primary"
-                    >
-                      {item.item_name}
-                    </button>
-                  ) : (
-                    <p className="truncate font-medium text-primary">{item.item_name}</p>
-                  )}
-                  <div className="mt-1 flex items-center gap-1.5">
-                    {item.category && (
-                      <span className="rounded-full bg-surface-muted px-2 py-0.5 text-xs text-secondary">
-                        {item.category}
-                      </span>
-                    )}
-                    {item.claimed_by_profile && (
-                      <span className="flex items-center gap-1">
-                        <Avatar
-                          name={item.claimed_by_profile.display_name}
-                          color={item.claimed_by_profile.avatar_color}
-                          imageUrl={item.claimed_by_profile.avatar_url}
-                          size={16}
-                        />
-                        <span className="text-xs text-muted">
-                          {isMine ? "You" : item.claimed_by_profile.display_name}
-                        </span>
-                      </span>
-                    )}
-                  </div>
-                </div>
-
-                {item.claimed_by ? (
-                  <button
-                    type="button"
-                    onClick={() => handleRelease(item)}
-                    aria-label="Release this item"
-                    className={cn(
-                      "shrink-0 rounded-full px-2.5 py-1.5 text-xs font-medium transition-colors",
-                      isMine
-                        ? "bg-primary/10 text-primary hover:bg-primary/20"
-                        : "bg-surface-muted text-secondary hover:bg-border/60"
-                    )}
-                  >
-                    {isMine ? "Unclaim" : <X size={14} />}
-                  </button>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={() => handleClaim(item)}
-                    className="shrink-0 rounded-full bg-primary px-2.5 py-1.5 text-xs font-medium text-white shadow-sm shadow-primary/30"
-                  >
-                    Claim
-                  </button>
-                )}
-                {canEditItem && (
-                  <button
-                    type="button"
-                    onClick={() => handleDelete(item)}
-                    aria-label={`Delete ${item.item_name}`}
-                    className="shrink-0 rounded-full p-1.5 text-muted transition-colors hover:bg-accent/10 hover:text-accent"
-                  >
-                    <Trash size={16} />
-                  </button>
-                )}
-              </motion.div>
-            );
-          })}
-        </div>
       )}
-
-      <ConfirmSheet
-        open={confirmClearAll}
-        title="Clear the whole list?"
-        description="Removes every item, including what people have claimed. Good for starting fresh before the next potluck - this can't be undone."
-        confirmLabel={clearing ? "Clearing..." : "Clear all"}
-        onConfirm={handleClearAll}
-        onCancel={() => setConfirmClearAll(false)}
-      />
+      {potlucks.map((potluck, i) => (
+        <motion.div
+          key={potluck.id}
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.25, delay: Math.min(i, 8) * 0.05, ease: "easeOut" }}
+        >
+          <div className="rounded-2xl border border-border/60 bg-white p-4 shadow-sm transition-colors hover:bg-surface-muted/40">
+            <Link href={`/tools/potluck/${potluck.id}`} className="block">
+              <div className="flex items-start justify-between gap-2">
+                <p className="font-medium text-primary">{potluck.title}</p>
+                {potluck.closed && (
+                  <span className="flex shrink-0 items-center gap-1 rounded-full bg-surface-muted px-2 py-0.5 text-xs text-secondary">
+                    <LockSimple size={12} /> Closed
+                  </span>
+                )}
+              </div>
+              <p className={cn("mt-1.5 text-xs text-muted")}>
+                {potluck.item_count} {potluck.item_count === 1 ? "item" : "items"}
+              </p>
+              <div className="mt-2 flex items-center gap-1.5">
+                <Avatar
+                  name={potluck.profiles?.display_name ?? "Someone"}
+                  color={potluck.profiles?.avatar_color}
+                  imageUrl={potluck.profiles?.avatar_url}
+                  size={18}
+                />
+                <span className="text-xs text-muted">
+                  {potluck.profiles?.display_name ?? "Someone"} ·{" "}
+                  {new Date(potluck.created_at).toLocaleDateString("en-US", {
+                    month: "short",
+                    day: "numeric",
+                    year: "numeric",
+                  })}
+                </span>
+              </div>
+            </Link>
+            <div className="mt-1.5 flex justify-end">
+              <button
+                type="button"
+                onClick={() => handleShare(potluck)}
+                className="flex items-center gap-1.5 rounded-full px-2.5 py-1 text-sm text-secondary transition-colors hover:bg-surface-muted"
+              >
+                <PaperPlaneTilt size={16} /> Share to chat
+              </button>
+            </div>
+          </div>
+        </motion.div>
+      ))}
     </div>
   );
 }

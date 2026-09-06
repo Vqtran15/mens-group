@@ -121,14 +121,27 @@ export interface Resource {
   profiles?: Pick<Profile, "display_name" | "avatar_color" | "avatar_url">;
 }
 
+export interface Potluck {
+  id: string;
+  group_id: string;
+  title: string;
+  closed: boolean;
+  created_by: string | null;
+  created_at: string;
+  archived_at: string | null;
+  profiles?: Pick<Profile, "display_name" | "avatar_color" | "avatar_url">;
+}
+
 export interface PotluckItem {
   id: string;
+  potluck_id: string;
   group_id: string;
   item_name: string;
   category: string | null;
   claimed_by: string | null;
   created_by: string | null;
   created_at: string;
+  archived_at: string | null;
   claimed_by_profile?: Pick<Profile, "display_name" | "avatar_color" | "avatar_url"> | null;
 }
 

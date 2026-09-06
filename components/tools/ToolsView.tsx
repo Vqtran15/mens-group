@@ -14,7 +14,7 @@ const TOOLS: { href: string; title: string; description: string; icon: Icon }[] 
   {
     href: "/tools/potluck",
     title: "Potluck",
-    description: "Add what you're bringing, or claim something on the list",
+    description: "Start a list and see who's bringing what",
     icon: ForkKnife,
   },
   {
