@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { ChatText, DotsThreeVertical, MapPin, Sparkle } from "@phosphor-icons/react";
+import { ChatText, DotsThreeVertical, ForkKnife, MapPin, Sparkle } from "@phosphor-icons/react";
 import { createClient } from "@/lib/supabase/client";
 import { dateKeyInZone } from "@/lib/recurrence";
 import { formatTime, startOfToday } from "@/lib/utils";
@@ -12,7 +12,7 @@ import { AttendeeList } from "@/components/calendar/AttendeeList";
 import { ConfirmSheet } from "@/components/ui/ConfirmSheet";
 import { EditDeleteActionSheet } from "@/components/ui/EditDeleteActionSheet";
 import { EditLocationSheet } from "@/components/ui/EditLocationSheet";
-import type { CalendarEvent, RelatedTopic, Rsvp, RsvpStatus } from "@/lib/types";
+import type { CalendarEvent, EventPotluckSummary, RelatedTopic, Rsvp, RsvpStatus } from "@/lib/types";
 
 export function NextMeetingCard({
   event,
@@ -21,6 +21,7 @@ export function NextMeetingCard({
   isAdmin,
   onChanged,
   relatedTopics = [],
+  potluck = null,
   isToday = false,
 }: {
   event: CalendarEvent;
@@ -29,6 +30,7 @@ export function NextMeetingCard({
   isAdmin: boolean;
   onChanged: () => void;
   relatedTopics?: RelatedTopic[];
+  potluck?: EventPotluckSummary | null;
   isToday?: boolean;
 }) {
   const [confirmOpen, setConfirmOpen] = useState(false);
@@ -154,7 +156,7 @@ export function NextMeetingCard({
         </div>
       </div>
 
-      {relatedTopics.length > 0 && (
+      {(relatedTopics.length > 0 || potluck) && (
         <div className="mt-3 flex flex-wrap gap-2">
           {relatedTopics.map((topic) => (
             <Link
@@ -165,6 +167,15 @@ export function NextMeetingCard({
               <ChatText size={12} /> {topic.title}
             </Link>
           ))}
+          {potluck && (
+            <Link
+              href={`/tools/potluck/${potluck.id}`}
+              className="inline-flex items-center gap-1 rounded-full bg-white/90 px-2.5 py-1 text-xs font-medium text-primary shadow-sm transition-colors hover:bg-white"
+            >
+              <ForkKnife size={12} /> {potluck.title} · {potluck.itemCount} {potluck.itemCount === 1 ? "item" : "items"}
+              {potluck.closed && " · Closed"}
+            </Link>
+          )}
         </div>
       )}
 

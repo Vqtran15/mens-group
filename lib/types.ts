@@ -63,7 +63,15 @@ export interface CalendarEvent {
   is_recurring: boolean;
   schedule_id: string | null;
   group_id: string;
+  potluck_id: string | null;
   created_at: string;
+}
+
+export interface EventPotluckSummary {
+  id: string;
+  title: string;
+  closed: boolean;
+  itemCount: number;
 }
 
 export type RsvpStatus = "yes" | "no" | "maybe";

@@ -13,7 +13,7 @@ import { NextMeetingCard } from "@/components/calendar/NextMeetingCard";
 import { EventListItem } from "@/components/calendar/EventListItem";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { startOfToday, toDateOnlyString } from "@/lib/utils";
-import type { CalendarEvent, MeetingSchedule, RelatedTopic, Rsvp } from "@/lib/types";
+import type { CalendarEvent, EventPotluckSummary, MeetingSchedule, RelatedTopic, Rsvp } from "@/lib/types";
 
 const MotionLink = motion.create(Link);
 
@@ -30,12 +30,13 @@ export function CalendarView() {
   const [featuredIsToday, setFeaturedIsToday] = useState(false);
   const [rsvpsByEvent, setRsvpsByEvent] = useState<Record<string, Rsvp[]>>({});
   const [topicsByDate, setTopicsByDate] = useState<Record<string, RelatedTopic[]>>({});
+  const [potlucksByEvent, setPotlucksByEvent] = useState<Record<string, EventPotluckSummary>>({});
   const [loading, setLoading] = useState(true);
 
   const loadEvents = useCallback(async (currentUserId: string, groupId: string) => {
     const supabase = createClient();
     const eventsSelect =
-      "*, rsvps(id, event_id, user_id, status, created_at, updated_at, profiles(display_name, avatar_color, avatar_url))";
+      "*, rsvps(id, event_id, user_id, status, created_at, updated_at, profiles(display_name, avatar_color, avatar_url)), potluck:potlucks(id, title, closed, potluck_items(id, archived_at))";
 
     // These three are independent of each other, so fetch them together -
     // the schedule/topics round trips no longer sit in front of the events
@@ -80,10 +81,20 @@ export function CalendarView() {
     }
 
     const rsvpMap: Record<string, Rsvp[]> = {};
+    const potluckMap: Record<string, EventPotluckSummary> = {};
     const cleanEvents: CalendarEvent[] = [];
     for (const row of finalEventRows ?? []) {
-      const { rsvps, ...event } = row as CalendarEvent & { rsvps: Rsvp[] };
+      type PotluckJoin = { id: string; title: string; closed: boolean; potluck_items: { id: string; archived_at: string | null }[] };
+      const { rsvps, potluck, ...event } = row as CalendarEvent & { rsvps: Rsvp[]; potluck: PotluckJoin | null };
       rsvpMap[event.id] = rsvps ?? [];
+      if (potluck) {
+        potluckMap[event.id] = {
+          id: potluck.id,
+          title: potluck.title,
+          closed: potluck.closed,
+          itemCount: potluck.potluck_items.filter((i) => !i.archived_at).length,
+        };
+      }
       cleanEvents.push(event);
     }
 
@@ -107,6 +118,7 @@ export function CalendarView() {
     setFeaturedIsToday(!!featured && toDateOnlyString(new Date(featured.starts_at)) === toDateOnlyString(startOfToday()));
     setRsvpsByEvent(rsvpMap);
     setTopicsByDate(dateMap);
+    setPotlucksByEvent(potluckMap);
     setLoading(false);
   }, []);
 
@@ -142,6 +154,7 @@ export function CalendarView() {
           isAdmin={isAdmin}
           onChanged={() => loadEvents(userId, groupId)}
           relatedTopics={topicsByDate[toDateOnlyString(new Date(nextMeeting.starts_at))] ?? []}
+          potluck={potlucksByEvent[nextMeeting.id] ?? null}
           isToday={featuredIsToday}
         />
       )}
@@ -185,6 +198,7 @@ export function CalendarView() {
                 isAdmin={isAdmin}
                 onChanged={() => loadEvents(userId, groupId)}
                 relatedTopics={topicsByDate[toDateOnlyString(new Date(event.starts_at))] ?? []}
+                potluck={potlucksByEvent[event.id] ?? null}
               />
             </motion.div>
           ))}

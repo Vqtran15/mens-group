@@ -1,9 +1,20 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import { LockSimple, LockSimpleOpen, PaperPlaneTilt, Plus, Trash, X } from "@phosphor-icons/react";
+import {
+  CalendarBlank,
+  CalendarPlus,
+  LinkBreak,
+  LockSimple,
+  LockSimpleOpen,
+  PaperPlaneTilt,
+  Plus,
+  Trash,
+  X,
+} from "@phosphor-icons/react";
 import { createClient } from "@/lib/supabase/client";
 import { getCurrentMembership } from "@/lib/supabase/current-membership";
 import { shareToChat } from "@/lib/supabase/shareToChat";
@@ -12,7 +23,8 @@ import { Avatar } from "@/components/Avatar";
 import { Button } from "@/components/ui/Button";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { ConfirmSheet } from "@/components/ui/ConfirmSheet";
-import { cn } from "@/lib/utils";
+import { EventPickerSheet, type PickableEvent } from "@/components/ui/EventPickerSheet";
+import { cn, startOfToday } from "@/lib/utils";
 import type { Potluck, PotluckItem } from "@/lib/types";
 
 const CATEGORIES = ["Main", "Side", "Dessert", "Drink", "Other"];
@@ -30,8 +42,12 @@ export function PotluckDetailView({ potluckId }: { potluckId: string }) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editValue, setEditValue] = useState("");
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [confirmShare, setConfirmShare] = useState(false);
   const [editingTitle, setEditingTitle] = useState(false);
   const [titleValue, setTitleValue] = useState("");
+  const [linkedEvent, setLinkedEvent] = useState<PickableEvent | null>(null);
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [pickableEvents, setPickableEvents] = useState<PickableEvent[] | null>(null);
 
   const load = useCallback(async () => {
     const supabase = createClient();
@@ -41,7 +57,7 @@ export function PotluckDetailView({ potluckId }: { potluckId: string }) {
     setGroupId(membership.groupId);
     setEmail(membership.email);
 
-    const [{ data: potluckData }, { data: itemsData }] = await Promise.all([
+    const [{ data: potluckData }, { data: itemsData }, { data: eventData }] = await Promise.all([
       supabase.from("potlucks").select("*").eq("id", potluckId).is("archived_at", null).single(),
       supabase
         .from("potluck_items")
@@ -49,6 +65,12 @@ export function PotluckDetailView({ potluckId }: { potluckId: string }) {
         .eq("potluck_id", potluckId)
         .is("archived_at", null)
         .order("created_at", { ascending: true }),
+      supabase
+        .from("events")
+        .select("id, title, starts_at")
+        .eq("potluck_id", potluckId)
+        .is("archived_at", null)
+        .maybeSingle(),
     ]);
 
     if (potluckData) {
@@ -56,6 +78,7 @@ export function PotluckDetailView({ potluckId }: { potluckId: string }) {
       setTitleValue(potluckData.title);
     }
     setItems(itemsData ?? []);
+    setLinkedEvent(eventData ?? null);
   }, [potluckId]);
 
   useEffect(() => {
@@ -146,6 +169,7 @@ export function PotluckDetailView({ potluckId }: { potluckId: string }) {
 
   async function handleShare() {
     if (!potluck || !userId || !groupId) return;
+    setConfirmShare(false);
     const itemCount = items?.length ?? 0;
     const supabase = createClient();
     await shareToChat(supabase, {
@@ -157,6 +181,40 @@ export function PotluckDetailView({ potluckId }: { potluckId: string }) {
       subtitle: `${itemCount} ${itemCount === 1 ? "item" : "items"}${potluck.closed ? " · Closed" : ""}`,
     });
     router.push("/chat");
+  }
+
+  async function openEventPicker() {
+    if (!groupId) return;
+    setPickerOpen(true);
+    setPickableEvents(null);
+    const supabase = createClient();
+    const { data } = await supabase
+      .from("events")
+      .select("id, title, starts_at")
+      .eq("group_id", groupId)
+      .is("archived_at", null)
+      .gte("starts_at", startOfToday().toISOString())
+      .order("starts_at", { ascending: true })
+      .limit(20);
+    setPickableEvents(data ?? []);
+  }
+
+  async function handlePickEvent(eventId: string) {
+    const supabase = createClient();
+    // A potluck links to at most one event (events_potluck_id_key in
+    // 0052_link_potluck_to_event.sql) - clear wherever it's currently
+    // attached before pointing a different event at it, so re-picking moves
+    // the link instead of colliding with the unique index.
+    await supabase.from("events").update({ potluck_id: null }).eq("potluck_id", potluckId);
+    await supabase.from("events").update({ potluck_id: potluckId }).eq("id", eventId);
+    setPickerOpen(false);
+    load();
+  }
+
+  async function handleUnlinkEvent() {
+    const supabase = createClient();
+    await supabase.from("events").update({ potluck_id: null }).eq("potluck_id", potluckId);
+    load();
   }
 
   async function handleDeletePotluck() {
@@ -207,12 +265,43 @@ export function PotluckDetailView({ potluckId }: { potluckId: string }) {
         </p>
         <button
           type="button"
-          onClick={handleShare}
+          onClick={() => setConfirmShare(true)}
           className="flex items-center gap-1.5 rounded-full px-2.5 py-1 text-sm text-secondary transition-colors hover:bg-surface-muted"
         >
           <PaperPlaneTilt size={16} /> Share to chat
         </button>
       </div>
+
+      {linkedEvent ? (
+        <div className="flex items-center gap-2 rounded-2xl border border-border/60 bg-white p-3 shadow-sm">
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-teal/10 text-teal">
+            <CalendarBlank size={18} />
+          </span>
+          <Link href="/calendar" className="min-w-0 flex-1">
+            <span className="block truncate text-sm font-medium text-primary">{linkedEvent.title}</span>
+            <span className="block text-xs text-muted">
+              Attached to{" "}
+              {new Date(linkedEvent.starts_at).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+            </span>
+          </Link>
+          <button
+            type="button"
+            onClick={handleUnlinkEvent}
+            aria-label="Remove from calendar event"
+            className="shrink-0 rounded-full p-1.5 text-muted transition-colors hover:bg-accent/10 hover:text-accent"
+          >
+            <LinkBreak size={16} />
+          </button>
+        </div>
+      ) : (
+        <button
+          type="button"
+          onClick={openEventPicker}
+          className="flex w-full items-center justify-center gap-1.5 rounded-2xl border border-dashed border-border px-3 py-2.5 text-sm font-medium text-secondary transition-colors hover:bg-surface-muted"
+        >
+          <CalendarPlus size={16} /> Add to a calendar event
+        </button>
+      )}
 
       <form
         onSubmit={handleAddItem}
@@ -359,6 +448,21 @@ export function PotluckDetailView({ potluckId }: { potluckId: string }) {
         confirmLabel="Delete"
         onConfirm={handleDeletePotluck}
         onCancel={() => setConfirmDelete(false)}
+      />
+      <ConfirmSheet
+        open={confirmShare}
+        title="Share to chat?"
+        description={`Everyone in the group will see "${potluck.title}" in the chat and can sign up right from there.`}
+        confirmLabel="Share"
+        confirmVariant="primary"
+        onConfirm={handleShare}
+        onCancel={() => setConfirmShare(false)}
+      />
+      <EventPickerSheet
+        open={pickerOpen}
+        events={pickableEvents}
+        onPick={handlePickEvent}
+        onCancel={() => setPickerOpen(false)}
       />
     </div>
   );

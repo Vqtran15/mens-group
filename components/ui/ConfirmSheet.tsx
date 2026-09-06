@@ -8,6 +8,7 @@ export function ConfirmSheet({
   title,
   description,
   confirmLabel = "Delete",
+  confirmVariant = "danger",
   onConfirm,
   onCancel,
 }: {
@@ -15,6 +16,7 @@ export function ConfirmSheet({
   title: string;
   description?: string;
   confirmLabel?: string;
+  confirmVariant?: "danger" | "primary";
   onConfirm: () => void;
   onCancel: () => void;
 }) {
@@ -42,7 +44,7 @@ export function ConfirmSheet({
               <Button variant="secondary" className="flex-1" onClick={onCancel}>
                 Cancel
               </Button>
-              <Button variant="danger" className="flex-1" onClick={onConfirm}>
+              <Button variant={confirmVariant} className="flex-1" onClick={onConfirm}>
                 {confirmLabel}
               </Button>
             </div>
