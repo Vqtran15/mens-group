@@ -19,3 +19,21 @@ export const ADMIN_EMAILS = ["vqtran15@gmail.com", "vqtran15+1@gmail.com"];
 export function isAdminEmail(email: string | null | undefined): boolean {
   return !!email && ADMIN_EMAILS.includes(email);
 }
+
+// Calendar-only widening of the above: per explicit request, recurring
+// meeting management (create/edit/delete the schedule, edit a series, skip
+// a meeting, override a recurring occurrence's location) is no longer
+// restricted to just the ADMIN_EMAILS allowlist - whoever created the group
+// gets those same rights over their own group's calendar, without being
+// added to that allowlist. Mirrored server-side by
+// public.is_calendar_admin(group_id) (see
+// 0054_calendar_admin_includes_group_creator.sql), which is the actual
+// enforcement; this is only the UI-side mirror. Scoped to Calendar only -
+// polls/potluck/resources moderation still follows isAdminEmail() alone.
+export function isCalendarAdmin(
+  email: string | null | undefined,
+  userId: string | null | undefined,
+  groupCreatedBy: string | null | undefined
+): boolean {
+  return isAdminEmail(email) || (!!userId && userId === groupCreatedBy);
+}

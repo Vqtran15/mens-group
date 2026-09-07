@@ -3,10 +3,11 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { motion } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 import {
   CalendarBlank,
   CalendarPlus,
+  DotsThreeVertical,
   LinkBreak,
   LockSimple,
   LockSimpleOpen,
@@ -22,6 +23,7 @@ import { Avatar } from "@/components/Avatar";
 import { Button } from "@/components/ui/Button";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { ConfirmSheet } from "@/components/ui/ConfirmSheet";
+import { EditDeleteActionSheet } from "@/components/ui/EditDeleteActionSheet";
 import { EventPickerSheet, type PickableEvent } from "@/components/ui/EventPickerSheet";
 import { startOfToday } from "@/lib/utils";
 import type { Potluck, PotluckItem } from "@/lib/types";
@@ -47,6 +49,9 @@ export function PotluckDetailView({ potluckId }: { potluckId: string }) {
   const [linkedEvent, setLinkedEvent] = useState<PickableEvent | null>(null);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [pickableEvents, setPickableEvents] = useState<PickableEvent[] | null>(null);
+  const [actionItemId, setActionItemId] = useState<string | null>(null);
+  const [confirmDeleteItemId, setConfirmDeleteItemId] = useState<string | null>(null);
+  const [highlightId, setHighlightId] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     const supabase = createClient();
@@ -135,6 +140,10 @@ export function PotluckDetailView({ potluckId }: { potluckId: string }) {
     await supabase.from("potluck_items").update({ item_name: trimmed }).eq("id", itemId);
     setEditingId(null);
     load();
+    // Brief highlight so a saved rename is visibly confirmed, not just a
+    // silent text swap - cleared after the flash finishes.
+    setHighlightId(itemId);
+    setTimeout(() => setHighlightId((current) => (current === itemId ? null : current)), 900);
   }
 
   async function toggleClosed() {
@@ -321,16 +330,28 @@ export function PotluckDetailView({ potluckId }: { potluckId: string }) {
       </form>
 
       <div className="space-y-2">
+        <AnimatePresence mode="popLayout" initial={false}>
         {items.map((item, i) => {
           const isMine = item.created_by === userId;
           const canEditItem = isAdminEmail(email) || item.created_by === userId;
           return (
             <motion.div
               key={item.id}
+              layout
               initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.2, delay: Math.min(i, 8) * 0.04, ease: "easeOut" }}
-              className="flex items-center gap-2 rounded-2xl border border-border/60 bg-white p-3 shadow-sm"
+              animate={{
+                opacity: 1,
+                y: 0,
+                backgroundColor: highlightId === item.id ? "rgba(38, 70, 83, 0.08)" : "#ffffff",
+              }}
+              exit={{ opacity: 0, scale: 0.92 }}
+              transition={{
+                duration: 0.2,
+                delay: Math.min(i, 8) * 0.04,
+                ease: "easeOut",
+                backgroundColor: { duration: 0.6, delay: 0 },
+              }}
+              className="flex items-center gap-2 rounded-2xl border border-border/60 p-3 shadow-sm"
             >
               <div className="min-w-0 flex-1">
                 {editingId === item.id ? (
@@ -378,16 +399,17 @@ export function PotluckDetailView({ potluckId }: { potluckId: string }) {
               {canEditItem && (
                 <button
                   type="button"
-                  onClick={() => handleDeleteItem(item)}
-                  aria-label={`Delete ${item.item_name}`}
-                  className="shrink-0 rounded-full p-1.5 text-muted transition-colors hover:bg-accent/10 hover:text-accent"
+                  onClick={() => setActionItemId(item.id)}
+                  aria-label={`${item.item_name} actions`}
+                  className="shrink-0 rounded-full p-1.5 text-muted transition-colors hover:bg-surface-muted"
                 >
-                  <Trash size={16} />
+                  <DotsThreeVertical size={18} weight="bold" />
                 </button>
               )}
             </motion.div>
           );
         })}
+        </AnimatePresence>
       </div>
 
       {canEdit && (
@@ -424,6 +446,28 @@ export function PotluckDetailView({ potluckId }: { potluckId: string }) {
         events={pickableEvents}
         onPick={handlePickEvent}
         onCancel={() => setPickerOpen(false)}
+      />
+      <EditDeleteActionSheet
+        open={!!actionItemId}
+        onClose={() => setActionItemId(null)}
+        editLabel="Edit item"
+        onEdit={() => {
+          const item = items.find((i) => i.id === actionItemId);
+          if (item) startEdit(item);
+        }}
+        onDelete={() => setConfirmDeleteItemId(actionItemId)}
+      />
+      <ConfirmSheet
+        open={!!confirmDeleteItemId}
+        title="Remove this item?"
+        description="This takes it off the list. This can't be undone."
+        confirmLabel="Delete"
+        onConfirm={() => {
+          const item = items.find((i) => i.id === confirmDeleteItemId);
+          setConfirmDeleteItemId(null);
+          if (item) handleDeleteItem(item);
+        }}
+        onCancel={() => setConfirmDeleteItemId(null)}
       />
     </div>
   );

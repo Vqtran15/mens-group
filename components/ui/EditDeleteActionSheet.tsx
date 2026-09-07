@@ -8,6 +8,7 @@ export function EditDeleteActionSheet({
   open,
   onClose,
   editHref,
+  onEdit,
   editLabel = "Edit",
   onDelete,
   onSkip,
@@ -16,7 +17,11 @@ export function EditDeleteActionSheet({
 }: {
   open: boolean;
   onClose: () => void;
-  editHref: string;
+  // Exactly one of these two is expected: editHref for a route-based edit
+  // page (events), onEdit for an in-place edit like potluck items that have
+  // no route of their own.
+  editHref?: string;
+  onEdit?: () => void;
   editLabel?: string;
   onDelete: () => void;
   onSkip?: () => void;
@@ -42,13 +47,28 @@ export function EditDeleteActionSheet({
             className="fixed inset-x-0 bottom-0 z-40 rounded-t-2xl border-t border-border bg-white p-3 pb-[env(safe-area-inset-bottom)] shadow-xl"
           >
             <div className="space-y-1">
-              <Link
-                href={editHref}
-                onClick={onClose}
-                className="flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-left text-secondary transition-colors hover:bg-surface-muted"
-              >
-                <PencilSimple size={18} /> {editLabel}
-              </Link>
+              {editHref ? (
+                <Link
+                  href={editHref}
+                  onClick={onClose}
+                  className="flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-left text-secondary transition-colors hover:bg-surface-muted"
+                >
+                  <PencilSimple size={18} /> {editLabel}
+                </Link>
+              ) : (
+                onEdit && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onEdit();
+                      onClose();
+                    }}
+                    className="flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-left text-secondary transition-colors hover:bg-surface-muted"
+                  >
+                    <PencilSimple size={18} /> {editLabel}
+                  </button>
+                )
+              )}
               {onEditLocation && (
                 <button
                   type="button"

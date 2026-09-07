@@ -7,7 +7,7 @@ import { WarningCircle, Clock, ArrowCounterClockwise } from "@phosphor-icons/rea
 import { createClient } from "@/lib/supabase/client";
 import { getCurrentMembership } from "@/lib/supabase/current-membership";
 import { reconcileScheduleEvents } from "@/lib/scheduleMaterialization";
-import { isAdminEmail } from "@/lib/admin";
+import { isCalendarAdmin } from "@/lib/admin";
 import { SuccessButton, type SubmitStatus } from "@/components/ui/SuccessButton";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { cn, formatDate, parseDateOnly, startOfToday, toDateOnlyString } from "@/lib/utils";
@@ -89,12 +89,18 @@ export function MeetingScheduleForm() {
         return;
       }
       // This whole page - creating, editing, or deleting the recurring
-      // schedule - is admin-only (see migration
-      // 0040_admin_only_schedule_actions.sql for the actual RLS
-      // enforcement). Redirecting here is just so a non-admin who lands on
-      // this route directly (not through a hidden UI entry point) sees
-      // something sensible instead of a form that would fail on submit.
-      if (!isAdminEmail(membership.email)) {
+      // schedule - is restricted to the group's admin or its creator (see
+      // migration 0054_calendar_admin_includes_group_creator.sql for the
+      // actual RLS enforcement, is_calendar_admin()). Redirecting here is
+      // just so someone without those rights who lands on this route
+      // directly (not through a hidden UI entry point) sees something
+      // sensible instead of a form that would fail on submit.
+      const { data: group } = await supabase
+        .from("groups")
+        .select("created_by")
+        .eq("id", membership.groupId)
+        .single();
+      if (!isCalendarAdmin(membership.email, membership.userId, group?.created_by ?? null)) {
         router.replace("/calendar");
         return;
       }

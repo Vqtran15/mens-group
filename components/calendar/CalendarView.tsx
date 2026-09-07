@@ -6,7 +6,7 @@ import { motion } from "framer-motion";
 import { CalendarBlank, CaretRight, Repeat } from "@phosphor-icons/react";
 import { createClient } from "@/lib/supabase/client";
 import { getCurrentMembership } from "@/lib/supabase/current-membership";
-import { isAdminEmail } from "@/lib/admin";
+import { isCalendarAdmin } from "@/lib/admin";
 import { OCCURRENCES_TO_MATERIALIZE } from "@/lib/recurrence";
 import { reconcileScheduleEvents } from "@/lib/scheduleMaterialization";
 import { NextMeetingCard } from "@/components/calendar/NextMeetingCard";
@@ -131,7 +131,14 @@ export function CalendarView() {
 
       setUserId(membership.userId);
       setGroupId(membership.groupId);
-      setIsAdmin(isAdminEmail(membership.email));
+      // Calendar management rights extend to whoever created the group, not
+      // just the ADMIN_EMAILS allowlist - see isCalendarAdmin().
+      const { data: group } = await supabase
+        .from("groups")
+        .select("created_by")
+        .eq("id", membership.groupId)
+        .single();
+      setIsAdmin(isCalendarAdmin(membership.email, membership.userId, group?.created_by ?? null));
       loadEvents(membership.userId, membership.groupId);
     }
 
