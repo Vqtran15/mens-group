@@ -243,15 +243,20 @@ export function PotluckDetailView({ potluckId }: { potluckId: string }) {
             className="min-w-0 flex-1 rounded-xl border border-border bg-white px-3 py-2 text-lg font-semibold text-primary outline-none focus:border-primary"
           />
         ) : canEdit ? (
+          // w-full is load-bearing, not decorative: a <button> left to its
+          // default width:auto sizes to fit its content instead of filling
+          // this flex-1 slot the way a <div>/<p> would, so a long title
+          // pushes the button (and the row around it) wider than the card
+          // instead of wrapping inside it.
           <button
             type="button"
             onClick={() => setEditingTitle(true)}
-            className="min-w-0 flex-1 text-left text-lg font-semibold text-primary"
+            className="block w-full min-w-0 flex-1 break-words text-left text-lg font-semibold text-primary"
           >
             {potluck.title}
           </button>
         ) : (
-          <p className="min-w-0 flex-1 text-lg font-semibold text-primary">{potluck.title}</p>
+          <p className="min-w-0 flex-1 break-words text-lg font-semibold text-primary">{potluck.title}</p>
         )}
       </div>
       <div className="flex items-center justify-between gap-2">
@@ -364,15 +369,19 @@ export function PotluckDetailView({ potluckId }: { potluckId: string }) {
                     className="w-full rounded-lg border border-border px-2 py-1 text-sm outline-none focus:border-primary"
                   />
                 ) : canEditItem ? (
+                  // w-full keeps this <button> from sizing to its own content
+                  // (its default width:auto) instead of the min-w-0 flex-1
+                  // slot above it - without it, a long item name pushed the
+                  // button past the card's edge rather than wrapping inside it.
                   <button
                     type="button"
                     onClick={() => startEdit(item)}
-                    className="block truncate text-left font-medium text-primary"
+                    className="block w-full break-words text-left font-medium text-primary"
                   >
                     {item.item_name}
                   </button>
                 ) : (
-                  <p className="truncate font-medium text-primary">{item.item_name}</p>
+                  <p className="break-words font-medium text-primary">{item.item_name}</p>
                 )}
                 <div className="mt-1 flex items-center gap-1.5">
                   {item.category && (

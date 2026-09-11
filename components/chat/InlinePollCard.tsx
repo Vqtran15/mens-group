@@ -119,7 +119,7 @@ export function InlinePollCard({ pollId, currentUserId }: { pollId: string; curr
         className="flex items-center gap-1.5 text-sm font-medium text-primary"
       >
         <ChartBar size={16} weight="duotone" className="shrink-0" />
-        <span className="truncate">{poll.question}</span>
+        <span className="min-w-0 truncate">{poll.question}</span>
       </Link>
 
       <div className="space-y-1.5">
@@ -145,7 +145,7 @@ export function InlinePollCard({ pollId, currentUserId }: { pollId: string; curr
               <div className="relative flex items-center justify-between gap-2">
                 <span className="flex min-w-0 items-center gap-1.5 font-medium text-secondary">
                   {isMine && <Check size={13} weight="bold" className="shrink-0 text-primary" />}
-                  <span className="truncate">{option.option_text}</span>
+                  <span className="min-w-0 truncate">{option.option_text}</span>
                 </span>
                 <span className="shrink-0 text-xs text-muted">
                   {count} · {pct}%

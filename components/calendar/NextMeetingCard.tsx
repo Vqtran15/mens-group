@@ -145,7 +145,7 @@ export function NextMeetingCard({
           <span className="text-xl font-bold leading-none">{startsAt.getDate()}</span>
         </div>
         <div className="min-w-0 flex-1">
-          <p className="text-xl font-semibold text-white">{event.title}</p>
+          <p className="min-w-0 break-words text-xl font-semibold text-white">{event.title}</p>
           <p className="mt-1 text-white">{formatTime(startsAt)}</p>
           {event.location && (
             <p className="mt-1 flex items-start gap-1.5 text-sm text-white">

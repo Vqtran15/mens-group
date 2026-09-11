@@ -97,7 +97,7 @@ export function PollsView() {
           <div className="rounded-2xl border border-border/60 bg-white p-4 shadow-sm transition-colors hover:bg-surface-muted/40">
             <Link href={`/tools/polls/${poll.id}`} className="block">
               <div className="flex items-start justify-between gap-2">
-                <p className="font-medium text-primary">{poll.question}</p>
+                <p className="min-w-0 break-words font-medium text-primary">{poll.question}</p>
                 {poll.closed && (
                   <span className="flex shrink-0 items-center gap-1 rounded-full bg-surface-muted px-2 py-0.5 text-xs text-secondary">
                     <LockSimple size={12} /> Closed

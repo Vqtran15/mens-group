@@ -168,15 +168,20 @@ export function PollDetailView({ pollId }: { pollId: string }) {
             className="min-w-0 flex-1 rounded-xl border border-border bg-white px-3 py-2 text-lg font-semibold text-primary outline-none focus:border-primary"
           />
         ) : canEdit ? (
+          // w-full is load-bearing, not decorative: a <button> left to its
+          // default width:auto sizes to fit its content instead of filling
+          // this flex-1 slot the way a <div>/<p> would, so a long question
+          // pushes the button (and the row around it) wider than the card
+          // instead of wrapping inside it.
           <button
             type="button"
             onClick={() => setEditingQuestion(true)}
-            className="min-w-0 flex-1 text-left text-lg font-semibold text-primary"
+            className="block w-full min-w-0 flex-1 break-words text-left text-lg font-semibold text-primary"
           >
             {poll.question}
           </button>
         ) : (
-          <p className="min-w-0 flex-1 text-lg font-semibold text-primary">{poll.question}</p>
+          <p className="min-w-0 flex-1 break-words text-lg font-semibold text-primary">{poll.question}</p>
         )}
       </div>
       <div className="flex items-center justify-between gap-2">
@@ -219,9 +224,9 @@ export function PollDetailView({ pollId }: { pollId: string }) {
                   style={{ width: `${pct}%` }}
                 />
                 <div className="relative flex items-center justify-between gap-2">
-                  <span className="flex items-center gap-1.5 text-sm font-medium text-secondary">
+                  <span className="flex min-w-0 items-center gap-1.5 text-sm font-medium text-secondary">
                     {isMine && <Check size={14} weight="bold" className="shrink-0 text-primary" />}
-                    {option.option_text}
+                    <span className="min-w-0 break-words">{option.option_text}</span>
                   </span>
                   <span className="shrink-0 text-xs text-muted">
                     {count} · {pct}%

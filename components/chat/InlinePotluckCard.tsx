@@ -118,7 +118,7 @@ export function InlinePotluckCard({ potluckId, currentUserId }: { potluckId: str
         className="flex items-center gap-1.5 text-sm font-medium text-primary"
       >
         <ForkKnife size={16} weight="duotone" className="shrink-0" />
-        <span className="truncate">{potluck.title}</span>
+        <span className="min-w-0 truncate">{potluck.title}</span>
       </Link>
 
       {items.length === 0 ? (
@@ -133,7 +133,7 @@ export function InlinePotluckCard({ potluckId, currentUserId }: { potluckId: str
                 className="flex items-center gap-2 rounded-xl border border-border bg-white p-2 text-sm"
               >
                 <div className="min-w-0 flex-1">
-                  <p className="truncate font-medium text-secondary">{item.item_name}</p>
+                  <p className="break-words font-medium text-secondary">{item.item_name}</p>
                   {item.created_by_profile && (
                     <span className="flex items-center gap-1">
                       <Avatar

@@ -103,7 +103,7 @@ export function ResourcesView() {
             <DotsThreeVertical size={18} weight="bold" />
           </button>
           <div className="pr-7">
-            <p className="font-medium text-primary">{resource.title}</p>
+            <p className="break-words font-medium text-primary">{resource.title}</p>
             {resource.description && (
               <p className="mt-1 text-sm text-secondary">{resource.description}</p>
             )}
@@ -115,7 +115,7 @@ export function ResourcesView() {
                 className="mt-2 flex items-center gap-1.5 text-sm text-primary underline underline-offset-2"
               >
                 <LinkSimple size={14} className="shrink-0" />
-                <span className="truncate">{resource.url}</span>
+                <span className="min-w-0 truncate">{resource.url}</span>
               </a>
             )}
             <div className="mt-3 flex items-center gap-1.5">
