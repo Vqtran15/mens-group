@@ -174,6 +174,10 @@ export function PotluckDetailView({ potluckId }: { potluckId: string }) {
       refId: potluck.id,
       title: potluck.title,
       subtitle: `${itemCount} ${itemCount === 1 ? "item" : "items"}${potluck.closed ? " · Closed" : ""}`,
+      // Spells out that signing up happens right in the card above, rather
+      // than leaving people to guess from the card's own layout alone - see
+      // the UX pass this came out of.
+      body: "🍽️ Tap the list above to sign up for what you're bringing!",
     });
     router.push("/chat");
   }

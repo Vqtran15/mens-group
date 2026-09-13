@@ -5,6 +5,7 @@ import Link from "next/link";
 import { ForkKnife, LockSimple, Plus } from "@phosphor-icons/react";
 import { createClient } from "@/lib/supabase/client";
 import { Avatar } from "@/components/Avatar";
+import { cn } from "@/lib/utils";
 import type { PotluckItem } from "@/lib/types";
 
 const MAX_VISIBLE_ITEMS = 6;
@@ -22,6 +23,13 @@ type PotluckRow = {
 // *is* signing up to bring it - there's no separate claim step, so whoever
 // typed it in is who the card shows next to it. Renaming/removing an item
 // (or closing/deleting the whole list) stays a Potluck-page-only action.
+//
+// Sign-up form renders above the items list, not below - user testing (see
+// conversation) found people weren't noticing they could sign up right in
+// chat at all, partly because a card with items already on it buried the
+// one interactive part under what read as a finished list. The share
+// itself (see PotluckDetailView's handleShare) also now carries a caption
+// telling people to look here instead of shipping silently.
 export function InlinePotluckCard({ potluckId, currentUserId }: { potluckId: string; currentUserId: string }) {
   // If the same potluck gets shared to chat more than once, each share
   // resolves to the same potluckId - if the channel topic were keyed on
@@ -109,9 +117,10 @@ export function InlinePotluckCard({ potluckId, currentUserId }: { potluckId: str
 
   const visibleItems = items.slice(0, MAX_VISIBLE_ITEMS);
   const hiddenCount = items.length - visibleItems.length;
+  const hasMine = items.some((item) => item.created_by === currentUserId);
 
   return (
-    <div className="w-[280px] max-w-full space-y-2 rounded-2xl bg-white p-3 shadow-sm">
+    <div className="w-[280px] max-w-full space-y-2.5 rounded-2xl bg-white p-3 shadow-sm">
       <Link
         href={`/tools/potluck/${potluckId}`}
         onClick={(e) => e.stopPropagation()}
@@ -121,8 +130,44 @@ export function InlinePotluckCard({ potluckId, currentUserId }: { potluckId: str
         <span className="min-w-0 truncate">{potluck.title}</span>
       </Link>
 
+      {/*
+        Sign-up goes first, right under the title - previously it sat below
+        the items list, so a card with even one item already on it buried
+        the one interactive part under what read as a finished status list.
+        The label doubles as a per-viewer nudge: unlike the old "list is
+        empty" message (which only ever fired once, for whoever saw it
+        first), this checks *this viewer's* own signup status every time.
+      */}
+      {signupsClosed ? (
+        <p className="flex items-center gap-1 text-xs text-muted">
+          <LockSimple size={11} /> Signups closed
+        </p>
+      ) : (
+        <form onSubmit={handleAddItem} className="space-y-1.5">
+          <p className={cn("text-xs font-semibold", hasMine ? "text-muted" : "text-primary")}>
+            {hasMine ? "Add another item" : "🖐️ Sign up - what are you bringing?"}
+          </p>
+          <div className="flex items-center gap-1.5">
+            <input
+              value={newItemName}
+              onChange={(e) => setNewItemName(e.target.value)}
+              onClick={(e) => e.stopPropagation()}
+              placeholder="e.g. Mac and cheese"
+              className="min-w-0 flex-1 rounded-lg border border-border bg-white px-2.5 py-1.5 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
+            />
+            <button
+              type="submit"
+              disabled={adding || !newItemName.trim()}
+              className="flex shrink-0 items-center gap-1 rounded-lg bg-primary px-2.5 py-1.5 text-sm font-medium text-white shadow-sm shadow-primary/30 disabled:opacity-50"
+            >
+              <Plus size={16} /> Add
+            </button>
+          </div>
+        </form>
+      )}
+
       {items.length === 0 ? (
-        <p className="text-xs text-muted">Nothing on the list yet - add the first item below.</p>
+        <p className="text-xs text-muted">Nobody has signed up yet.</p>
       ) : (
         <div className="space-y-1.5">
           {visibleItems.map((item) => {
@@ -161,30 +206,6 @@ export function InlinePotluckCard({ potluckId, currentUserId }: { potluckId: str
             </Link>
           )}
         </div>
-      )}
-
-      {signupsClosed ? (
-        <p className="flex items-center gap-1 text-xs text-muted">
-          <LockSimple size={11} /> Signups closed
-        </p>
-      ) : (
-        <form onSubmit={handleAddItem} className="flex items-center gap-1.5">
-          <input
-            value={newItemName}
-            onChange={(e) => setNewItemName(e.target.value)}
-            onClick={(e) => e.stopPropagation()}
-            placeholder="What are you bringing?"
-            className="min-w-0 flex-1 rounded-lg border border-border bg-white px-2.5 py-1.5 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
-          />
-          <button
-            type="submit"
-            disabled={adding || !newItemName.trim()}
-            aria-label="Add item"
-            className="shrink-0 rounded-lg bg-primary p-1.5 text-white shadow-sm shadow-primary/30 disabled:opacity-50"
-          >
-            <Plus size={16} />
-          </button>
-        </form>
       )}
     </div>
   );
