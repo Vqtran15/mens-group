@@ -44,7 +44,7 @@ export function EditDeleteActionSheet({
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 30 }}
             transition={{ type: "spring", stiffness: 400, damping: 35 }}
-            className="fixed inset-x-0 bottom-0 z-40 rounded-t-2xl border-t border-border bg-white p-3 pb-[env(safe-area-inset-bottom)] shadow-xl"
+            className="fixed inset-x-0 bottom-0 z-40 mx-auto max-w-2xl rounded-t-2xl border-t border-border bg-white p-3 pb-[env(safe-area-inset-bottom)] shadow-xl"
           >
             <div className="space-y-1">
               {editHref ? (

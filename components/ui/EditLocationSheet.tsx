@@ -45,7 +45,7 @@ export function EditLocationSheet({
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 30 }}
             transition={{ type: "spring", stiffness: 400, damping: 35 }}
-            className="fixed inset-x-0 bottom-0 z-40 rounded-t-2xl border-t border-border bg-white p-4 pb-[calc(env(safe-area-inset-bottom)+1rem)] shadow-xl"
+            className="fixed inset-x-0 bottom-0 z-40 mx-auto max-w-2xl rounded-t-2xl border-t border-border bg-white p-4 pb-[calc(env(safe-area-inset-bottom)+1rem)] shadow-xl"
           >
             <p className="font-semibold text-primary">Location for this meeting</p>
             <p className="mt-1 text-sm text-secondary">

@@ -61,7 +61,12 @@ export function BottomNav() {
           shape, so the blur's rectangular bounding box can show through as
           a visible grey rectangle behind the pill instead of following its
           curve. */}
-      <ul className="pointer-events-auto flex overflow-hidden rounded-full border border-border/60 bg-white/60 shadow-sm backdrop-blur-xl">
+      {/* mx-auto + max-w-2xl matches the app shell's own width-capped
+          column (see (app)/layout.tsx) so the pill stays centered under
+          the actual content instead of stretching across a wide desktop
+          window - w-full keeps it filling the available width exactly as
+          before on anything narrower than that cap. */}
+      <ul className="pointer-events-auto mx-auto flex w-full max-w-2xl overflow-hidden rounded-full border border-border/60 bg-white/60 shadow-sm backdrop-blur-xl">
         {TABS.map(({ href, label, icon: Icon }) => {
           const active = pathname.startsWith(href);
           const unread = unreadByHref[href];

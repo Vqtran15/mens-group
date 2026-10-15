@@ -290,63 +290,70 @@ export default function AppLayout({
     <UnreadIndicatorProvider>
       <TopicsSearchProvider>
         {/* var(--dvh, 100dvh), not the h-dvh utility directly - see
-            ViewportFix, which corrects 100dvh's own iOS unreliability. */}
+            ViewportFix, which corrects 100dvh's own iOS unreliability. This
+            outer div stays full-bleed (its bg-background shows either side
+            of the column below on a wide window) - only the inner column
+            is width-capped, so the app still fills a phone-width viewport
+            exactly as before and just stops stretching edge-to-edge once
+            the window is wider than a phone. */}
         <div className="flex flex-col bg-background" style={{ height: "var(--dvh, 100dvh)" }}>
-          <AppHeader direction={direction} lastNonChatTab={lastNonChatTab} />
-          <OfflineBanner />
-          <AutoUpdater />
-          <PushPermissionPrompt />
-          {/* BottomNav is a fixed overlay (see BottomNav.tsx), not a normal-
-              flow sibling - it no longer claims its own row here, so the
-              scroll containers below reserve that space themselves via
-              bottom padding, tall enough to clear the pill (roughly its own
-              height plus the safe-area inset) so the last item can still
-              scroll fully into view above it rather than under it. */}
-          {activeTabIndex === -1 ? (
-            <main
-              className={cn(
-                "min-h-0 flex-1 overflow-y-auto",
-                showBottomNav && "pb-[calc(5rem+var(--sab,0px))]"
-              )}
-            >
-              {children}
-            </main>
-          ) : (
-            <main className="relative min-h-0 flex-1 overflow-hidden">
-              {/* Keyed on the *tab*, not the raw pathname - sub-pages within
-                  a tab (e.g. /tools/resources) share their tab root's key,
-                  so this wrapper's shape and identity stay stable across
-                  navigation within a tab and only actually change (playing
-                  the slide) on a genuine tab-to-tab switch. Keying on
-                  pathname directly used to force this whole branch to
-                  remount on every /tools <-> /tools/resources-style
-                  navigation - both because the *other* branch (the plain
-                  one above) doesn't exist here at all for an exact-pathname
-                  key, and because any nested layout further down inside
-                  {children} (e.g. app/(app)/tools/layout.tsx's own
-                  list<->card push/pop) got torn down and rebuilt from
-                  scratch every time, discarding its own transition-tracking
-                  state before it ever got to animate - in both directions,
-                  not just one. */}
-              <AnimatePresence mode="popLayout" initial={false} custom={direction}>
-                <motion.div
-                  key={TAB_HREFS[activeTabIndex]}
-                  custom={direction}
-                  variants={slideVariants}
-                  initial="enter"
-                  animate="center"
-                  exit="exit"
-                  transition={{ duration: 0.22, ease: "easeOut" }}
-                  className={cn(
-                    "h-full overflow-y-auto",
-                    showBottomNav && "pb-[calc(5rem+var(--sab,0px))]"
-                  )}
-                >
-                  <FrozenRouter>{children}</FrozenRouter>
-                </motion.div>
-              </AnimatePresence>
-            </main>
-          )}
+          <div className="mx-auto flex min-h-0 w-full max-w-2xl flex-1 flex-col md:border-x md:border-border/60">
+            <AppHeader direction={direction} lastNonChatTab={lastNonChatTab} />
+            <OfflineBanner />
+            <AutoUpdater />
+            <PushPermissionPrompt />
+            {/* BottomNav is a fixed overlay (see BottomNav.tsx), not a normal-
+                flow sibling - it no longer claims its own row here, so the
+                scroll containers below reserve that space themselves via
+                bottom padding, tall enough to clear the pill (roughly its own
+                height plus the safe-area inset) so the last item can still
+                scroll fully into view above it rather than under it. */}
+            {activeTabIndex === -1 ? (
+              <main
+                className={cn(
+                  "min-h-0 flex-1 overflow-y-auto",
+                  showBottomNav && "pb-[calc(5rem+var(--sab,0px))]"
+                )}
+              >
+                {children}
+              </main>
+            ) : (
+              <main className="relative min-h-0 flex-1 overflow-hidden">
+                {/* Keyed on the *tab*, not the raw pathname - sub-pages within
+                    a tab (e.g. /tools/resources) share their tab root's key,
+                    so this wrapper's shape and identity stay stable across
+                    navigation within a tab and only actually change (playing
+                    the slide) on a genuine tab-to-tab switch. Keying on
+                    pathname directly used to force this whole branch to
+                    remount on every /tools <-> /tools/resources-style
+                    navigation - both because the *other* branch (the plain
+                    one above) doesn't exist here at all for an exact-pathname
+                    key, and because any nested layout further down inside
+                    {children} (e.g. app/(app)/tools/layout.tsx's own
+                    list<->card push/pop) got torn down and rebuilt from
+                    scratch every time, discarding its own transition-tracking
+                    state before it ever got to animate - in both directions,
+                    not just one. */}
+                <AnimatePresence mode="popLayout" initial={false} custom={direction}>
+                  <motion.div
+                    key={TAB_HREFS[activeTabIndex]}
+                    custom={direction}
+                    variants={slideVariants}
+                    initial="enter"
+                    animate="center"
+                    exit="exit"
+                    transition={{ duration: 0.22, ease: "easeOut" }}
+                    className={cn(
+                      "h-full overflow-y-auto",
+                      showBottomNav && "pb-[calc(5rem+var(--sab,0px))]"
+                    )}
+                  >
+                    <FrozenRouter>{children}</FrozenRouter>
+                  </motion.div>
+                </AnimatePresence>
+              </main>
+            )}
+          </div>
           {/* Hidden on Chat - the composer is now a full-width pill itself,
               and having both it and the nav pill float at the bottom
               crowded the space this was meant to open up. AppHeader's back
@@ -354,7 +361,9 @@ export default function AppLayout({
               AnimatePresence (BottomNav is a motion.nav with its own
               enter/exit variants) so it fades in/out at the Chat boundary
               instead of popping, matching MessageComposer's equivalent fix
-              and the rest of the app's motion language. */}
+              and the rest of the app's motion language. BottomNav centers
+              and width-caps itself to match this column - see its own
+              comment. */}
           <AnimatePresence>{showBottomNav && <BottomNav />}</AnimatePresence>
         </div>
       </TopicsSearchProvider>

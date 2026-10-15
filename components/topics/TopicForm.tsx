@@ -24,6 +24,7 @@ export function TopicForm() {
   const [description, setDescription] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [status, setStatus] = useState<SubmitStatus>("idle");
+  const [draftStatus, setDraftStatus] = useState<SubmitStatus>("idle");
 
   useEffect(() => {
     async function init() {
@@ -43,6 +44,9 @@ export function TopicForm() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    // Guards against the draft save (a sibling action, not disabled by this
+    // button's own status) finishing mid-flight at the same time as this one.
+    if (draftStatus !== "idle") return;
     setError(null);
     setStatus("submitting");
 
@@ -75,6 +79,49 @@ export function TopicForm() {
     setStatus("success");
     setTimeout(() => {
       router.push(`/topics/${topic.id}`);
+      router.refresh();
+    }, 500);
+  }
+
+  // Drafts have no topic_date (see DraftForm/topic_drafts - they're not
+  // tied to a meeting until converted), so this skips that field entirely
+  // rather than reusing whatever's currently picked above. type="button" on
+  // the triggering SuccessButton is load-bearing here: it keeps this from
+  // running through the <form>'s own required-field (topicDate) validation,
+  // which only makes sense for the real "Add topic" submit.
+  async function handleSaveAsDraft() {
+    if (status !== "idle") return;
+    if (!title.trim()) {
+      setError("Give it a title before saving as a draft.");
+      return;
+    }
+    setError(null);
+    setDraftStatus("submitting");
+
+    const supabase = createClient();
+    const membership = await getCurrentMembership(supabase);
+    if (!membership) {
+      setError("You must be signed in and belong to a group.");
+      setDraftStatus("idle");
+      return;
+    }
+
+    const { error: insertError } = await supabase.from("topic_drafts").insert({
+      title,
+      description: description || null,
+      created_by: membership.userId,
+      group_id: membership.groupId,
+    });
+
+    if (insertError) {
+      setError(insertError.message);
+      setDraftStatus("idle");
+      return;
+    }
+
+    setDraftStatus("success");
+    setTimeout(() => {
+      router.push("/topics/drafts");
       router.refresh();
     }, 500);
   }
@@ -173,8 +220,18 @@ export function TopicForm() {
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.25, delay: 0.24, ease: "easeOut" }}
+        className="flex gap-2"
       >
-        <SuccessButton status={status} idleLabel="Add topic" submittingLabel="Adding..." className="w-full" />
+        <SuccessButton
+          status={draftStatus}
+          idleLabel="Save as draft"
+          submittingLabel="Saving..."
+          type="button"
+          variant="secondary"
+          onClick={handleSaveAsDraft}
+          className="flex-1"
+        />
+        <SuccessButton status={status} idleLabel="Add topic" submittingLabel="Adding..." className="flex-1" />
       </motion.div>
     </form>
   );

@@ -11,14 +11,24 @@ export function SuccessButton({
   idleLabel,
   submittingLabel,
   className,
+  type = "submit",
+  variant = "primary",
+  onClick,
 }: {
   status: SubmitStatus;
   idleLabel: string;
   submittingLabel: string;
   className?: string;
+  // "button" + onClick lets a second action (e.g. "Save as draft" sitting
+  // alongside a form's real submit button) reuse this same idle/submitting/
+  // success treatment without also triggering the <form>'s native required-
+  // field validation, which type="submit" would.
+  type?: "button" | "submit";
+  variant?: "primary" | "secondary" | "ghost" | "danger";
+  onClick?: () => void;
 }) {
   return (
-    <Button type="submit" disabled={status !== "idle"} className={className}>
+    <Button type={type} variant={variant} onClick={onClick} disabled={status !== "idle"} className={className}>
       <AnimatePresence mode="wait" initial={false}>
         {status === "success" ? (
           <motion.span

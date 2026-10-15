@@ -188,7 +188,11 @@ export const MessageComposer = forwardRef<HTMLTextAreaElement, {
           transition={{ duration: 0.2, ease: "easeOut" }}
           className="pointer-events-none fixed inset-x-0 bottom-0 z-20 px-3 pb-[max(0.75rem,var(--sab,0px))] pt-2"
         >
-      <div className="pointer-events-auto">
+      {/* mx-auto + max-w-2xl matches the app shell's own width-capped
+          column (see (app)/layout.tsx and BottomNav's equivalent fix) so
+          the composer pill stays centered under the chat column instead of
+          stretching across a wide desktop window. */}
+      <div className="pointer-events-auto mx-auto w-full max-w-2xl">
         {replyingTo && (
           <div className="mb-2 flex items-center justify-between gap-2 rounded-2xl border border-border/60 bg-white/90 px-3 py-2 text-sm shadow-sm backdrop-blur-md">
             <p className="truncate text-secondary">

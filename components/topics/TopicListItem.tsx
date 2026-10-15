@@ -4,11 +4,11 @@ import { useState } from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { DotsThreeVertical } from "@phosphor-icons/react";
-import { Avatar, AVATAR_COLORS } from "@/components/Avatar";
+import { Avatar } from "@/components/Avatar";
 import { EditDeleteActionSheet } from "@/components/ui/EditDeleteActionSheet";
 import { ConfirmSheet } from "@/components/ui/ConfirmSheet";
 import { createClient } from "@/lib/supabase/client";
-import { formatDate, hashToColor, parseDateOnly } from "@/lib/utils";
+import { formatDate, parseDateOnly } from "@/lib/utils";
 import type { Topic } from "@/lib/types";
 
 const MotionLink = motion.create(Link);
@@ -21,7 +21,6 @@ export function TopicListItem({ topic, onChanged }: { topic: Topic; onChanged: (
   const [actionsOpen, setActionsOpen] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const preview = topic.description ? stripHtml(topic.description) : "";
-  const accentColor = hashToColor(topic.id, AVATAR_COLORS);
   const authorName = topic.profiles?.display_name ?? "Someone";
 
   async function handleDelete() {
@@ -32,10 +31,7 @@ export function TopicListItem({ topic, onChanged }: { topic: Topic; onChanged: (
   }
 
   return (
-    <div
-      style={{ borderLeftColor: accentColor }}
-      className="relative rounded-2xl border border-l-4 border-border/60 bg-white p-4 shadow-sm transition-colors hover:bg-surface-muted/40"
-    >
+    <div className="relative rounded-2xl border border-border/60 bg-white p-4 shadow-sm transition-colors hover:bg-surface-muted/40">
       <button
         type="button"
         onClick={() => setActionsOpen(true)}
