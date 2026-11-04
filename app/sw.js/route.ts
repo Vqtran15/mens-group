@@ -26,15 +26,43 @@ self.addEventListener("push", (event) => {
     badge: "/icons/icon-192.png",
     data: { url: data.url || "/" },
   };
-  // Only chat/reaction pushes (url: "/chat") represent an unread message -
-  // the meeting-reminder push has nothing to do with unread state. The app
-  // itself clears this the next time it's opened and re-evaluates chatUnread.
-  // Rejects (e.g. not installed as a home-screen app) if the badge can't be
-  // set - not fatal, so swallow it instead of an unhandled rejection.
-  if (data.url === "/chat" && "setAppBadge" in navigator) {
-    navigator.setAppBadge(1).catch(() => {});
-  }
-  event.waitUntil(self.registration.showNotification(title, options));
+
+  event.waitUntil(
+    (async () => {
+      // Only chat/reaction pushes (url: "/chat") represent an unread
+      // message - the meeting-reminder push has nothing to do with unread
+      // state.
+      //
+      // The badge is meant to be purely an "app is fully closed" fallback -
+      // UnreadIndicatorContext.tsx's own badge-mirroring effect is the real
+      // source of truth whenever any window for this app is actually open,
+      // since it reflects the genuine seen/unread status (driven by a live
+      // Realtime subscription), not just "a push for /chat happened to
+      // arrive". Setting the badge here unconditionally raced against
+      // that: the server sends a push to every group member regardless of
+      // whether they're already connected, and Web Push delivery (through
+      // the OS push relay) is often slower than Realtime (a live
+      // WebSocket) - so a push can land *after* the user already viewed
+      // the message and the open app had already cleared the badge,
+      // re-lighting it with no code path left to ever clear it again
+      // (chatUnread never changes a second time for a message already
+      // marked seen). Checking for *any* open client, not just one
+      // focused on /chat, avoids the race entirely rather than just
+      // narrowing its window - a backgrounded-but-still-alive tab keeps
+      // its Realtime subscription live and will have already handled this
+      // correctly; only when no client exists at all (the app is actually
+      // closed) does this become the sole source of truth, which is
+      // exactly the fallback role it was documented to have.
+      const openClients = await self.clients.matchAll({ type: "window", includeUncontrolled: true });
+      // Rejects (e.g. not installed as a home-screen app) if the badge
+      // can't be set - not fatal, so swallow it instead of an unhandled
+      // rejection.
+      if (openClients.length === 0 && data.url === "/chat" && "setAppBadge" in navigator) {
+        await navigator.setAppBadge(1).catch(() => {});
+      }
+      await self.registration.showNotification(title, options);
+    })()
+  );
 });
 
 self.addEventListener("notificationclick", (event) => {
