@@ -53,7 +53,15 @@ self.addEventListener("push", (event) => {
       // correctly; only when no client exists at all (the app is actually
       // closed) does this become the sole source of truth, which is
       // exactly the fallback role it was documented to have.
-      const openClients = await self.clients.matchAll({ type: "window", includeUncontrolled: true });
+      // Own try/catch, not left to propagate - a failure here must never
+      // take showNotification() below down with it. Falling back to []
+      // (same as "nothing is open") also reproduces the old unconditional-
+      // set behavior as the fail-safe direction, rather than silently
+      // dropping the badge update instead.
+      let openClients = [];
+      try {
+        openClients = await self.clients.matchAll({ type: "window", includeUncontrolled: true });
+      } catch {}
       // Rejects (e.g. not installed as a home-screen app) if the badge
       // can't be set - not fatal, so swallow it instead of an unhandled
       // rejection.
